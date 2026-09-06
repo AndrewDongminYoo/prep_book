@@ -1,0 +1,42 @@
+{
+  "version": "0.2",
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "dictionaries": [
+    "vgv_allowed",
+    "vgv_forbidden",
+    "dart",
+    "flutter",
+    "swift",
+    "cpp",
+    "cpp-compound-words",
+    "java",
+    "kotlin",
+    "softwareTerms",
+    "filetypes",
+    "fonts",
+    "custom-dictionary"
+  ],
+  "dictionaryDefinitions": [
+    {
+      "name": "vgv_allowed",
+      "path": "https://raw.githubusercontent.com/verygoodopensource/very_good_dictionaries/main/allowed.txt",
+      "description": "Allowed VGV Spellings"
+    },
+    {
+      "name": "vgv_forbidden",
+      "path": "https://raw.githubusercontent.com/verygoodopensource/very_good_dictionaries/main/forbidden.txt",
+      "description": "Forbidden VGV Spellings"
+    },
+    {
+      "name": "custom-dictionary",
+      "path": "./.cspell/custom-dictionary.txt",
+      "addWords": true
+    }
+  ],
+  "allowCompoundWords": false,
+  "enableGlobDot": true,
+  "useGitignore": true,
+  "ignoreWords": ["meta-data", "plaintext"],
+  "ignorePaths": [".git", ".gitignore", ".metadata", ".shellcheckrc"],
+  "words": ["donminzzi", "prepbook", "Pretendard", "wght"]
+}
