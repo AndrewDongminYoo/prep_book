@@ -74,5 +74,34 @@ void main() {
         const SubRecipeRef('dough').hashCode,
       );
     });
+
+    test('a per-batch component keeps its rounding, note, and order', () {
+      final rounding = RoundingRule.upToIncrement(Decimal.parse('0.5'));
+      final component = RecipeComponent(
+        id: 'c2',
+        target: const IngredientRef('yeast'),
+        baseQuantity: Quantity.parse('10', Unit.gram),
+        behavior: ScalingBehavior.perBatch,
+        rounding: rounding,
+        note: 'proof for 20 minutes',
+        displayOrder: 3,
+      );
+      expect(component.behavior, ScalingBehavior.perBatch);
+      expect(component.target, const IngredientRef('yeast'));
+      expect(component.rounding, rounding);
+      expect(component.note, 'proof for 20 minutes');
+      expect(component.displayOrder, 3);
+    });
+
+    test('a fixed-once component still needs a base quantity', () {
+      final component = RecipeComponent(
+        id: 'c3',
+        target: const IngredientRef('starter'),
+        baseQuantity: Quantity.parse('200', Unit.gram),
+        behavior: ScalingBehavior.fixedOnce,
+        displayOrder: 1,
+      );
+      expect(component.behavior, ScalingBehavior.fixedOnce);
+    });
   });
 }
