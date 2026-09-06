@@ -100,11 +100,11 @@ Recipe twicePie() {
 
 /// A pie with its own manual component sharing an id with a manual
 /// component in the sub-recipe it references — same component id, two
-/// different recipes. The manual component is listed (and so scaled) before
-/// the sub-recipe reference: its warning is appended unconditionally when
-/// its own line is scaled, and only afterward does expanding the sub-recipe
-/// lift a same-shaped warning through the de-duplicating path — the order
-/// that actually exercises "does the second warning get silently dropped."
+/// different recipes. The manual component is listed before the sub-recipe
+/// reference. Since a component's own warning and a lifted one both go
+/// through the same de-duplication path, this order has no bearing on the
+/// outcome; [saltyPieReversed] lists the two lines the other way to pin
+/// that the order really doesn't matter, rather than leaving it assumed.
 Recipe saltyPie() {
   return Recipe(
     id: 'salty-pie',
@@ -124,6 +124,34 @@ Recipe saltyPie() {
         target: const SubRecipeRef('dough'),
         baseQuantity: Quantity.parse('1', Unit.kilogram),
         behavior: ScalingBehavior.proportional,
+        displayOrder: 1,
+      ),
+    ],
+    modifiedAt: DateTime.utc(2026, 9, 6),
+  );
+}
+
+/// The same collision as [saltyPie], with the sub-recipe line listed before
+/// the manual one.
+Recipe saltyPieReversed() {
+  return Recipe(
+    id: 'salty-pie-reversed',
+    revision: 1,
+    name: 'Salty pie (reversed)',
+    baseYield: Quantity.parse('4', Unit.portion),
+    components: [
+      RecipeComponent(
+        id: 'pie-dough',
+        target: const SubRecipeRef('dough'),
+        baseQuantity: Quantity.parse('1', Unit.kilogram),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: 0,
+      ),
+      RecipeComponent(
+        id: 'dough-salt',
+        target: const IngredientRef('salt'),
+        baseQuantity: null,
+        behavior: ScalingBehavior.manual,
         displayOrder: 1,
       ),
     ],
@@ -240,6 +268,27 @@ void main() {
         expect(
           manualWarnings.map((w) => w.recipeId),
           unorderedEquals(['salty-pie', 'dough']),
+        );
+      },
+    );
+
+    test(
+      'the same collision still produces two distinct warnings when the '
+      'sub-recipe line is listed first',
+      () {
+        final result = calculator.calculate(
+          recipe: saltyPieReversed(),
+          targetYield: Quantity.parse('4', Unit.portion),
+          recipeIndex: {'dough': dough()},
+        );
+
+        final manualWarnings = result.warnings
+            .whereType<ManualComponentWarning>()
+            .toList();
+        expect(manualWarnings, hasLength(2));
+        expect(
+          manualWarnings.map((w) => w.recipeId),
+          unorderedEquals(['salty-pie-reversed', 'dough']),
         );
       },
     );

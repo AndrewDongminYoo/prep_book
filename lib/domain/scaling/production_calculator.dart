@@ -74,7 +74,7 @@ final class ProductionCalculator {
     // A null base quantity means manual; RecipeComponent guarantees it.
     final base = component.baseQuantity;
     if (base == null) {
-      warnings.add(ManualComponentWarning(recipeId, component.id));
+      _addUnique(warnings, ManualComponentWarning(recipeId, component.id));
       return ScaledComponent(
         source: component,
         total: null,
@@ -158,9 +158,20 @@ final class ProductionCalculator {
   }
 
   /// Appends [warning] to [warnings] unless an equal warning is already
-  /// there. [ProductionWarning] compares by value, so two warnings about the
-  /// same problem — the same manual component, the same archived recipe —
-  /// are equal regardless of which expansion produced them.
+  /// there. Every warning this calculator adds — a component's own, or one
+  /// lifted from an expanded sub-recipe — goes through this, so an
+  /// identical warning is reported once regardless of whether it was
+  /// produced directly or through expansion, or in what order the two
+  /// arrive. [ManualComponentWarning] and [RoundingAdjustedWarning] compare
+  /// by their recipe id together with their component id, so two warnings
+  /// are equal only when both the recipe and the component match — the
+  /// same sub-recipe referenced twice collapses to one warning, while a
+  /// same-named component in a different recipe stays distinct.
+  /// [ArchivedDependencyWarning] compares by recipe id alone. A single
+  /// recipe cannot produce two equal warnings for itself, since a
+  /// component's id is unique within its own recipe, so routing a
+  /// component's own warning through here changes nothing for that case —
+  /// it only ever matters once expansion is involved.
   void _addUnique(List<ProductionWarning> warnings, ProductionWarning warning) {
     if (!warnings.contains(warning)) warnings.add(warning);
   }
@@ -202,7 +213,7 @@ final class ProductionCalculator {
 
     final total = ScaledQuantity.summing(perBatch);
     if (total.wasRounded) {
-      warnings.add(RoundingAdjustedWarning(recipeId, component.id));
+      _addUnique(warnings, RoundingAdjustedWarning(recipeId, component.id));
     }
     return total;
   }
