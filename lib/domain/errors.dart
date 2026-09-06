@@ -53,6 +53,19 @@ final class InvalidBaseYieldError extends DomainError {
   final String recipeId;
 }
 
+/// Raised when a recipe's maximum batch yield is zero.
+///
+/// Zero is redundant with `null`, which already means "no maximum" — see
+/// `BatchPlan.decompose`. Accepting a zero maximum would let it reach that
+/// decomposition and be silently reinterpreted as `null` there, so it is
+/// rejected here instead.
+final class InvalidMaxBatchYieldError extends DomainError {
+  InvalidMaxBatchYieldError(this.recipeId)
+    : super('recipe $recipeId has a zero maximum batch yield');
+
+  final String recipeId;
+}
+
 /// Raised when a component's fields contradict its scaling behavior, or a
 /// recipe's component list repeats an id.
 final class InvalidComponentError extends DomainError {

@@ -30,6 +30,13 @@ void main() {
       );
     });
 
+    test('rejects a zero maximum batch yield', () {
+      expect(
+        () => buildRecipe(maxBatchYield: Quantity.parse('0', Unit.portion)),
+        throwsA(isA<InvalidMaxBatchYieldError>()),
+      );
+    });
+
     test('rejects a max batch yield in another dimension', () {
       expect(
         () => buildRecipe(maxBatchYield: Quantity.parse('1', Unit.kilogram)),

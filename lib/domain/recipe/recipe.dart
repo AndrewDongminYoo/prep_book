@@ -23,9 +23,11 @@ final class Recipe {
     bool isArchived = false,
   }) {
     if (baseYield.isZero) throw InvalidBaseYieldError(id);
-    if (maxBatchYield != null &&
-        !baseYield.unit.canConvertTo(maxBatchYield.unit)) {
-      throw IncompatibleYieldUnitError(baseYield.unit, maxBatchYield.unit);
+    if (maxBatchYield != null) {
+      if (maxBatchYield.isZero) throw InvalidMaxBatchYieldError(id);
+      if (!baseYield.unit.canConvertTo(maxBatchYield.unit)) {
+        throw IncompatibleYieldUnitError(baseYield.unit, maxBatchYield.unit);
+      }
     }
     // A component's id is only meaningful as a key — warnings and
     // per-component overrides are both addressed by (recipe id, component
