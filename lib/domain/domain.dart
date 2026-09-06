@@ -9,6 +9,7 @@ export 'package:rational/rational.dart' show Rational;
 
 export 'errors.dart';
 export 'graph/recipe_dependency_graph.dart';
+export 'production_run.dart';
 export 'recipe/component.dart';
 export 'recipe/ingredient.dart';
 export 'recipe/recipe.dart';
