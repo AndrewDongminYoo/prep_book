@@ -376,5 +376,81 @@ void main() {
         throwsUnsupportedError,
       );
     });
+
+    test(
+      "a stored run's per-batch lists are unmodifiable, at the top level "
+      'and inside an expanded sub-recipe',
+      () {
+        final crust = Recipe(
+          id: 'crust',
+          revision: 1,
+          name: 'Crust',
+          baseYield: Quantity.parse('2', Unit.kilogram),
+          components: [
+            RecipeComponent(
+              id: 'crust-flour',
+              target: const IngredientRef('flour'),
+              baseQuantity: Quantity.parse('1', Unit.kilogram),
+              behavior: ScalingBehavior.proportional,
+              displayOrder: 0,
+            ),
+          ],
+          modifiedAt: DateTime.utc(2026, 9, 6),
+        );
+        final tart = Recipe(
+          id: 'tart',
+          revision: 1,
+          name: 'Tart',
+          baseYield: Quantity.parse('4', Unit.portion),
+          components: [
+            RecipeComponent(
+              id: 'tart-crust',
+              target: const SubRecipeRef('crust'),
+              baseQuantity: Quantity.parse('1', Unit.kilogram),
+              behavior: ScalingBehavior.proportional,
+              displayOrder: 0,
+            ),
+          ],
+          modifiedAt: DateTime.utc(2026, 9, 6),
+        );
+        final run = ProductionRun(
+          id: 'run-6',
+          createdAt: DateTime.utc(2026, 9, 6, 9),
+          recipe: tart,
+          dependencySnapshot: {'crust': crust},
+          targetYield: Quantity.parse('8', Unit.portion),
+          result: const ProductionCalculator().calculate(
+            recipe: tart,
+            targetYield: Quantity.parse('8', Unit.portion),
+            recipeIndex: {'crust': crust},
+          ),
+        );
+
+        expect(
+          () => run.result.components.first.perBatch.clear(),
+          throwsUnsupportedError,
+        );
+        expect(
+          () => run.result.components.first.subRecipe!.components.first.perBatch
+              .clear(),
+          throwsUnsupportedError,
+        );
+      },
+    );
+
+    test(
+      "an unresolved manual component's per-batch list is unmodifiable too",
+      () {
+        // soup()'s second component ('pepper') is manual, so its perBatch
+        // is built from List.filled rather than the [for ...] literal the
+        // other components above go through — a separate call site the W1
+        // fix must also cover.
+        final run = buildRun();
+        expect(
+          () => run.result.components[1].perBatch.clear(),
+          throwsUnsupportedError,
+        );
+      },
+    );
   });
 }

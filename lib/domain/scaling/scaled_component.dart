@@ -8,8 +8,21 @@ import 'package:rational/rational.dart';
 /// One calculated line of a production result.
 @immutable
 final class ScaledComponent {
-  /// Creates a calculated line.
-  const ScaledComponent({
+  /// Creates a calculated line, taking its own copy of [perBatch] so a
+  /// stored result can never be mutated through the caller's list.
+  factory ScaledComponent({
+    required RecipeComponent source,
+    required ScaledQuantity? total,
+    required List<ScaledQuantity?> perBatch,
+    ProductionResult? subRecipe,
+  }) => ScaledComponent._(
+    source: source,
+    total: total,
+    perBatch: List.unmodifiable(perBatch),
+    subRecipe: subRecipe,
+  );
+
+  const ScaledComponent._({
     required this.source,
     required this.total,
     required this.perBatch,
