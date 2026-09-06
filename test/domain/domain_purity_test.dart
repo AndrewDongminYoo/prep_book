@@ -12,14 +12,25 @@ const _allowedPackagePrefixes = <String>[
   'package:prep_book/domain/',
 ];
 
-/// Matches an `import`/`export` directive's URI in either quote style.
-final _directiveUri = RegExp(
-  "(?:import|export)\\s+(?:'([^']*)'|\"([^\"]*)\")",
-);
+/// Matches a whole `import`/`export` directive, from the keyword to its
+/// terminating `;`. A conditional directive
+/// (`export 'a.dart' if (dart.library.io) 'b.dart';`) carries more than one
+/// quoted URI, so the directive is captured whole and every quoted URI
+/// inside it is checked — not just the first.
+final _directiveStatement = RegExp(r'\b(?:import|export)\b[^;]*;');
+
+/// Matches one quoted URI, either quote style.
+final _quotedUri = RegExp("'([^']*)'|\"([^\"]*)\"");
 
 final _lineComment = RegExp(r'//[^\n]*');
+
+// Deliberately excludes newline from the string body: a triple-quoted
+// string then survives stripping only partially, which can under-strip
+// (false positive, a loud failure to investigate) but can never
+// over-strip past a line comment's stray apostrophe and swallow real code
+// (false negative, a silent pass). Do not widen this to span newlines.
 final _stringLiteral = RegExp(
-  r'''r?'(?:[^'\\]|\\.)*'|r?"(?:[^"\\]|\\.)*"''',
+  r'''r?'(?:[^'\\\n]|\\.)*'|r?"(?:[^"\\\n]|\\.)*"''',
 );
 final _floatLiteral = RegExp(r'\b\d+\.\d+\b');
 final _doubleKeyword = RegExp(r'\bdouble\b');
@@ -60,10 +71,13 @@ void main() {
       final offenders = <String>[];
       for (final file in _dartFilesUnder('lib/domain')) {
         final source = file.readAsStringSync();
-        for (final match in _directiveUri.allMatches(source)) {
-          final uri = match.group(1) ?? match.group(2)!;
-          if (!_isAllowedUri(uri)) {
-            offenders.add('${file.path} references disallowed uri: $uri');
+        for (final statement in _directiveStatement.allMatches(source)) {
+          final text = statement.group(0)!;
+          for (final match in _quotedUri.allMatches(text)) {
+            final uri = match.group(1) ?? match.group(2)!;
+            if (!_isAllowedUri(uri)) {
+              offenders.add('${file.path} references disallowed uri: $uri');
+            }
           }
         }
       }
