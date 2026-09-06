@@ -93,7 +93,7 @@ void main() {
       expect(component.displayOrder, 3);
     });
 
-    test('a fixed-once component still needs a base quantity', () {
+    test('a fixed-once component may carry a base quantity', () {
       final component = RecipeComponent(
         id: 'c3',
         target: const IngredientRef('starter'),

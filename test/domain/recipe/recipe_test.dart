@@ -44,6 +44,14 @@ void main() {
       expect(recipe.maxBatchYield, Quantity.parse('4', Unit.portion));
     });
 
+    test('carries the identity, revision, and base yield later tasks '
+        'compute against', () {
+      final recipe = buildRecipe();
+      expect(recipe.id, 'r1');
+      expect(recipe.revision, 1);
+      expect(recipe.baseYield, Quantity.parse('10', Unit.portion));
+    });
+
     test('exposes components in display order', () {
       final recipe = buildRecipe();
       expect(recipe.components.map((c) => c.id), ['c1']);
