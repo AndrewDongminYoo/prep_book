@@ -40,7 +40,12 @@ final class InvalidRoundingIncrementError extends DomainError {
   final Decimal increment;
 }
 
-/// Raised when a recipe's base yield is missing, zero, or negative.
+/// Raised when a recipe's base yield is zero.
+///
+/// A negative base yield cannot reach this guard: `Quantity.fromRational`
+/// already rejects a negative amount when the yield is constructed. A
+/// missing one cannot reach it either — a recipe's base yield parameter is
+/// required, not nullable.
 final class InvalidBaseYieldError extends DomainError {
   InvalidBaseYieldError(this.recipeId)
     : super('recipe $recipeId has no positive base yield');

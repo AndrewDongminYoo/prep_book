@@ -12,12 +12,17 @@ It solves exactly one job: scaling a saved production recipe to today's target y
 
 ## Current state versus target architecture
 
-The tree is still the Very Good CLI template plus its `counter` sample.
-`lib/` contains only `app/`, `counter/`, `l10n/`, `bootstrap.dart`, and the three flavor entrypoints.
+The tree is still the Very Good CLI template plus its `counter` sample, with a finished domain layer added alongside it.
+`lib/` contains `app/`, `counter/`, `domain/`, `l10n/`, `bootstrap.dart`, and the three flavor entrypoints.
 
 The design document defines six isolated units as the target layout: presentation, application, domain, persistence, export, and migration.
-None of them exist yet.
-When a document, plan, or agent refers to `lib/domain/`, treat it as a target to build, not a directory to look for.
+`lib/domain/` is complete for units and their conversion table, `Quantity`, rounding, the recipe model, dependency-cycle and missing-dependency validation, batch decomposition, the production calculator, nested sub-recipe expansion, and the immutable production-run snapshot.
+The other five are still targets to build, not directories to look for.
+
+`test/domain/domain_purity_test.dart` enforces the pure-Dart rule as two independent gates.
+An import allowlist checks every `import`/`export` directive under `lib/domain/` against a short list of permitted `package:` prefixes (`decimal`, `rational`, `meta`, and sibling `lib/domain/` files); anything else, including any `dart:` import, fails the build.
+A raw-source denylist then scans each file's unstripped text for banned substrings such as `package:flutter/`, `package:sqflite`, and `package:pdf`, deliberately redundant with the allowlist — which also means a doc comment under `lib/domain/` must never spell one of those URIs out in its prose, or the build fails on the comment itself.
+A third test in the same file fails if any domain or domain-test source uses `double` or a floating-point literal.
 
 The `counter` feature is template scaffolding.
 Delete it together with `test/counter/`, its `home:` reference in `lib/app/view/app.dart`, and `test/app/view/app_test.dart` in the same change that introduces the first real screen.
@@ -55,11 +60,13 @@ After editing an ARB file, run `flutter gen-l10n` first, because `lib/l10n/gen/`
 
 ## Invariants that no linter or test will catch for you
 
-These come from the design document and have no tooling behind them.
+These come from the design document, plus decisions settled during the domain build that the document itself is silent on.
 Violating any of them produces code that analyzes clean, passes CI, and is wrong.
 
-- **Exact decimal arithmetic only.** Binary floating point is prohibited in every domain calculation. `double` must not appear in quantity, ratio, batch, or rounding logic.
-- **The domain unit is pure Dart.** It must not import Flutter, persistence, PDF generation, file access, or networking.
+- **Exact arithmetic, not decimal.** `Quantity` stores a `Rational` amount, not a `Decimal`, because a scale ratio such as one third has no finite decimal form that a `Decimal` could hold exactly. `Decimal` is only the construction and display type — `Quantity.fromDecimal`, `Quantity.parse`, and `toDecimal()` are its only touch points. `double` must never appear under `lib/domain/`; the purity guard above fails the build if it does.
+- **`Quantity` equality is structural; `compareTo` converts.** `==` compares `amount` and `unit` exactly, with no conversion, so a kilogram is never `==` to a thousand grams. `compareTo` converts the other operand into this quantity's unit first, so the same two values compare equal — and, like `convertTo`, it throws `UndefinedConversionError` when the units don't share a dimension, so it is not safe to call across dimensions. Any `Set` membership, deduplication, or `Map` key built from `Quantity` must convert to a common unit first; `quantity_test.dart` pins this divergence deliberately.
+- **A rounded component's displayed total is the sum of its displayed per-batch values, not a freshly rounded grand total.** The calculator sums already-rounded per-batch amounts into the total rather than rounding the exact total again, because a kitchen measures per batch. The design document is silent on this; it was a ruling made during implementation, not something derived from the spec, so treat it as open to revision.
+- **Warning identity, and a production run's override keys, are a (recipe id, component id) pair, never a component id alone.** A component id is only unique within its own recipe: a sub-recipe referenced from two places, or nested inside another recipe, can share a component id with something else in the same run. `ManualComponentWarning`, `RoundingAdjustedWarning`, and `ProductionRun`'s override map all key on the pair for this reason.
 - **Production-run snapshots are immutable.** Editing, archiving, or deleting a recipe must never alter a stored `ProductionRun`. History is never silently recalculated against the current recipe revision.
 - **A saved recipe edit creates a new revision.** Existing snapshots keep the revision values they were computed from.
 - **The recipe dependency graph is acyclic.** Direct and indirect cycles are rejected before a revision is committed, and the rejection names the dependency path.
@@ -82,8 +89,9 @@ If a task appears to require one, stop and ask.
 `bloc` and `flutter_bloc` are the state-management decision and are already wired through `Bloc.observer` in `lib/bootstrap.dart`.
 Do not introduce a second solution.
 
-The design document names capabilities the project does not yet have dependencies for: exact decimal arithmetic, transactional SQLite storage, PDF rendering, printing, sharing, and file picking.
-Each is a separate decision. Add one package at a time, in the change that first needs it, with a stated reason.
+The design document names capabilities the project does not yet have dependencies for: transactional SQLite storage, PDF rendering, printing, sharing, and file picking.
+Exact decimal arithmetic already has one: `decimal` and `rational` are dependencies, added for `lib/domain/`.
+Each remaining capability is a separate decision. Add one package at a time, in the change that first needs it, with a stated reason.
 
 ## Flavors
 
@@ -95,7 +103,7 @@ Flavor-independent setup, such as opening the database or registering an error h
 
 ## CI gates that fail in ways the local run does not show
 
-- **Coverage must be 100 percent.** `VeryGoodOpenSource/very_good_workflows` defaults `min_coverage` to 100, so a single uncovered line fails the build. New code needs its test in the same change.
+- **Coverage must be 100 percent, and that is weaker than it sounds.** `VeryGoodOpenSource/very_good_workflows` defaults `min_coverage` to 100, so a single uncovered line fails the build. New code needs its test in the same change. But 100 percent only means every reached line was reached, not that what it does there was asserted: swapping the order of the two checks in `RecipeDependencyGraph.assertResolvable` (cycle check, then missing-dependency check) still passes the full domain suite, because no existing test builds a graph carrying both defects at once, and both branches stay fully covered either way. Establish a property by mutating the code and naming the test that should fail, not by citing the coverage percentage.
 - **Spell check runs on every Markdown file in the repository**, not only modified ones, against the dictionaries configured in `cspell.json` at the repository root. New prose may need words added there or to `.cspell/custom-dictionary.txt`.
 - **Pull request titles must be conventional commits.** The `semantic-pull-request` job checks the title, not the commits.
 - **CI pins a Flutter version.** `.github/workflows/main.yaml` owns that number; do not restate it elsewhere. Keep it aligned with the version installed locally, because a mismatch surfaces as analyzer or formatter differences that reproduce nowhere else.

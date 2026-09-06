@@ -199,9 +199,13 @@ final class ProductionCalculator {
     return ScaledQuantity.rounded(exact: exact, rule: rule);
   }
 
-  /// The run's total, summed from the batches rather than freshly rounded
-  /// from the exact total. That keeps a total-oriented view and a
-  /// batch-oriented view of the same run in agreement.
+  /// The run's total for [component].
+  ///
+  /// A component with no rounding rule returns the unrounded exact total
+  /// directly, the same as [_presentBatch]. When a rule is set, the total is
+  /// summed from the already-rounded batches rather than freshly rounded
+  /// from the exact total, so a total-oriented view and a batch-oriented
+  /// view of the same run never disagree.
   ScaledQuantity _presentTotal(
     RecipeComponent component,
     Quantity exact,

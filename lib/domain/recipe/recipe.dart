@@ -27,8 +27,8 @@ final class Recipe {
         !baseYield.unit.canConvertTo(maxBatchYield.unit)) {
       throw IncompatibleYieldUnitError(baseYield.unit, maxBatchYield.unit);
     }
-    // A component's id is only meaningful as a key — warnings, and Task
-    // 10's per-component overrides, are addressed by (recipe id, component
+    // A component's id is only meaningful as a key — warnings and
+    // per-component overrides are both addressed by (recipe id, component
     // id) — so two components sharing an id within one recipe would make
     // that key ambiguous. Nothing about a RecipeComponent in isolation can
     // catch this; it is only visible once the whole list is assembled here.
