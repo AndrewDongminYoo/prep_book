@@ -39,3 +39,28 @@ final class InvalidRoundingIncrementError extends DomainError {
 
   final Decimal increment;
 }
+
+/// Raised when a recipe's base yield is missing, zero, or negative.
+final class InvalidBaseYieldError extends DomainError {
+  InvalidBaseYieldError(this.recipeId)
+    : super('recipe $recipeId has no positive base yield');
+
+  final String recipeId;
+}
+
+/// Raised when a component's fields contradict its scaling behavior.
+final class InvalidComponentError extends DomainError {
+  InvalidComponentError(this.componentId, String reason)
+    : super('component $componentId is invalid: $reason');
+
+  final String componentId;
+}
+
+/// Raised when a yield is expressed in an incompatible dimension.
+final class IncompatibleYieldUnitError extends DomainError {
+  IncompatibleYieldUnitError(this.expected, this.actual)
+    : super('expected a yield in ${expected.symbol}, got ${actual.symbol}');
+
+  final Unit expected;
+  final Unit actual;
+}
