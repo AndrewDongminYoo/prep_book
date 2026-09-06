@@ -88,11 +88,16 @@ final class ProductionRun {
   ///
   /// The calculated result is never rewritten, so the original value stays
   /// available for comparison.
-  ProductionRun override(
-    String recipeId,
-    String componentId,
-    Quantity value,
-  ) => _copyWith(overrides: {...overrides, (recipeId, componentId): value});
+  ///
+  /// Named rather than positional: [recipeId] and [componentId] are both
+  /// plain strings, so two positional parameters of the same type would
+  /// compile and silently swap when transposed, writing an override under
+  /// the wrong key.
+  ProductionRun override({
+    required String recipeId,
+    required String componentId,
+    required Quantity value,
+  }) => _copyWith(overrides: {...overrides, (recipeId, componentId): value});
 
   ProductionRun _copyWith({
     Map<OverrideKey, Quantity>? overrides,

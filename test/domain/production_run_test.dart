@@ -238,9 +238,9 @@ void main() {
     test('records an operator override without touching the result', () {
       final run = buildRun();
       final overridden = run.override(
-        'soup',
-        'stock',
-        Quantity.parse('5', Unit.liter),
+        recipeId: 'soup',
+        componentId: 'stock',
+        value: Quantity.parse('5', Unit.liter),
       );
 
       expect(
@@ -260,8 +260,16 @@ void main() {
       () {
         final run = buildRun();
         final overridden = run
-            .override('soup', 'stock', Quantity.parse('5', Unit.liter))
-            .override('broth', 'stock', Quantity.parse('9', Unit.liter));
+            .override(
+              recipeId: 'soup',
+              componentId: 'stock',
+              value: Quantity.parse('5', Unit.liter),
+            )
+            .override(
+              recipeId: 'broth',
+              componentId: 'stock',
+              value: Quantity.parse('9', Unit.liter),
+            );
 
         expect(
           overridden.overrides[('soup', 'stock')],
@@ -283,35 +291,70 @@ void main() {
 
         final acknowledgeThenOverride = buildRun()
             .acknowledge(acknowledgement)
-            .override('soup', 'stock', value);
+            .override(recipeId: 'soup', componentId: 'stock', value: value);
         expect(acknowledgeThenOverride.overrides[('soup', 'stock')], value);
         expect(acknowledgeThenOverride.isFinalizable, isTrue);
 
         final overrideThenAcknowledge = buildRun()
-            .override('soup', 'stock', value)
+            .override(recipeId: 'soup', componentId: 'stock', value: value)
             .acknowledge(acknowledgement);
         expect(overrideThenAcknowledge.overrides[('soup', 'stock')], value);
         expect(overrideThenAcknowledge.isFinalizable, isTrue);
       },
     );
 
-    test('keeps its own copy of a dependency snapshot', () {
-      final run = ProductionRun(
-        id: 'run-5',
-        createdAt: DateTime.utc(2026, 9, 6, 9),
-        recipe: soup(),
-        dependencySnapshot: {'broth': brothRecipe()},
-        targetYield: Quantity.parse('20', Unit.portion),
-        result: const ProductionCalculator().calculate(
+    test(
+      'copies the collections it is constructed with, rather than '
+      "aliasing the caller's map or set",
+      () {
+        // A wrong implementation that wraps the caller's own container in
+        // an unmodifiable view (instead of copying it first) would still
+        // pass the "exposes unmodifiable collections" test below — direct
+        // writes through `run.overrides` etc. would still throw — while
+        // leaking every mutation the caller makes to its original
+        // afterward. Mutating the caller's originals here, after
+        // construction, is what tells the two implementations apart.
+        final snapshot = <String, Recipe>{'broth': brothRecipe()};
+        final overridesMap = <OverrideKey, Quantity>{
+          ('soup', 'stock'): Quantity.parse('5', Unit.liter),
+        };
+        final acknowledged = <ProductionWarning>{
+          const ManualComponentWarning('soup', 'pepper'),
+        };
+
+        final run = ProductionRun(
+          id: 'run-5',
+          createdAt: DateTime.utc(2026, 9, 6, 9),
           recipe: soup(),
+          dependencySnapshot: snapshot,
           targetYield: Quantity.parse('20', Unit.portion),
-        ),
-      );
+          result: const ProductionCalculator().calculate(
+            recipe: soup(),
+            targetYield: Quantity.parse('20', Unit.portion),
+          ),
+          overrides: overridesMap,
+          acknowledgedWarnings: acknowledged,
+        );
 
-      brothRecipe(isArchived: true);
+        snapshot['broth'] = brothRecipe(isArchived: true);
+        snapshot['extra'] = soup();
+        overridesMap[('soup', 'stock')] = Quantity.parse('9', Unit.liter);
+        overridesMap[('broth', 'stock')] = Quantity.parse('1', Unit.liter);
+        acknowledged.clear();
 
-      expect(run.dependencySnapshot['broth']!.isArchived, isFalse);
-    });
+        expect(run.dependencySnapshot['broth']!.isArchived, isFalse);
+        expect(run.dependencySnapshot.containsKey('extra'), isFalse);
+        expect(
+          run.overrides[('soup', 'stock')],
+          Quantity.parse('5', Unit.liter),
+        );
+        expect(run.overrides.containsKey(('broth', 'stock')), isFalse);
+        expect(
+          run.acknowledgedWarnings,
+          contains(const ManualComponentWarning('soup', 'pepper')),
+        );
+      },
+    );
 
     test('exposes unmodifiable collections', () {
       final run = buildRun();
