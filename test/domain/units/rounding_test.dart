@@ -65,25 +65,51 @@ void main() {
       expect(scaled.wasRounded, isFalse);
     });
 
-    test('withDisplayed keeps the exact and displayed amounts given', () {
-      final exact = Quantity.parse('4.5', Unit.count('item'));
-      final displayed = Quantity.parse('5', Unit.count('item'));
-      final scaled = ScaledQuantity.withDisplayed(
-        exact: exact,
-        displayed: displayed,
-      );
-      expect(scaled.exact, exact);
-      expect(scaled.displayed, displayed);
-      expect(scaled.wasRounded, isTrue);
+    test('summing sums the exact and displayed amounts independently', () {
+      final rule = RoundingRule.upToIncrement(Decimal.one);
+      final parts = [
+        ScaledQuantity.rounded(
+          exact: Quantity.parse('1.2', Unit.count('item')),
+          rule: rule,
+        ),
+        ScaledQuantity.rounded(
+          exact: Quantity.parse('1.2', Unit.count('item')),
+          rule: rule,
+        ),
+        ScaledQuantity.rounded(
+          exact: Quantity.parse('0.6', Unit.count('item')),
+          rule: rule,
+        ),
+      ];
+      final total = ScaledQuantity.summing(parts);
+      expect(total.exact.amount, Decimal.parse('3').toRational());
+      expect(total.displayed.amount, Decimal.parse('5').toRational());
+      expect(total.wasRounded, isTrue);
     });
 
-    test('withDisplayed reports no rounding when the amounts match', () {
-      final value = Quantity.parse('6', Unit.count('item'));
-      final scaled = ScaledQuantity.withDisplayed(
-        exact: value,
-        displayed: value,
+    test('summing reports no rounding when every part agrees', () {
+      final value = Quantity.parse('2', Unit.gram);
+      final total = ScaledQuantity.summing([
+        ScaledQuantity.unrounded(value),
+        ScaledQuantity.unrounded(value),
+      ]);
+      expect(total.exact.amount, Decimal.parse('4').toRational());
+      expect(total.wasRounded, isFalse);
+    });
+
+    test('summing converts parts recorded in different units', () {
+      final total = ScaledQuantity.summing([
+        ScaledQuantity.unrounded(Quantity.parse('1', Unit.kilogram)),
+        ScaledQuantity.unrounded(Quantity.parse('500', Unit.gram)),
+      ]);
+      expect(total.exact, Quantity.parse('1.5', Unit.kilogram));
+    });
+
+    test('summing rejects an empty iterable', () {
+      expect(
+        () => ScaledQuantity.summing(const <ScaledQuantity>[]),
+        throwsA(isA<ArgumentError>()),
       );
-      expect(scaled.wasRounded, isFalse);
     });
   });
 }
