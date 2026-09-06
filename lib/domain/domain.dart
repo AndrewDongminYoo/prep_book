@@ -13,6 +13,7 @@ export 'recipe/component.dart';
 export 'recipe/ingredient.dart';
 export 'recipe/recipe.dart';
 export 'recipe/scaling_behavior.dart';
+export 'scaling/batch_plan.dart';
 export 'units/quantity.dart';
 export 'units/rounding.dart';
 export 'units/unit.dart';
