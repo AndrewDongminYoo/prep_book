@@ -91,3 +91,9 @@ final class MissingDependencyError extends DomainError {
   final String recipeId;
   final String missingId;
 }
+
+/// Raised when a target yield is missing, zero, or negative.
+final class InvalidTargetYieldError extends DomainError {
+  InvalidTargetYieldError()
+    : super('a production run needs a positive target yield');
+}
