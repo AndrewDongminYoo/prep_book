@@ -8,4 +8,5 @@ export 'package:decimal/decimal.dart' show Decimal;
 export 'package:rational/rational.dart' show Rational;
 
 export 'errors.dart';
+export 'units/quantity.dart';
 export 'units/unit.dart';

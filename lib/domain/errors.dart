@@ -1,4 +1,5 @@
 import 'package:prep_book/domain/units/unit.dart';
+import 'package:rational/rational.dart';
 
 /// Base type for every error the domain raises.
 sealed class DomainError implements Exception {
@@ -20,4 +21,12 @@ final class UndefinedConversionError extends DomainError {
 
   final Unit from;
   final Unit to;
+}
+
+/// Raised when a quantity would become negative.
+final class NegativeQuantityError extends DomainError {
+  NegativeQuantityError(this.amount)
+    : super('a quantity may not be negative: $amount');
+
+  final Rational amount;
 }
