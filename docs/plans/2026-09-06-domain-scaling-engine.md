@@ -19,6 +19,7 @@
 - Every commit passes the `trunk fmt` pre-commit hook. Stage with `git add <paths>`, then commit the index.
 - Commit subjects are conventional commits in English. No AI attribution trailers.
 - Korean is not used in domain identifiers or in code comments in this layer; the domain has no user-facing strings.
+- Inside a linked worktree, a spell check must pass `--no-gitignore`; without it cspell checks zero files and still reports success. Read the "Files checked" count.
 
 ## Representation decision, stated once
 
@@ -122,9 +123,10 @@ void main() {
     for (final entity in domain.listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       final source = entity.readAsStringSync();
-      for (final import in banned) {
-        if (source.contains("import '$import")) {
-          offenders.add('${entity.path} imports $import');
+      for (final reference in banned) {
+        // Any quoted reference, so a re-export cannot slip past the guard.
+        if (source.contains("'$reference")) {
+          offenders.add('${entity.path} references $reference');
         }
       }
     }
@@ -932,6 +934,18 @@ void main() {
       );
     });
 
+    test('an ingredient carries its display name and default unit', () {
+      final ingredient = Ingredient(
+        id: 'flour',
+        name: 'Bread flour',
+        defaultUnit: Unit.kilogram,
+        category: 'Dry goods',
+      );
+      expect(ingredient.name, 'Bread flour');
+      expect(ingredient.defaultUnit, Unit.kilogram);
+      expect(ingredient.category, 'Dry goods');
+    });
+
     test('targets compare by their referenced identifier', () {
       expect(const IngredientRef('flour'), const IngredientRef('flour'));
       expect(const SubRecipeRef('dough'), isNot(const IngredientRef('dough')));
@@ -1335,7 +1349,7 @@ export 'recipe/scaling_behavior.dart';
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `flutter test test/domain/recipe`
-Expected: PASS, 9 tests.
+Expected: PASS, 10 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -1464,6 +1478,7 @@ void main() {
         'd': recipeWith('d', []),
       });
       expect(graph.findCycleFrom('a'), isNull);
+      expect(() => graph.assertResolvable('a'), returnsNormally);
     });
   });
 }
@@ -1937,6 +1952,7 @@ void main() {
       expect(eggs.exact.amount, Rational.fromInt(9, 2));
       expect(eggs.displayed.amount, Rational.fromInt(5));
       expect(result.warnings, contains(const RoundingAdjustedWarning('eggs')));
+      expect(result.hasBlockingWarnings, isFalse);
     });
 
     test('rejects a target yield in another dimension', () {
@@ -2383,6 +2399,7 @@ void main() {
         result.warnings,
         contains(const ArchivedDependencyWarning('dough')),
       );
+      expect(result.hasBlockingWarnings, isTrue);
     });
 
     test('rejects a cycle before calculating', () {
@@ -2521,7 +2538,7 @@ git commit -m "feat(domain): expand nested sub-recipes recursively"
 
 **Interfaces:**
 
-- Consumes: `Recipe`, `Ingredient`, `Quantity`, `ProductionResult`, `ProductionWarning`.
+- Consumes: `Recipe`, `Quantity`, `ProductionResult`, `ProductionWarning`.
 - Produces:
   - `ProductionRun({required String id, required DateTime createdAt, required Recipe recipe, required Map<String, Recipe> dependencySnapshot, required Quantity targetYield, required ProductionResult result, Map<String, Quantity> overrides, Set<ProductionWarning> acknowledgedWarnings})`
   - `ProductionRun acknowledge(ProductionWarning warning)`, `ProductionRun override(String componentId, Quantity value)`, `bool get isFinalizable`.
@@ -2944,8 +2961,16 @@ Under "Invariants that no linter or test will catch for you", replace the exact-
 
 - [ ] **Step 3: Verify the documentation gates**
 
-Run: `trunk fmt CLAUDE.md && cspell --config cspell.json --no-progress "**/*.md"`
-Expected: no formatting changes needed, 0 spelling issues.
+Run `trunk fmt CLAUDE.md`, then the spell check below.
+Expected: no formatting changes needed, 0 spelling issues over 6 files.
+
+```sh
+cspell --config cspell.json --no-progress --no-gitignore \
+  --exclude '.superpowers/**' '**/*.md'
+```
+
+The `--no-gitignore` flag is required inside a linked worktree: `.git` is a file there rather than a directory, cspell's ignore-file resolution fails, and it silently checks zero files while reporting no issues.
+Always read the "Files checked" count, never the issue count alone.
 
 - [ ] **Step 4: Commit**
 
