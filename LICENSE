@@ -2,21 +2,64 @@ PrepBook Pro — Proprietary License
 
 Copyright (c) 2026 Dongmin Yu. All rights reserved.
 
-This software, its source code, its assets, and its accompanying documentation are
-proprietary and confidential.
+1. No license is granted
 
-No license, express or implied, is granted to any person to use, copy, modify, merge,
-publish, distribute, sublicense, or sell any part of this software, in source or binary
-form, without the prior written permission of the copyright holder.
+   No license, express or implied, is granted to any person or entity by the
+   publication of this source code, by any statement in this repository, or by
+   any act of the copyright holder short of a signed written grant. Every right
+   in this software is reserved.
 
-Unauthorized copying, redistribution, public disclosure, or commercial use of any part of
-this repository is prohibited.
+2. Public visibility is not a grant
 
-Third-party dependencies are not covered by this notice and remain subject to their own
-licenses.
+   This repository is publicly readable so that the project can use the
+   development and continuous-integration services offered to public
+   repositories during its build-out. That choice is a matter of development
+   cost. It does not place this software in the public domain, does not make it
+   open source, does not grant any license, and does not waive, limit, or
+   exhaust any right of the copyright holder.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
-OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+3. Prohibited without prior written permission
+
+   Without the prior written permission of the copyright holder, no person may:
+
+   - use, run, compile, build, or deploy this software, in whole or in part;
+   - copy, reproduce, or store it, other than the incidental copying a browser
+     or a version-control client performs while reading this repository;
+   - modify it, translate it, or create a derivative work from it;
+   - distribute, publish, sublicense, sell, rent, lend, or otherwise transfer
+     it;
+   - publish it, or any application built from it, to any application store or
+     other distribution channel;
+   - use it, in whole or in part, as training data for a machine-learning
+     model.
+
+   Reading this repository is permitted. Nothing beyond reading is.
+
+4. Contributions
+
+   Anything submitted to this repository as an issue, a pull request, or any
+   other contribution is offered to the copyright holder for unrestricted use
+   in this software and grants the contributor no right in it. Do not submit
+   material you are not entitled to offer on those terms.
+
+5. Trademarks
+
+   No right is granted in the "PrepBook" or "PrepBook Pro" names, in any
+   associated logo, or in any other mark of the copyright holder.
+
+6. Third-party dependencies
+
+   Third-party dependencies are not covered by this notice and remain subject
+   to their own licenses.
+
+7. No warranty and no liability
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+   IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+To request permission for any use, contact the copyright holder.
