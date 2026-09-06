@@ -32,8 +32,32 @@ final _lineComment = RegExp(r'//[^\n]*');
 final _stringLiteral = RegExp(
   r'''r?'(?:[^'\\\n]|\\.)*'|r?"(?:[^"\\\n]|\\.)*"''',
 );
-final _floatLiteral = RegExp(r'\b\d+\.\d+\b');
+// Catches both the decimal-point form (`1.5`, and `1.5e10` with an
+// exponent) and the exponent-only form (`1e10`) — Dart infers a `double`
+// for either shape. A plain integer literal (`1000`) matches neither
+// alternative and must keep passing.
+final _floatLiteral = RegExp(
+  r'\b\d+\.\d+(?:[eE][+-]?\d+)?\b|\b\d+[eE][+-]?\d+\b',
+);
 final _doubleKeyword = RegExp(r'\bdouble\b');
+
+/// Plain substrings that must never appear in a domain file, checked
+/// against the raw, unstripped source as a second, independent gate. The
+/// allowlist above is the primary check; this denylist is deliberately
+/// redundant so that anything which slips past the directive parser (e.g.
+/// a comment that hides a real semicolon) is still caught by a search that
+/// cannot be fooled by parsing tricks. Accepted tradeoff: a banned name
+/// appearing inside a domain string literal would also trip this gate —
+/// a false positive, which is loud and gets reworded, never a silent pass.
+const _bannedSubstrings = <String>[
+  'package:flutter/',
+  'package:flutter_bloc/',
+  'dart:io',
+  'dart:ui',
+  'package:sqflite',
+  'package:pdf',
+  'package:http',
+];
 
 /// Blanks out string contents and line comments so a legitimate string
 /// (e.g. `Decimal.parse('0.001')`) or a dartdoc comment cannot trip the
@@ -103,6 +127,23 @@ void main() {
         if (_doubleKeyword.hasMatch(stripped) ||
             _floatLiteral.hasMatch(stripped)) {
           offenders.add(file.path);
+        }
+      }
+
+      expect(offenders, isEmpty);
+    },
+  );
+
+  test(
+    'no domain source contains a banned substring (denylist backstop)',
+    () {
+      final offenders = <String>[];
+      for (final file in _dartFilesUnder('lib/domain')) {
+        final source = file.readAsStringSync();
+        for (final banned in _bannedSubstrings) {
+          if (source.contains(banned)) {
+            offenders.add('${file.path} contains banned substring: $banned');
+          }
         }
       }
 
