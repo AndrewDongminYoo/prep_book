@@ -73,12 +73,16 @@ final class Quantity implements Comparable<Quantity> {
   /// This means [compareTo] and `==` can disagree: two quantities that
   /// compare equal (a kilogram and a thousand grams) are not `==`,
   /// because equality never converts.
-  /// This conversion only succeeds within one unit dimension: comparing
-  /// across dimensions (mass against volume, for example) throws
-  /// [UndefinedConversionError], the same as [convertTo]. So sorting and
-  /// range comparisons are safe only within a dimension; identity checks,
-  /// `Set` membership, and `Map` keys are not safe even within one —
-  /// convert to a common unit first for those.
+  /// This conversion only succeeds when [Unit.canConvertTo] accepts the
+  /// pair: the two units must share a dimension, and that dimension must
+  /// either define a conversion (mass, volume) or the two units must carry
+  /// the same symbol. Two different count units, or two different
+  /// yield-only units, share a dimension but still fail that test, so
+  /// comparing them throws [UndefinedConversionError] exactly as a
+  /// cross-dimension comparison does, the same as [convertTo]. So sorting
+  /// and range comparisons are safe only between units [Unit.canConvertTo]
+  /// accepts; identity checks, `Set` membership, and `Map` keys are not
+  /// safe even then — convert to a common unit first for those.
   @override
   int compareTo(Quantity other) =>
       amount.compareTo(other.convertTo(unit).amount);
