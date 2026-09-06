@@ -19,14 +19,12 @@ final class ProductionCalculator {
   ///
   /// [recipeIndex] supplies sub-recipes so a [SubRecipeRef] component can be
   /// expanded recursively; a component's nested warnings are lifted into the
-  /// returned result's [ProductionResult.warnings]. An empty [recipeIndex]
-  /// (the default) opts out of expansion entirely: every [SubRecipeRef]
-  /// component comes back with a null [ScaledComponent.subRecipe] and no
-  /// validation runs. A non-empty [recipeIndex] is validated up front,
-  /// keyed by each recipe's own id — [recipe] itself must be one of the
-  /// entries, or this throws [MissingDependencyError] before any component
-  /// is scaled — and also throws [RecipeCycleError] if [recipe] cannot be
-  /// resolved into a finite tree.
+  /// returned result's [ProductionResult.warnings]. The dependency graph
+  /// (with [recipe] itself injected under its own id, so a caller never has
+  /// to include the root) is always validated before any component is
+  /// scaled, throwing [RecipeCycleError] or [MissingDependencyError] if
+  /// [recipe] cannot be resolved into a finite tree — a missing or archived
+  /// dependency blocks a run rather than expanding it silently.
   ProductionResult calculate({
     required Recipe recipe,
     required Quantity targetYield,
@@ -36,9 +34,10 @@ final class ProductionCalculator {
     if (!recipe.baseYield.unit.canConvertTo(targetYield.unit)) {
       throw IncompatibleYieldUnitError(recipe.baseYield.unit, targetYield.unit);
     }
-    if (recipeIndex.isNotEmpty) {
-      RecipeDependencyGraph(recipeIndex).assertResolvable(recipe.id);
-    }
+    RecipeDependencyGraph({
+      ...recipeIndex,
+      recipe.id: recipe,
+    }).assertResolvable(recipe.id);
 
     final target = targetYield.convertTo(recipe.baseYield.unit);
     final ratio = target.amount / recipe.baseYield.amount;
@@ -120,19 +119,21 @@ final class ProductionCalculator {
   }
 
   /// Scales the recipe [recipeId] points at to [requiredYield] and folds its
-  /// warnings into the parent's [warnings], or returns null when [recipeId]
-  /// is absent from [recipeIndex]. See [calculate] for when that lookup can
-  /// fail versus when it is expected to.
-  ProductionResult? _expand(
+  /// warnings into the parent's [warnings], de-duplicating a warning that is
+  /// already present — a sub-recipe referenced more than once by the same
+  /// parent must not report the same problem twice.
+  ProductionResult _expand(
     String recipeId,
     Quantity requiredYield,
     Map<String, Recipe> recipeIndex,
     List<ProductionWarning> warnings,
   ) {
-    final child = recipeIndex[recipeId];
-    if (child == null) return null;
+    // calculate already validated the dependency graph — with the current
+    // recipe injected under its own id — before scaling any component, so
+    // every direct sub-recipe reference is guaranteed present here.
+    final child = recipeIndex[recipeId]!;
     if (child.isArchived) {
-      warnings.add(ArchivedDependencyWarning(recipeId));
+      _addUnique(warnings, ArchivedDependencyWarning(recipeId));
     }
 
     final nested = calculate(
@@ -140,8 +141,18 @@ final class ProductionCalculator {
       targetYield: requiredYield,
       recipeIndex: recipeIndex,
     );
-    warnings.addAll(nested.warnings);
+    for (final warning in nested.warnings) {
+      _addUnique(warnings, warning);
+    }
     return nested;
+  }
+
+  /// Appends [warning] to [warnings] unless an equal warning is already
+  /// there. [ProductionWarning] compares by value, so two warnings about the
+  /// same problem — the same manual component, the same archived recipe —
+  /// are equal regardless of which expansion produced them.
+  void _addUnique(List<ProductionWarning> warnings, ProductionWarning warning) {
+    if (!warnings.contains(warning)) warnings.add(warning);
   }
 
   /// Each batch's share of the whole run, in batch order.

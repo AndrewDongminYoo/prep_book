@@ -70,6 +70,34 @@ Recipe roundedPie() {
   );
 }
 
+/// A pie that references the same sub-recipe twice, so a warning lifted
+/// from that sub-recipe would otherwise be duplicated in the parent.
+Recipe twicePie() {
+  return Recipe(
+    id: 'twice-pie',
+    revision: 1,
+    name: 'Twice pie',
+    baseYield: Quantity.parse('4', Unit.portion),
+    components: [
+      RecipeComponent(
+        id: 'top-dough',
+        target: const SubRecipeRef('dough'),
+        baseQuantity: Quantity.parse('1', Unit.kilogram),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: 0,
+      ),
+      RecipeComponent(
+        id: 'bottom-dough',
+        target: const SubRecipeRef('dough'),
+        baseQuantity: Quantity.parse('1', Unit.kilogram),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: 1,
+      ),
+    ],
+    modifiedAt: DateTime.utc(2026, 9, 6),
+  );
+}
+
 void main() {
   const calculator = ProductionCalculator();
 
@@ -128,6 +156,35 @@ void main() {
       expect(result.warnings, contains(isA<ManualComponentWarning>()));
       expect(result.hasBlockingWarnings, isTrue);
     });
+
+    test(
+      'de-duplicates a warning lifted from a sub-recipe referenced twice',
+      () {
+        final result = calculator.calculate(
+          recipe: twicePie(),
+          targetYield: Quantity.parse('4', Unit.portion),
+          recipeIndex: {'dough': dough()},
+        );
+
+        expect(
+          result.warnings.whereType<ManualComponentWarning>(),
+          hasLength(1),
+        );
+
+        final top = result.components[0];
+        final bottom = result.components[1];
+        expect(top.total!.exact, Quantity.parse('1', Unit.kilogram));
+        expect(bottom.total!.exact, Quantity.parse('1', Unit.kilogram));
+        expect(
+          top.subRecipe!.components.first.total!.exact,
+          Quantity.parse('0.6', Unit.kilogram),
+        );
+        expect(
+          bottom.subRecipe!.components.first.total!.exact,
+          Quantity.parse('0.6', Unit.kilogram),
+        );
+      },
+    );
 
     test('warns when a dependency is archived', () {
       final result = calculator.calculate(

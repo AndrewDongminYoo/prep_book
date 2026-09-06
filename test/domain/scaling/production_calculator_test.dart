@@ -313,9 +313,27 @@ void main() {
           modifiedAt: DateTime.utc(2026, 9, 6),
         );
 
+        final starterDough = Recipe(
+          id: 'starter-dough',
+          revision: 1,
+          name: 'Starter dough',
+          baseYield: Quantity.parse('2', Unit.kilogram),
+          components: [
+            RecipeComponent(
+              id: 'starter-flour',
+              target: const IngredientRef('flour'),
+              baseQuantity: Quantity.parse('1.5', Unit.kilogram),
+              behavior: ScalingBehavior.proportional,
+              displayOrder: 0,
+            ),
+          ],
+          modifiedAt: DateTime.utc(2026, 9, 6),
+        );
+
         final result = calculator.calculate(
           recipe: recipe,
           targetYield: Quantity.parse('10', Unit.portion),
+          recipeIndex: {'starter-dough': starterDough},
         );
         expectBatchesSumToTotal(result);
 
@@ -357,7 +375,13 @@ void main() {
         expect(salt.perBatch, [isNull, isNull, isNull]);
 
         final dough = componentById(result, 'dough');
-        expect(dough.subRecipe, isNull);
+        final nestedStarter = dough.subRecipe;
+        expect(nestedStarter, isNotNull);
+        expect(nestedStarter!.scaleRatio, Rational.one);
+        expect(
+          nestedStarter.components.single.total!.exact,
+          Quantity.parse('1.5', Unit.kilogram),
+        );
         expect(dough.total!.exact, Quantity.parse('2', Unit.kilogram));
         expect(
           dough.perBatch.map((batch) => batch!.exact).toList(),
