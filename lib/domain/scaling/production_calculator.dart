@@ -27,7 +27,10 @@ final class ProductionCalculator {
   /// makes the calculation impossible, so it is a hard error. An archived
   /// dependency is different: the calculation can still run, so it expands
   /// normally and instead raises a blocking [ArchivedDependencyWarning] the
-  /// operator must acknowledge before the run is finalized.
+  /// operator must acknowledge before the run is finalized. The same check
+  /// applies to [recipe] itself, not only to a sub-recipe it references —
+  /// a run computed straight from an archived recipe raises the warning
+  /// too.
   ProductionResult calculate({
     required Recipe recipe,
     required Quantity targetYield,
@@ -50,6 +53,9 @@ final class ProductionCalculator {
     );
 
     final warnings = <ProductionWarning>[];
+    if (recipe.isArchived) {
+      _addUnique(warnings, ArchivedDependencyWarning(recipe.id));
+    }
     final components = [
       for (final component in recipe.components)
         _scale(component, ratio, plan, recipeIndex, recipe.id, warnings),

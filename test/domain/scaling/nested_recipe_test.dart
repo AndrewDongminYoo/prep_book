@@ -28,12 +28,13 @@ Recipe dough({bool isArchived = false}) {
   );
 }
 
-Recipe pie() {
+Recipe pie({bool isArchived = false}) {
   return Recipe(
     id: 'pie',
     revision: 1,
     name: 'Pie',
     baseYield: Quantity.parse('4', Unit.portion),
+    isArchived: isArchived,
     components: [
       RecipeComponent(
         id: 'pie-dough',
@@ -305,6 +306,44 @@ void main() {
       );
       expect(result.hasBlockingWarnings, isTrue);
     });
+
+    test('warns when the run is computed straight from an archived recipe', () {
+      final result = calculator.calculate(
+        recipe: pie(isArchived: true),
+        targetYield: Quantity.parse('4', Unit.portion),
+        recipeIndex: {'dough': dough(), 'pie': pie(isArchived: true)},
+      );
+      expect(
+        result.warnings,
+        contains(const ArchivedDependencyWarning('pie')),
+      );
+      expect(result.hasBlockingWarnings, isTrue);
+    });
+
+    test(
+      'reports both when the run is computed from an archived recipe that '
+      'also references an archived child, without collapsing them since '
+      'their recipe ids differ',
+      () {
+        final result = calculator.calculate(
+          recipe: pie(isArchived: true),
+          targetYield: Quantity.parse('4', Unit.portion),
+          recipeIndex: {
+            'dough': dough(isArchived: true),
+            'pie': pie(isArchived: true),
+          },
+        );
+
+        final archivedWarnings = result.warnings
+            .whereType<ArchivedDependencyWarning>()
+            .toList();
+        expect(archivedWarnings, hasLength(2));
+        expect(
+          archivedWarnings.map((w) => w.recipeId),
+          unorderedEquals(['pie', 'dough']),
+        );
+      },
+    );
 
     test(
       'de-duplicates an archived-dependency warning when the sub-recipe is '
