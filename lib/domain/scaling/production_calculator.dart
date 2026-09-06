@@ -19,10 +19,14 @@ final class ProductionCalculator {
   ///
   /// [recipeIndex] supplies sub-recipes so a [SubRecipeRef] component can be
   /// expanded recursively; a component's nested warnings are lifted into the
-  /// returned result's [ProductionResult.warnings]. When [recipeIndex] is
-  /// non-empty it is validated up front, throwing [RecipeCycleError] or
-  /// [MissingDependencyError] if [recipe] cannot be resolved into a finite
-  /// tree.
+  /// returned result's [ProductionResult.warnings]. An empty [recipeIndex]
+  /// (the default) opts out of expansion entirely: every [SubRecipeRef]
+  /// component comes back with a null [ScaledComponent.subRecipe] and no
+  /// validation runs. A non-empty [recipeIndex] is validated up front,
+  /// keyed by each recipe's own id — [recipe] itself must be one of the
+  /// entries, or this throws [MissingDependencyError] before any component
+  /// is scaled — and also throws [RecipeCycleError] if [recipe] cannot be
+  /// resolved into a finite tree.
   ProductionResult calculate({
     required Recipe recipe,
     required Quantity targetYield,
@@ -117,9 +121,8 @@ final class ProductionCalculator {
 
   /// Scales the recipe [recipeId] points at to [requiredYield] and folds its
   /// warnings into the parent's [warnings], or returns null when [recipeId]
-  /// is absent from [recipeIndex] (an empty index opts a caller out of
-  /// expansion entirely; [calculate] rejects a non-empty index that cannot
-  /// resolve [recipeId] before any component is scaled).
+  /// is absent from [recipeIndex]. See [calculate] for when that lookup can
+  /// fail versus when it is expected to.
   ProductionResult? _expand(
     String recipeId,
     Quantity requiredYield,
