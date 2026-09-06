@@ -9,4 +9,5 @@ export 'package:rational/rational.dart' show Rational;
 
 export 'errors.dart';
 export 'units/quantity.dart';
+export 'units/rounding.dart';
 export 'units/unit.dart';

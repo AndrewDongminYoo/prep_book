@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:prep_book/domain/units/unit.dart';
 import 'package:rational/rational.dart';
 
@@ -29,4 +30,12 @@ final class NegativeQuantityError extends DomainError {
     : super('a quantity may not be negative: $amount');
 
   final Rational amount;
+}
+
+/// Raised when a rounding increment is not strictly positive.
+final class InvalidRoundingIncrementError extends DomainError {
+  InvalidRoundingIncrementError(this.increment)
+    : super('a rounding increment must be positive: $increment');
+
+  final Decimal increment;
 }
