@@ -7,7 +7,8 @@ sealed class DomainError implements Exception {
   final String message;
 
   @override
-  // The domain never obfuscates itself; this message is diagnostic-only.
+  // Diagnostic-only: this message is logged for debugging, never shown
+  // to an end user, so an obfuscated release renaming the type is fine.
   // ignore: no_runtimetype_tostring
   String toString() => '$runtimeType: $message';
 }
