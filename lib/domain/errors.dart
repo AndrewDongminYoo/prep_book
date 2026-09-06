@@ -64,3 +64,21 @@ final class IncompatibleYieldUnitError extends DomainError {
   final Unit expected;
   final Unit actual;
 }
+
+/// Raised when a recipe depends on itself, directly or indirectly.
+final class RecipeCycleError extends DomainError {
+  RecipeCycleError(this.path)
+    : super('recipe dependency cycle: ${path.join(' -> ')}');
+
+  /// The dependency path, ending at the identifier that repeats.
+  final List<String> path;
+}
+
+/// Raised when a referenced recipe is not in the index.
+final class MissingDependencyError extends DomainError {
+  MissingDependencyError(this.recipeId, this.missingId)
+    : super('recipe $recipeId references missing recipe $missingId');
+
+  final String recipeId;
+  final String missingId;
+}

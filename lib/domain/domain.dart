@@ -8,6 +8,7 @@ export 'package:decimal/decimal.dart' show Decimal;
 export 'package:rational/rational.dart' show Rational;
 
 export 'errors.dart';
+export 'graph/recipe_dependency_graph.dart';
 export 'recipe/component.dart';
 export 'recipe/ingredient.dart';
 export 'recipe/recipe.dart';
