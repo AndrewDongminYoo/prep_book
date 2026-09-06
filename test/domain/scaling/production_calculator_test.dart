@@ -188,7 +188,10 @@ void main() {
       final eggs = componentById(result, 'eggs').total!;
       expect(eggs.exact.amount, Rational.fromInt(9, 2));
       expect(eggs.displayed.amount, Rational.fromInt(5));
-      expect(result.warnings, contains(const RoundingAdjustedWarning('eggs')));
+      expect(
+        result.warnings,
+        contains(const RoundingAdjustedWarning('buns', 'eggs')),
+      );
       expect(result.hasBlockingWarnings, isFalse);
     });
 
@@ -257,7 +260,7 @@ void main() {
         expect(eggs.total!.displayed.amount, Rational.fromInt(5));
         expect(
           result.warnings,
-          contains(const RoundingAdjustedWarning('eggs')),
+          contains(const RoundingAdjustedWarning('buns', 'eggs')),
         );
       },
     );

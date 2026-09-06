@@ -98,6 +98,39 @@ Recipe twicePie() {
   );
 }
 
+/// A pie with its own manual component sharing an id with a manual
+/// component in the sub-recipe it references — same component id, two
+/// different recipes. The manual component is listed (and so scaled) before
+/// the sub-recipe reference: its warning is appended unconditionally when
+/// its own line is scaled, and only afterward does expanding the sub-recipe
+/// lift a same-shaped warning through the de-duplicating path — the order
+/// that actually exercises "does the second warning get silently dropped."
+Recipe saltyPie() {
+  return Recipe(
+    id: 'salty-pie',
+    revision: 1,
+    name: 'Salty pie',
+    baseYield: Quantity.parse('4', Unit.portion),
+    components: [
+      RecipeComponent(
+        id: 'dough-salt',
+        target: const IngredientRef('salt'),
+        baseQuantity: null,
+        behavior: ScalingBehavior.manual,
+        displayOrder: 0,
+      ),
+      RecipeComponent(
+        id: 'pie-dough',
+        target: const SubRecipeRef('dough'),
+        baseQuantity: Quantity.parse('1', Unit.kilogram),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: 1,
+      ),
+    ],
+    modifiedAt: DateTime.utc(2026, 9, 6),
+  );
+}
+
 void main() {
   const calculator = ProductionCalculator();
 
@@ -186,6 +219,31 @@ void main() {
       },
     );
 
+    test(
+      'a manual component sharing an id with one in its sub-recipe still '
+      'produces two distinct warnings',
+      () {
+        final result = calculator.calculate(
+          recipe: saltyPie(),
+          targetYield: Quantity.parse('4', Unit.portion),
+          recipeIndex: {'dough': dough()},
+        );
+
+        // Asserted as a raw count plus the distinguishing field (rather than
+        // via ManualComponentWarning's own equality) so this test still
+        // fails correctly if that equality itself is ever the thing that
+        // regresses.
+        final manualWarnings = result.warnings
+            .whereType<ManualComponentWarning>()
+            .toList();
+        expect(manualWarnings, hasLength(2));
+        expect(
+          manualWarnings.map((w) => w.recipeId),
+          unorderedEquals(['salty-pie', 'dough']),
+        );
+      },
+    );
+
     test('warns when a dependency is archived', () {
       final result = calculator.calculate(
         recipe: pie(),
@@ -198,6 +256,27 @@ void main() {
       );
       expect(result.hasBlockingWarnings, isTrue);
     });
+
+    test(
+      'de-duplicates an archived-dependency warning when the sub-recipe is '
+      'referenced twice',
+      () {
+        final result = calculator.calculate(
+          recipe: twicePie(),
+          targetYield: Quantity.parse('4', Unit.portion),
+          recipeIndex: {'dough': dough(isArchived: true)},
+        );
+
+        expect(
+          result.warnings.whereType<ArchivedDependencyWarning>(),
+          hasLength(1),
+        );
+        expect(
+          result.warnings,
+          contains(const ArchivedDependencyWarning('dough')),
+        );
+      },
+    );
 
     test('rejects a cycle before calculating', () {
       final a = Recipe(

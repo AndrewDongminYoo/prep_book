@@ -23,8 +23,11 @@ final class ProductionCalculator {
   /// (with [recipe] itself injected under its own id, so a caller never has
   /// to include the root) is always validated before any component is
   /// scaled, throwing [RecipeCycleError] or [MissingDependencyError] if
-  /// [recipe] cannot be resolved into a finite tree — a missing or archived
-  /// dependency blocks a run rather than expanding it silently.
+  /// [recipe] cannot be resolved into a finite tree — a missing dependency
+  /// makes the calculation impossible, so it is a hard error. An archived
+  /// dependency is different: the calculation can still run, so it expands
+  /// normally and instead raises a blocking [ArchivedDependencyWarning] the
+  /// operator must acknowledge before the run is finalized.
   ProductionResult calculate({
     required Recipe recipe,
     required Quantity targetYield,
@@ -49,7 +52,7 @@ final class ProductionCalculator {
     final warnings = <ProductionWarning>[];
     final components = [
       for (final component in recipe.components)
-        _scale(component, ratio, plan, recipeIndex, warnings),
+        _scale(component, ratio, plan, recipeIndex, recipe.id, warnings),
     ];
 
     return ProductionResult(
@@ -65,12 +68,13 @@ final class ProductionCalculator {
     Rational ratio,
     BatchPlan plan,
     Map<String, Recipe> recipeIndex,
+    String recipeId,
     List<ProductionWarning> warnings,
   ) {
     // A null base quantity means manual; RecipeComponent guarantees it.
     final base = component.baseQuantity;
     if (base == null) {
-      warnings.add(ManualComponentWarning(component.id));
+      warnings.add(ManualComponentWarning(recipeId, component.id));
       return ScaledComponent(
         source: component,
         total: null,
@@ -98,11 +102,17 @@ final class ProductionCalculator {
       for (final value in perBatchExact) _presentBatch(component, value),
     ];
     final totalExact = perBatchExact.reduce((a, b) => a + b);
-    final total = _presentTotal(component, totalExact, perBatch, warnings);
+    final total = _presentTotal(
+      component,
+      totalExact,
+      perBatch,
+      recipeId,
+      warnings,
+    );
 
     final expanded = switch (component.target) {
-      SubRecipeRef(:final recipeId) => _expand(
-        recipeId,
+      SubRecipeRef(recipeId: final targetRecipeId) => _expand(
+        targetRecipeId,
         total.displayed,
         recipeIndex,
         warnings,
@@ -185,13 +195,14 @@ final class ProductionCalculator {
     RecipeComponent component,
     Quantity exact,
     List<ScaledQuantity> perBatch,
+    String recipeId,
     List<ProductionWarning> warnings,
   ) {
     if (component.rounding == null) return ScaledQuantity.unrounded(exact);
 
     final total = ScaledQuantity.summing(perBatch);
     if (total.wasRounded) {
-      warnings.add(RoundingAdjustedWarning(component.id));
+      warnings.add(RoundingAdjustedWarning(recipeId, component.id));
     }
     return total;
   }
