@@ -37,6 +37,78 @@ void main() {
       );
     });
 
+    test('rejects two manual components sharing an id', () {
+      expect(
+        () => Recipe(
+          id: 'r1',
+          revision: 1,
+          name: 'Baguette',
+          baseYield: Quantity.parse('10', Unit.portion),
+          components: [
+            RecipeComponent(
+              id: 'shared-id',
+              target: const IngredientRef('salt'),
+              baseQuantity: null,
+              behavior: ScalingBehavior.manual,
+              displayOrder: 0,
+            ),
+            RecipeComponent(
+              id: 'shared-id',
+              target: const IngredientRef('pepper'),
+              baseQuantity: null,
+              behavior: ScalingBehavior.manual,
+              displayOrder: 1,
+            ),
+          ],
+          modifiedAt: DateTime.utc(2026, 9, 6),
+        ),
+        throwsA(
+          isA<InvalidComponentError>().having(
+            (e) => e.componentId,
+            'componentId',
+            'shared-id',
+          ),
+        ),
+      );
+    });
+
+    test('rejects two rounded proportional components sharing an id', () {
+      expect(
+        () => Recipe(
+          id: 'r1',
+          revision: 1,
+          name: 'Baguette',
+          baseYield: Quantity.parse('10', Unit.portion),
+          components: [
+            RecipeComponent(
+              id: 'shared-round',
+              target: const IngredientRef('egg'),
+              baseQuantity: Quantity.parse('3', Unit.count('item')),
+              behavior: ScalingBehavior.proportional,
+              rounding: RoundingRule.upToIncrement(Decimal.one),
+              displayOrder: 0,
+            ),
+            RecipeComponent(
+              id: 'shared-round',
+              target: const IngredientRef('butter'),
+              baseQuantity: Quantity.parse('2', Unit.count('item')),
+              behavior: ScalingBehavior.proportional,
+              rounding: RoundingRule.upToIncrement(Decimal.one),
+              displayOrder: 1,
+            ),
+          ],
+          modifiedAt: DateTime.utc(2026, 9, 6),
+        ),
+        throwsA(
+          isA<InvalidComponentError>().having(
+            (e) => e.componentId,
+            'componentId',
+            'shared-round',
+          ),
+        ),
+      );
+    });
+
     test('accepts a max batch yield in the same dimension', () {
       final recipe = buildRecipe(
         maxBatchYield: Quantity.parse('4', Unit.portion),

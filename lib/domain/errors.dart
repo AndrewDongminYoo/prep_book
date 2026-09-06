@@ -48,7 +48,8 @@ final class InvalidBaseYieldError extends DomainError {
   final String recipeId;
 }
 
-/// Raised when a component's fields contradict its scaling behavior.
+/// Raised when a component's fields contradict its scaling behavior, or a
+/// recipe's component list repeats an id.
 final class InvalidComponentError extends DomainError {
   InvalidComponentError(this.componentId, String reason)
     : super('component $componentId is invalid: $reason');
