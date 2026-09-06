@@ -81,6 +81,16 @@ final class ProductionCalculator {
     final base = component.baseQuantity;
     if (base == null) {
       _addUnique(warnings, ManualComponentWarning(recipeId, component.id));
+      // A manual line has no total to expand a sub-recipe against, so it
+      // never reaches _expand — the only other place an archived reference
+      // is reported. Archival is a property of the reference itself rather
+      // than of the numbers, so it is checked here too; the index lookup is
+      // safe for the reason _expand gives below.
+      if (component.target case SubRecipeRef(
+        recipeId: final targetRecipeId,
+      ) when recipeIndex[targetRecipeId]!.isArchived) {
+        _addUnique(warnings, ArchivedDependencyWarning(targetRecipeId));
+      }
       return ScaledComponent(
         source: component,
         total: null,
@@ -173,11 +183,14 @@ final class ProductionCalculator {
   /// are equal only when both the recipe and the component match — the
   /// same sub-recipe referenced twice collapses to one warning, while a
   /// same-named component in a different recipe stays distinct.
-  /// [ArchivedDependencyWarning] compares by recipe id alone. A single
-  /// recipe cannot produce two equal warnings for itself, since a
-  /// component's id is unique within its own recipe, so routing a
-  /// component's own warning through here changes nothing for that case —
-  /// it only ever matters once expansion is involved.
+  /// [ArchivedDependencyWarning] compares by recipe id alone, so one recipe
+  /// can produce two equal ones for itself with no expansion involved: two
+  /// manual lines naming the same archived sub-recipe raise the warning
+  /// twice, and this is what collapses them. The other two carry a
+  /// component id that is unique within its own recipe, so a single recipe
+  /// cannot produce two equal warnings of those kinds — routing a
+  /// component's own warning through here changes nothing for them until
+  /// expansion is involved.
   void _addUnique(List<ProductionWarning> warnings, ProductionWarning warning) {
     if (!warnings.contains(warning)) warnings.add(warning);
   }

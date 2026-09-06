@@ -160,6 +160,55 @@ Recipe saltyPieReversed() {
   );
 }
 
+/// A pie whose dough line names a sub-recipe but is manual, so it carries
+/// no quantity and there is nothing to expand the sub-recipe against.
+Recipe manualDoughPie() {
+  return Recipe(
+    id: 'manual-dough-pie',
+    revision: 1,
+    name: 'Manual dough pie',
+    baseYield: Quantity.parse('4', Unit.portion),
+    components: [
+      RecipeComponent(
+        id: 'pie-dough',
+        target: const SubRecipeRef('dough'),
+        baseQuantity: null,
+        behavior: ScalingBehavior.manual,
+        displayOrder: 0,
+      ),
+    ],
+    modifiedAt: DateTime.utc(2026, 9, 6),
+  );
+}
+
+/// The same manual sub-recipe reference twice over, so an archived target
+/// would be reported twice without de-duplication.
+Recipe twiceManualDoughPie() {
+  return Recipe(
+    id: 'twice-manual-dough-pie',
+    revision: 1,
+    name: 'Twice manual dough pie',
+    baseYield: Quantity.parse('4', Unit.portion),
+    components: [
+      RecipeComponent(
+        id: 'top-dough',
+        target: const SubRecipeRef('dough'),
+        baseQuantity: null,
+        behavior: ScalingBehavior.manual,
+        displayOrder: 0,
+      ),
+      RecipeComponent(
+        id: 'bottom-dough',
+        target: const SubRecipeRef('dough'),
+        baseQuantity: null,
+        behavior: ScalingBehavior.manual,
+        displayOrder: 1,
+      ),
+    ],
+    modifiedAt: DateTime.utc(2026, 9, 6),
+  );
+}
+
 void main() {
   const calculator = ProductionCalculator();
 
@@ -362,6 +411,77 @@ void main() {
         expect(
           result.warnings,
           contains(const ArchivedDependencyWarning('dough')),
+        );
+      },
+    );
+
+    test(
+      'warns that an archived sub-recipe is referenced by a manual line, '
+      'which has no total to expand it against',
+      () {
+        final result = calculator.calculate(
+          recipe: manualDoughPie(),
+          targetYield: Quantity.parse('4', Unit.portion),
+          recipeIndex: {'dough': dough(isArchived: true)},
+        );
+
+        expect(
+          result.warnings,
+          contains(const ArchivedDependencyWarning('dough')),
+        );
+        expect(
+          result.warnings,
+          contains(
+            const ManualComponentWarning('manual-dough-pie', 'pie-dough'),
+          ),
+        );
+        expect(result.hasBlockingWarnings, isTrue);
+        // The line is still not expanded: there is no quantity to scale the
+        // sub-recipe to, so only its archived identity is reported.
+        expect(result.components.single.subRecipe, isNull);
+      },
+    );
+
+    test(
+      'does not raise an archived warning for a manual line whose '
+      'sub-recipe is live',
+      () {
+        final result = calculator.calculate(
+          recipe: manualDoughPie(),
+          targetYield: Quantity.parse('4', Unit.portion),
+          recipeIndex: {'dough': dough()},
+        );
+
+        expect(
+          result.warnings,
+          contains(
+            const ManualComponentWarning('manual-dough-pie', 'pie-dough'),
+          ),
+        );
+        expect(
+          result.warnings,
+          isNot(contains(isA<ArchivedDependencyWarning>())),
+        );
+      },
+    );
+
+    test(
+      'de-duplicates an archived-dependency warning raised by two manual '
+      'lines naming the same sub-recipe',
+      () {
+        final result = calculator.calculate(
+          recipe: twiceManualDoughPie(),
+          targetYield: Quantity.parse('4', Unit.portion),
+          recipeIndex: {'dough': dough(isArchived: true)},
+        );
+
+        expect(
+          result.warnings.whereType<ArchivedDependencyWarning>(),
+          hasLength(1),
+        );
+        expect(
+          result.warnings.whereType<ManualComponentWarning>(),
+          hasLength(2),
         );
       },
     );
