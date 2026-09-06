@@ -60,9 +60,8 @@ After editing an ARB file, run `flutter gen-l10n` first, because `lib/l10n/gen/`
 
 ## Invariants that no linter or test will catch for you
 
-These come from the design document, or from decisions settled during the domain build that the document itself is silent on.
-Some are now enforced mechanically; each bullet names its own guard where one exists.
-Where none is named, violating the bullet produces code that analyzes clean, passes CI, and is wrong.
+These record decisions taken during the build that a future session would otherwise re-derive or reverse, whether or not the design document covers them.
+A bullet naming no test is not evidence that nothing pins it — check before assuming a decision is unguarded.
 
 - **Exact arithmetic, not decimal.** `Quantity` stores a `Rational` amount, not a `Decimal`, because a scale ratio such as one third has no finite decimal form that a `Decimal` could hold exactly. `Decimal` is only the construction and display type — `Quantity.fromDecimal`, `Quantity.parse`, and `toDecimal()` are its only touch points. `double` must never appear under `lib/domain/`; the purity guard above fails the build if it does.
 - **`Quantity` equality is structural; `compareTo` converts.** `==` compares `amount` and `unit` exactly, with no conversion, so a kilogram is never `==` to a thousand grams. `compareTo` converts the other operand into this quantity's unit first, so the same two values compare equal — and, like `convertTo`, it throws `UndefinedConversionError` whenever `Unit.canConvertTo` rejects the pair: not only across dimensions, but also between two different count units or two different yield-only units, which share a dimension but still never convert. So `compareTo` is only safe between units `canConvertTo` accepts. Any `Set` membership, deduplication, or `Map` key built from `Quantity` must convert to a common unit first; `quantity_test.dart` pins this divergence deliberately.
