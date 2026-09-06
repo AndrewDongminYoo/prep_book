@@ -82,15 +82,16 @@ final class ProductionCalculator {
       ];
     }
 
+    final perBatch = [
+      for (final value in perBatchExact) _presentBatch(component, value),
+    ];
     final totalExact = perBatchExact.reduce((a, b) => a + b);
-    final total = _present(component, totalExact, warnings);
+    final total = _presentTotal(component, totalExact, perBatch, warnings);
 
     return ScaledComponent(
       source: component,
       total: total,
-      perBatch: [
-        for (final value in perBatchExact) _present(component, value, null),
-      ],
+      perBatch: perBatch,
     );
   }
 
@@ -110,18 +111,37 @@ final class ProductionCalculator {
     }
   }
 
-  ScaledQuantity _present(
-    RecipeComponent component,
-    Quantity exact,
-    List<ProductionWarning>? warnings,
-  ) {
+  /// One batch's displayed amount, rounded independently of the total.
+  ScaledQuantity _presentBatch(RecipeComponent component, Quantity exact) {
     final rule = component.rounding;
     if (rule == null) return ScaledQuantity.unrounded(exact);
+    return ScaledQuantity.rounded(exact: exact, rule: rule);
+  }
 
-    final scaled = ScaledQuantity.rounded(exact: exact, rule: rule);
-    if (scaled.wasRounded && warnings != null) {
+  /// The run's total, whose displayed amount is the sum of the batches'
+  /// already-rounded displayed amounts, not a fresh rounding of the exact
+  /// total. That keeps a total-oriented view and a batch-oriented view of
+  /// the same run in agreement.
+  ScaledQuantity _presentTotal(
+    RecipeComponent component,
+    Quantity exact,
+    List<ScaledQuantity> perBatch,
+    List<ProductionWarning> warnings,
+  ) {
+    if (component.rounding == null) return ScaledQuantity.unrounded(exact);
+
+    final displayed = perBatch
+        .map((batch) => batch.displayed)
+        .reduce(
+          (a, b) => a + b,
+        );
+    final total = ScaledQuantity.withDisplayed(
+      exact: exact,
+      displayed: displayed,
+    );
+    if (total.wasRounded) {
       warnings.add(RoundingAdjustedWarning(component.id));
     }
-    return scaled;
+    return total;
   }
 }

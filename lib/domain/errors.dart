@@ -92,7 +92,7 @@ final class MissingDependencyError extends DomainError {
   final String missingId;
 }
 
-/// Raised when a target yield is missing, zero, or negative.
+/// Raised when a target yield is zero.
 final class InvalidTargetYieldError extends DomainError {
   InvalidTargetYieldError()
     : super('a production run needs a positive target yield');

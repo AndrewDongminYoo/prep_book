@@ -46,6 +46,16 @@ final class ScaledQuantity {
   ScaledQuantity.rounded({required this.exact, required RoundingRule rule})
     : displayed = rule.apply(exact);
 
+  /// A value whose displayed amount was computed independently of its
+  /// exact amount, rather than derived from it by a rounding rule.
+  ///
+  /// Used for a total whose displayed amount is the sum of already-rounded
+  /// per-batch values, so the total and the batches never disagree.
+  const ScaledQuantity.withDisplayed({
+    required this.exact,
+    required this.displayed,
+  });
+
   /// The calculated value before any rounding.
   final Quantity exact;
 

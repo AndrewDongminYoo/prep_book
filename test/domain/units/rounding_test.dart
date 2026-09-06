@@ -64,5 +64,26 @@ void main() {
       );
       expect(scaled.wasRounded, isFalse);
     });
+
+    test('withDisplayed keeps the exact and displayed amounts given', () {
+      final exact = Quantity.parse('4.5', Unit.count('item'));
+      final displayed = Quantity.parse('5', Unit.count('item'));
+      final scaled = ScaledQuantity.withDisplayed(
+        exact: exact,
+        displayed: displayed,
+      );
+      expect(scaled.exact, exact);
+      expect(scaled.displayed, displayed);
+      expect(scaled.wasRounded, isTrue);
+    });
+
+    test('withDisplayed reports no rounding when the amounts match', () {
+      final value = Quantity.parse('6', Unit.count('item'));
+      final scaled = ScaledQuantity.withDisplayed(
+        exact: value,
+        displayed: value,
+      );
+      expect(scaled.wasRounded, isFalse);
+    });
   });
 }
