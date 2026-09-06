@@ -68,10 +68,27 @@ final class Quantity implements Comparable<Quantity> {
   Quantity operator +(Quantity other) =>
       Quantity.fromRational(amount + other.convertTo(unit).amount, unit);
 
+  /// Orders by [amount] after converting [other] into this quantity's
+  /// [unit], so `1 kg` compares greater than `999 g`.
+  /// This means [compareTo] and `==` can disagree: two quantities that
+  /// compare equal (a kilogram and a thousand grams) are not `==`,
+  /// because equality never converts.
+  /// Sorting and range comparisons are safe across mixed units; identity
+  /// checks, `Set` membership, and `Map` keys are not — convert to a
+  /// common unit first for those.
   @override
   int compareTo(Quantity other) =>
       amount.compareTo(other.convertTo(unit).amount);
 
+  /// Equality is structural, not dimensional: this quantity equals
+  /// [other] only when both [amount] and [unit] match exactly, with no
+  /// conversion performed.
+  /// A kilogram is therefore never `==` to a thousand grams, even though
+  /// [compareTo] would rank them equal after converting.
+  /// Any `Set`, `Map` key, or other membership or deduplication check
+  /// that must treat mixed-unit quantities as interchangeable has to
+  /// call [convertTo] on a common unit first — this operator will not
+  /// do it.
   @override
   bool operator ==(Object other) =>
       other is Quantity && other.amount == amount && other.unit == unit;

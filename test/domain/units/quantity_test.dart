@@ -91,5 +91,19 @@ void main() {
     test('describes itself with the unit symbol', () {
       expect(Quantity.parse('1.5', Unit.kilogram).toString(), '1.5 kg');
     });
+
+    test('equality is unit-structural while ordering converts', () {
+      final kilogram = Quantity.parse('1', Unit.kilogram);
+      final thousandGrams = Quantity.parse('1000', Unit.gram);
+
+      expect(kilogram, isNot(equals(thousandGrams)));
+      expect(kilogram.compareTo(thousandGrams), 0);
+    });
+
+    test('converting to the same unit returns the identical instance', () {
+      final grams = Quantity.parse('250', Unit.gram);
+
+      expect(identical(grams.convertTo(Unit.gram), grams), isTrue);
+    });
   });
 }
