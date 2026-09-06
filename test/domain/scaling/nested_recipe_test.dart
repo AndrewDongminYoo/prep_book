@@ -47,6 +47,29 @@ Recipe pie() {
   );
 }
 
+/// A pie whose dough line rounds up for display, so its exact and displayed
+/// totals diverge — this discriminates which one a sub-recipe is expanded
+/// against.
+Recipe roundedPie() {
+  return Recipe(
+    id: 'rounded-pie',
+    revision: 1,
+    name: 'Rounded pie',
+    baseYield: Quantity.parse('4', Unit.portion),
+    components: [
+      RecipeComponent(
+        id: 'rounded-pie-dough',
+        target: const SubRecipeRef('dough'),
+        baseQuantity: Quantity.parse('0.9', Unit.kilogram),
+        behavior: ScalingBehavior.proportional,
+        rounding: RoundingRule.upToIncrement(Decimal.parse('0.5')),
+        displayOrder: 0,
+      ),
+    ],
+    modifiedAt: DateTime.utc(2026, 9, 6),
+  );
+}
+
 void main() {
   const calculator = ProductionCalculator();
 
@@ -70,6 +93,29 @@ void main() {
       expect(
         result.warnings,
         isNot(contains(isA<ArchivedDependencyWarning>())),
+      );
+    });
+
+    test('expands the sub-recipe against the displayed total, not the '
+        'exact one', () {
+      // Exact: 0.9kg * (8/4) = 1.8kg. Displayed: rounded up to 2.0kg. Dough's
+      // base yield is 2kg, so only the displayed value scales it to exactly
+      // Rational.one; the exact value would scale it to 9/10.
+      final result = calculator.calculate(
+        recipe: roundedPie(),
+        targetYield: Quantity.parse('8', Unit.portion),
+        recipeIndex: {'dough': dough(), 'rounded-pie': roundedPie()},
+      );
+
+      final line = result.components.single;
+      expect(line.total!.exact, Quantity.parse('1.8', Unit.kilogram));
+      expect(line.total!.displayed, Quantity.parse('2', Unit.kilogram));
+
+      final nested = line.subRecipe!;
+      expect(nested.scaleRatio, Rational.one);
+      expect(
+        nested.components.first.total!.exact,
+        Quantity.parse('1.2', Unit.kilogram),
       );
     });
 
