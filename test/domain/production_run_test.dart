@@ -444,10 +444,12 @@ void main() {
         // soup()'s second component ('pepper') is manual, so its perBatch
         // is built from List.filled rather than the [for ...] literal the
         // other components above go through — a separate call site the W1
-        // fix must also cover.
+        // fix must also cover. List.filled is already fixed-length, so
+        // clear() would throw regardless of List.unmodifiable; index
+        // assignment is the operation that actually distinguishes the fix.
         final run = buildRun();
         expect(
-          () => run.result.components[1].perBatch.clear(),
+          () => run.result.components[1].perBatch[0] = null,
           throwsUnsupportedError,
         );
       },
