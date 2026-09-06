@@ -1,4 +1,5 @@
 import 'package:prep_book/domain/errors.dart';
+import 'package:prep_book/domain/graph/recipe_dependency_graph.dart';
 import 'package:prep_book/domain/recipe/component.dart';
 import 'package:prep_book/domain/recipe/recipe.dart';
 import 'package:prep_book/domain/recipe/scaling_behavior.dart';
@@ -16,8 +17,12 @@ final class ProductionCalculator {
 
   /// Scales [recipe] to [targetYield].
   ///
-  /// [recipeIndex] supplies sub-recipes; it is unused until nested expansion
-  /// is added.
+  /// [recipeIndex] supplies sub-recipes so a [SubRecipeRef] component can be
+  /// expanded recursively; a component's nested warnings are lifted into the
+  /// returned result's [ProductionResult.warnings]. When [recipeIndex] is
+  /// non-empty it is validated up front, throwing [RecipeCycleError] or
+  /// [MissingDependencyError] if [recipe] cannot be resolved into a finite
+  /// tree.
   ProductionResult calculate({
     required Recipe recipe,
     required Quantity targetYield,
@@ -26,6 +31,9 @@ final class ProductionCalculator {
     if (targetYield.isZero) throw InvalidTargetYieldError();
     if (!recipe.baseYield.unit.canConvertTo(targetYield.unit)) {
       throw IncompatibleYieldUnitError(recipe.baseYield.unit, targetYield.unit);
+    }
+    if (recipeIndex.isNotEmpty) {
+      RecipeDependencyGraph(recipeIndex).assertResolvable(recipe.id);
     }
 
     final target = targetYield.convertTo(recipe.baseYield.unit);
@@ -38,7 +46,7 @@ final class ProductionCalculator {
     final warnings = <ProductionWarning>[];
     final components = [
       for (final component in recipe.components)
-        _scale(component, ratio, plan, warnings),
+        _scale(component, ratio, plan, recipeIndex, warnings),
     ];
 
     return ProductionResult(
@@ -53,6 +61,7 @@ final class ProductionCalculator {
     RecipeComponent component,
     Rational ratio,
     BatchPlan plan,
+    Map<String, Recipe> recipeIndex,
     List<ProductionWarning> warnings,
   ) {
     // A null base quantity means manual; RecipeComponent guarantees it.
@@ -88,11 +97,48 @@ final class ProductionCalculator {
     final totalExact = perBatchExact.reduce((a, b) => a + b);
     final total = _presentTotal(component, totalExact, perBatch, warnings);
 
+    final expanded = switch (component.target) {
+      SubRecipeRef(:final recipeId) => _expand(
+        recipeId,
+        total.displayed,
+        recipeIndex,
+        warnings,
+      ),
+      IngredientRef() => null,
+    };
+
     return ScaledComponent(
       source: component,
       total: total,
       perBatch: perBatch,
+      subRecipe: expanded,
     );
+  }
+
+  /// Scales the recipe [recipeId] points at to [requiredYield] and folds its
+  /// warnings into the parent's [warnings], or returns null when [recipeId]
+  /// is absent from [recipeIndex] (an empty index opts a caller out of
+  /// expansion entirely; [calculate] rejects a non-empty index that cannot
+  /// resolve [recipeId] before any component is scaled).
+  ProductionResult? _expand(
+    String recipeId,
+    Quantity requiredYield,
+    Map<String, Recipe> recipeIndex,
+    List<ProductionWarning> warnings,
+  ) {
+    final child = recipeIndex[recipeId];
+    if (child == null) return null;
+    if (child.isArchived) {
+      warnings.add(ArchivedDependencyWarning(recipeId));
+    }
+
+    final nested = calculate(
+      recipe: child,
+      targetYield: requiredYield,
+      recipeIndex: recipeIndex,
+    );
+    warnings.addAll(nested.warnings);
+    return nested;
   }
 
   /// Each batch's share of the whole run, in batch order.
