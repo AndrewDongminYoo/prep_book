@@ -42,8 +42,11 @@ final class RecipeDependencyGraph {
 
   /// Throws when [recipeId] cannot be resolved into a finite tree.
   ///
-  /// Cycles are reported before missing dependencies, because a cycle makes
-  /// the traversal that finds missing references non-terminating.
+  /// Cycles are checked before missing dependencies. On a graph that carries
+  /// both defects, checking the cycle first reports the cycle, while
+  /// checking missing dependencies first would report the missing reference
+  /// instead; the cycle is the more actionable error, so it is reported
+  /// first.
   void assertResolvable(String recipeId) {
     final cycle = findCycleFrom(recipeId);
     if (cycle != null) throw RecipeCycleError(cycle);

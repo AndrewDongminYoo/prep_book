@@ -82,11 +82,17 @@ void main() {
       );
     });
 
-    test('reports a missing root', () {
+    test('reports a missing root as absent, not self-referencing', () {
       final graph = RecipeDependencyGraph(const {});
       expect(
         () => graph.assertResolvable('a'),
-        throwsA(isA<MissingDependencyError>()),
+        throwsA(
+          isA<MissingDependencyError>().having(
+            (e) => e.message,
+            'message',
+            'recipe a is not in the index',
+          ),
+        ),
       );
     });
 

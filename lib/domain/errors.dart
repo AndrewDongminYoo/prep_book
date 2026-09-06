@@ -76,8 +76,17 @@ final class RecipeCycleError extends DomainError {
 
 /// Raised when a referenced recipe is not in the index.
 final class MissingDependencyError extends DomainError {
+  // `recipeId == missingId` only ever happens when the walk's root itself is
+  // absent: a cycle check runs before this walk, so a recipe that truly
+  // references itself is already reported as a RecipeCycleError, never
+  // reaches here. That case is not "references itself" but "is not there",
+  // so it gets its own message rather than the misleading reference wording.
   MissingDependencyError(this.recipeId, this.missingId)
-    : super('recipe $recipeId references missing recipe $missingId');
+    : super(
+        recipeId == missingId
+            ? 'recipe $recipeId is not in the index'
+            : 'recipe $recipeId references missing recipe $missingId',
+      );
 
   final String recipeId;
   final String missingId;
