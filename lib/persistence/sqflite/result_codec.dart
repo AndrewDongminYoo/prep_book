@@ -375,8 +375,11 @@ Map<String, Object?> _scaledComponentToJson(ScaledComponent component) =>
           : _resultToJson(component.subRecipe!),
     };
 
-/// [rowLabel] is carried only so an expanded sub-recipe's own warnings can
-/// still name the stored run they came out of; nothing else here uses it.
+/// Rebuilds a [ScaledComponent], including the nested result of an expanded
+/// sub-recipe when the component has one.
+///
+/// [rowLabel] is carried only so that nested result's own warnings can still
+/// name the stored run they came out of; nothing else here uses it.
 ScaledComponent _scaledComponentFromJson(
   Map<String, Object?> json, {
   required String rowLabel,
