@@ -104,4 +104,9 @@ CREATE UNIQUE INDEX idx_ack_without_component
   ON run_acknowledgements (run_id, warning_kind, recipe_id)
   WHERE component_id IS NULL
 ''',
+  // The only query against this table filters on `run_id` alone, which
+  // implies neither partial index's `WHERE` clause, so SQLite could use
+  // neither and scanned the table instead. One plain index now costs a line;
+  // adding it later costs a schema upgrade.
+  'CREATE INDEX idx_ack_run ON run_acknowledgements (run_id)',
 ];

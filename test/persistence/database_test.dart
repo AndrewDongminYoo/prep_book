@@ -54,6 +54,29 @@ void main() {
     expect(await db.getVersion(), currentSchemaVersion);
   });
 
+  // The two unique indexes on this table are partial, and neither of their
+  // `WHERE` clauses is implied by a filter on `run_id` alone — which is the
+  // only filter the repository ever applies to it. Asserting the index
+  // exists would not prove the scan is gone, because SQLite decides that
+  // for itself, so this reads the plan it actually chose.
+  test('an acknowledgement lookup by run uses an index, not a scan', () async {
+    final db = await openPrepBookDatabase(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(db.close);
+
+    final plan = await db.rawQuery(
+      'EXPLAIN QUERY PLAN '
+      'SELECT * FROM run_acknowledgements WHERE run_id = ?',
+      ['run-1'],
+    );
+    final detail = plan.single['detail']! as String;
+
+    expect(detail, contains('USING INDEX idx_ack_run'));
+    expect(detail, isNot(contains('SCAN')));
+  });
+
   test('foreign key enforcement is on', () async {
     final db = await openPrepBookDatabase(
       path: inMemoryDatabasePath,
