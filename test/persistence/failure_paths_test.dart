@@ -651,6 +651,63 @@ void main() {
     },
   );
 
+  // The third corrupt input to the same column, and the one guard in this
+  // layer whose fail-closed behavior depends on a property of a domain
+  // internal rather than on anything visible here. `_recipeFromRow` builds
+  // the notes as a lazy `cast<String>()` view, which checks no element at
+  // construction — the first two lines assert exactly that, since an eager
+  // cast would throw on the line that builds it and this test would then
+  // pass for a reason unrelated to the guard.
+  //
+  // What forces the check back inside the try block is `Recipe`'s factory
+  // copying the list with `List.unmodifiable`, which iterates it (see
+  // `lib/domain/recipe/recipe.dart`). Without that copy the element
+  // `TypeError` would be raised later, by whichever caller first read the
+  // list, outside every guard this layer has. Pinned here so a domain
+  // change that stopped copying is caught by this suite rather than by a
+  // bare `TypeError` reaching a screen.
+  test(
+    'a preparation_notes element of the wrong type is a corrupt row',
+    () async {
+      // The lazy half of the premise: `cast` checks no element when the
+      // view is built, only when one is read. An eager cast would throw on
+      // the line below and this test would pass for a reason that has
+      // nothing to do with the guard.
+      final lazy = <Object?>[1].cast<String>();
+      expect(() => lazy.first, throwsA(isA<TypeError>()));
+
+      // The domain half, asserted against the domain rather than assumed:
+      // `Recipe`'s factory copies the list, so the element check happens
+      // during construction — synchronously, inside whatever try block the
+      // caller built it in. A domain that stopped copying fails here.
+      expect(
+        () => Recipe(
+          id: 'premise',
+          revision: 1,
+          name: 'Premise',
+          baseYield: Quantity.parse('1', Unit.gram),
+          modifiedAt: DateTime.utc(2026, 9, 7),
+          components: const [],
+          preparationNotes: <Object?>[1].cast<String>(),
+        ),
+        throwsA(isA<TypeError>()),
+      );
+
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate("UPDATE recipes SET preparation_notes = '[1, 2]'");
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipes row r revision 1',
+            'holds a column of the wrong type',
+          ),
+        ),
+      );
+    },
+  );
+
   test('an unparseable recipes.modified_at is a corrupt row', () async {
     await recipes.saveRevision(buildRecipe());
     await db.rawUpdate("UPDATE recipes SET modified_at = 'yesterday'");

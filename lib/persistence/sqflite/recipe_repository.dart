@@ -143,7 +143,10 @@ final class SqfliteRecipeRepository implements RecipeRepository {
   /// as a [CorruptDatabaseError], the same way `decodeRunPayload` restates
   /// a cast failure on decoded JSON. `preparationNotes` is covered too:
   /// `Recipe`'s factory copies the list, which forces the lazy
-  /// `cast<String>()` below to check its elements inside this block.
+  /// `cast<String>()` below to check its elements inside this block. That
+  /// is a property of a domain internal rather than of anything visible
+  /// here, so `failure_paths_test.dart` asserts it against the domain
+  /// directly as well as reaching this guard through a stored row.
   /// A domain rejection is not swallowed by this — every modelled domain
   /// failure extends `DomainError`, never `TypeError` — and neither is a
   /// component's own corruption, which [_componentFromRow] has already
