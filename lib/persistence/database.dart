@@ -12,6 +12,34 @@ const currentSchemaVersion = 1;
 /// building the upgrade and its means of verification at the same time.
 const schemaUpgrades = <int, List<String>>{};
 
+/// Runs every upgrade that takes a database from version [from] to [to], in
+/// ascending order of the version it produces.
+///
+/// This is what [openPrepBookDatabase] hands sqflite as its `onUpgrade`
+/// handler, and it is a named function rather than a closure so a test can
+/// drive it directly. At version 1 there is no stored version between 0 and
+/// the current one, so sqflite calls `onCreate` and never this — without a
+/// seam the whole upgrade path would ship unexercised, which is the failure
+/// the specification asks the harness to prevent by existing from the first
+/// version.
+///
+/// [upgrades] defaults to the real [schemaUpgrades]. A test substitutes a
+/// map of its own, so the loop, the ordering, and the gap between two
+/// registered versions are all exercised against a real database before the
+/// first genuine upgrade is written.
+Future<void> applySchemaUpgrades(
+  DatabaseExecutor db,
+  int from,
+  int to, {
+  Map<int, List<String>> upgrades = schemaUpgrades,
+}) async {
+  for (var version = from + 1; version <= to; version++) {
+    for (final statement in upgrades[version] ?? const <String>[]) {
+      await db.execute(statement);
+    }
+  }
+}
+
 /// Opens the database at [path], creating or upgrading it as needed.
 ///
 /// Takes a path rather than resolving one so that a candidate database can be
@@ -35,21 +63,7 @@ Future<Database> openPrepBookDatabase({
           await db.execute(statement);
         }
       },
-      // coverage:ignore-start
-      // Unreachable while currentSchemaVersion is 1: sqflite calls onCreate,
-      // never onUpgrade, for a brand-new (version 0) database, and no stored
-      // version can sit strictly between 0 and 1. This becomes reachable
-      // once schemaUpgrades gets its first entry (schema version 2) — delete
-      // these two markers in that same change and cover this with a real
-      // upgrade test instead.
-      onUpgrade: (db, from, to) async {
-        for (var version = from + 1; version <= to; version++) {
-          for (final statement in schemaUpgrades[version] ?? const <String>[]) {
-            await db.execute(statement);
-          }
-        }
-      },
-      // coverage:ignore-end
+      onUpgrade: applySchemaUpgrades,
     ),
   );
 }
