@@ -195,6 +195,40 @@ ProductionRun buildRunWithDynamicUnits() {
   );
 }
 
+/// A minimal run whose recipe carries [modifiedAt] verbatim, so the
+/// payload's own timestamp encoding can be asserted on a value that is not
+/// already UTC.
+ProductionRun buildRunModifiedAt(DateTime modifiedAt) {
+  final recipe = Recipe(
+    id: 'scone',
+    revision: 1,
+    name: 'Scone',
+    baseYield: Quantity.parse('1', Unit.kilogram),
+    modifiedAt: modifiedAt,
+    components: [
+      RecipeComponent(
+        id: 'flour',
+        target: const IngredientRef('flour'),
+        baseQuantity: Quantity.parse('500', Unit.gram),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: 0,
+      ),
+    ],
+  );
+  final targetYield = recipe.baseYield;
+  return ProductionRun(
+    id: 'run-5',
+    createdAt: DateTime.utc(2026, 9, 7),
+    recipe: recipe,
+    dependencySnapshot: {'scone': recipe},
+    targetYield: targetYield,
+    result: const ProductionCalculator().calculate(
+      recipe: recipe,
+      targetYield: targetYield,
+    ),
+  );
+}
+
 // None of Recipe, RecipeComponent, BatchPlan, ScaledComponent,
 // ProductionResult, or ScaledQuantity override `==`, so `expect(a, b)` on
 // any of them falls back to identity — always false for a freshly decoded
@@ -372,6 +406,43 @@ void main() {
     final eggs = decoded.result.components.single;
     expect(eggs.source.baseQuantity!.unit, Unit.count('egg'));
     expect(eggs.source.baseQuantity!.unit.dimension, UnitDimension.count);
+  });
+
+  // Every other fixture in this file builds `modifiedAt` with `DateTime.utc`,
+  // for which `toUtc()` is identity, so the suite exercised only the form
+  // that already serializes with a `Z`. The application will hand this layer
+  // `DateTime.now()`, which is local. The two column writers were normalized
+  // earlier; this is the third writer of the same value, and leaving it naive
+  // made the same recipe read back through `findRevision` and through a run
+  // payload compare unequal — `DateTime`'s `==` includes the `isUtc` flag —
+  // while denoting the same instant, and left the payload copy a wall clock
+  // that re-anchors wherever it is next read.
+  //
+  // `toIso8601String` emits the `Z` from the `isUtc` flag rather than from
+  // the zone offset, so a runner whose local zone is UTC still fails this
+  // without the normalization: `local` is not a UTC `DateTime` there either.
+  test('a local modifiedAt is normalized to UTC in the payload', () {
+    final local = DateTime(2026, 9, 7, 21, 30);
+    expect(local.isUtc, isFalse);
+
+    final json = encodeRunPayload(buildRunModifiedAt(local));
+    final encoded = jsonDecode(json) as Map<String, Object?>;
+
+    expect(
+      (encoded['recipe']! as Map<String, Object?>)['modifiedAt'],
+      endsWith('Z'),
+    );
+    // The dependency snapshot goes through the same encoder, and a run's
+    // dependencies carry timestamps of their own.
+    final snapshot = encoded['dependencySnapshot']! as Map<String, Object?>;
+    expect(
+      (snapshot['scone']! as Map<String, Object?>)['modifiedAt'],
+      endsWith('Z'),
+    );
+
+    final decoded = decodeRunPayload(json, rowLabel: _rowLabel);
+    expect(decoded.recipe.modifiedAt.isUtc, isTrue);
+    expect(decoded.recipe.modifiedAt.isAtSameMomentAs(local), isTrue);
   });
 
   // Both of the codec's row-naming failures are asserted on their message,

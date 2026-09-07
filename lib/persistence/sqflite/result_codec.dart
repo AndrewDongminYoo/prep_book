@@ -341,6 +341,15 @@ RecipeComponent _recipeComponentFromJson(Map<String, Object?> json) {
 /// [_recipeComponentToJson]: a field added to `Recipe` has to be added
 /// here and there, and the pairing is stated in both places so neither can
 /// be changed alone without the other being visible.
+///
+/// `modifiedAt` is normalized to UTC before serializing, the same way the
+/// `recipes.modified_at` and `production_runs.created_at` columns are. A
+/// caller supplies whatever `DateTime` it holds and `DateTime.now()` is
+/// local, so leaving it alone would store a wall clock that re-anchors when
+/// read in another zone — and would make the same recipe read back through
+/// `SqfliteRecipeRepository.findRevision` and through a run payload compare
+/// unequal, since `DateTime`'s `==` includes the `isUtc` flag, while both
+/// denote the same instant.
 Map<String, Object?> _recipeToJson(Recipe recipe) => <String, Object?>{
   'id': recipe.id,
   'revision': recipe.revision,
@@ -352,7 +361,7 @@ Map<String, Object?> _recipeToJson(Recipe recipe) => <String, Object?>{
       : _quantityToJson(recipe.maxBatchYield!),
   'components': [for (final c in recipe.components) _recipeComponentToJson(c)],
   'preparationNotes': recipe.preparationNotes,
-  'modifiedAt': recipe.modifiedAt.toIso8601String(),
+  'modifiedAt': recipe.modifiedAt.toUtc().toIso8601String(),
   'isArchived': recipe.isArchived,
 };
 
