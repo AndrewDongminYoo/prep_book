@@ -57,25 +57,23 @@ The schema separates those two mutable sets into their own tables so that the sn
 A `Quantity` holds an exact `Rational` whose numerator and denominator are both `BigInt`.
 SQLite's `INTEGER` is 64-bit and cannot be guaranteed to hold either, so a quantity is stored as a numerator and denominator pair in `TEXT`.
 
+A `Quantity` therefore occupies three columns wherever one is stored: numerator, denominator, and unit.
+
 A `ScaledQuantity` carries both the exact value and the displayed value, because the design document requires rounding never to destroy the exact quantity.
-Both are stored.
-One scaled quantity therefore occupies five columns:
+Both are stored, but never as columns.
+A `ScaledQuantity` only ever appears inside a `ProductionResult`, which the schema section below keeps whole in `result_json`, so no table has a column group for one.
+Its exact and displayed values are two quantities encoded in that JSON, each in the same numerator, denominator and unit form for the same reason.
 
-```sql
-exact_numerator        TEXT NOT NULL,
-exact_denominator      TEXT NOT NULL,
-displayed_numerator    TEXT NOT NULL,
-displayed_denominator  TEXT NOT NULL,
-unit_symbol            TEXT NOT NULL
-```
-
-A plain `Quantity`, which has no displayed counterpart, occupies three: numerator, denominator, and unit symbol.
+Corrected 2026-09-07: this section previously said a scaled quantity occupied five columns and listed them, which the schema section below already contradicted.
 
 Storing a single normalized decimal string was rejected.
 A scale ratio such as one third has no finite decimal form, so that encoding would have to truncate, and truncating is the exact failure the domain chose `Rational` over `Decimal` to avoid.
 
-`Unit` has a private constructor and a fixed table defined in the domain, so only its symbol is stored and the instance is recovered by lookup.
-An unknown symbol on read is a corrupt-database error, never a silently constructed unit.
+`Unit`'s own constructor is private, but the domain's unit space is not a fixed table: `Unit.count` and `Unit.namedYield` build units from arbitrary caller-chosen symbols, so no lookup can recover them.
+A unit is stored as the string `unitToStorage` produces — a bare symbol for one of the domain's fixed instances, and a `count:` or `yield:` prefixed form for one built from an arbitrary symbol, so a single column round-trips both.
+A stored value that is neither is a corrupt-database error, never a silently constructed unit.
+
+Corrected 2026-09-07: this section previously said `Unit` had a fixed table and that only a symbol was stored and recovered by lookup, which is why `unitToStorage` exists at all.
 
 `RoundingRule.increment` and `Unit.factorToCanonical` are `Decimal` rather than `Rational`.
 A `Decimal` is by definition a terminating decimal, so those are stored as a single `TEXT` value with no loss.

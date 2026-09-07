@@ -1,9 +1,11 @@
 /// The tables as of schema version 1.
 ///
-/// A quantity is three columns (numerator, denominator, unit symbol) because a
+/// A quantity is three columns (numerator, denominator, unit) because a
 /// `Rational` holds `BigInt` values that SQLite's 64-bit `INTEGER` cannot be
-/// relied on to store. A scaled quantity is five: the exact pair, the displayed
-/// pair, and the shared unit.
+/// relied on to store. A scaled quantity is no columns at all: one only ever
+/// appears inside a `ProductionResult`, which `production_runs` keeps whole
+/// in `result_json`, so its exact and displayed values are two quantities
+/// encoded there rather than a column group here.
 const _createIdxRunsRecipe =
     'CREATE INDEX idx_runs_recipe ON production_runs '
     '(recipe_id, recipe_revision)';
