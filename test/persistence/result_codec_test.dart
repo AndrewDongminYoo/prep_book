@@ -152,6 +152,43 @@ ProductionRun buildRunWithSubRecipeAndBatches() {
   );
 }
 
+/// A run whose yield is a dynamic named-yield unit (`Unit.namedYield`) and
+/// whose one component is a dynamic count unit (`Unit.count`) — neither is
+/// one of the eight fixed units `unitToStorage`/`unitFromStorage` special-
+/// case, so this is the only fixture that would notice a regression from
+/// `unitToStorage(quantity.unit)` back to the bare `quantity.unit.symbol`.
+ProductionRun buildRunWithDynamicUnits() {
+  final recipe = Recipe(
+    id: 'tray-bake',
+    revision: 1,
+    name: 'Tray bake',
+    baseYield: Quantity.parse('10', Unit.namedYield('tray')),
+    modifiedAt: DateTime.utc(2026, 9, 7),
+    components: [
+      RecipeComponent(
+        id: 'eggs',
+        target: const IngredientRef('egg'),
+        baseQuantity: Quantity.parse('12', Unit.count('egg')),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: 0,
+      ),
+    ],
+  );
+  final targetYield = Quantity.parse('10', Unit.namedYield('tray'));
+  final result = const ProductionCalculator().calculate(
+    recipe: recipe,
+    targetYield: targetYield,
+  );
+  return ProductionRun(
+    id: 'run-4',
+    createdAt: DateTime.utc(2026, 9, 7),
+    recipe: recipe,
+    dependencySnapshot: const {},
+    targetYield: targetYield,
+    result: result,
+  );
+}
+
 // None of Recipe, RecipeComponent, BatchPlan, ScaledComponent,
 // ProductionResult, or ScaledQuantity override `==`, so `expect(a, b)` on
 // any of them falls back to identity — always false for a freshly decoded
@@ -300,6 +337,25 @@ void main() {
     },
   );
 
+  test('a run with dynamic count and named-yield units round-trips', () {
+    final run = buildRunWithDynamicUnits();
+    final decoded = decodeRunPayload(encodeRunPayload(run));
+
+    expectRecipe(decoded.recipe, run.recipe);
+    expectResult(decoded.result, run.result);
+
+    // Neither unit is one of the eight fixed units, so a regression from
+    // unitToStorage back to the bare symbol would either throw decoding
+    // (no ':' separator, no fixed-table match) or silently collide two
+    // dynamic units that happen to share a symbol. Assert the actual
+    // dynamic Unit instances survive, not just their symbols.
+    expect(decoded.recipe.baseYield.unit, Unit.namedYield('tray'));
+    expect(decoded.recipe.baseYield.unit.dimension, UnitDimension.yieldOnly);
+    final eggs = decoded.result.components.single;
+    expect(eggs.source.baseQuantity!.unit, Unit.count('egg'));
+    expect(eggs.source.baseQuantity!.unit.dimension, UnitDimension.count);
+  });
+
   test('malformed json is a corrupt database', () {
     expect(
       () => decodeRunPayload('{not json'),
@@ -407,6 +463,33 @@ void main() {
       // BatchPlan.decompose still reconstructs a self-consistent triple —
       // only the components' perBatch length still remembers the truth.
       batchPlan['fullBatchCount'] = (batchPlan['fullBatchCount']! as int) + 3;
+
+      expect(
+        () => decodeRunPayload(jsonEncode(encoded)),
+        throwsA(isA<CorruptDatabaseError>()),
+      );
+    },
+  );
+
+  test(
+    "a full-batch yield that disagrees with a proportional component's "
+    'per-batch ratio is a corrupt database',
+    () {
+      final encoded =
+          jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
+              as Map<String, Object?>;
+      final result = encoded['result']! as Map<String, Object?>;
+      final batchPlan = result['batchPlan']! as Map<String, Object?>;
+      final fullBatchYield =
+          batchPlan['fullBatchYield']! as Map<String, Object?>;
+      // fullBatchYield changes alone (400g -> 500g); remainderYield (200g)
+      // is left untouched. BatchPlan.decompose still reconstructs a
+      // self-consistent triple from these two numbers alone (2 full
+      // batches of 500g plus a 200g remainder), so only 'butter' — a
+      // proportional component whose stored per-batch quantities were
+      // scaled against the real 400g yield — still remembers the truth.
+      fullBatchYield['n'] = '500';
+      fullBatchYield['d'] = '1';
 
       expect(
         () => decodeRunPayload(jsonEncode(encoded)),

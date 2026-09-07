@@ -393,6 +393,7 @@ ProductionResult _resultFromJson(Map<String, Object?> json) {
       );
     }
   }
+  _checkFullBatchYieldWitness(batchPlan, components);
   return ProductionResult(
     scaleRatio: _rationalFromJson(json['scaleRatio']! as Map<String, Object?>),
     batchPlan: batchPlan,
@@ -402,6 +403,65 @@ ProductionResult _resultFromJson(Map<String, Object?> json) {
         _warningFromJson(w! as Map<String, Object?>),
     ],
   );
+}
+
+/// Cross-checks [batchPlan]'s `fullBatchYield` against an independent
+/// witness in [components], when one exists.
+///
+/// `_batchPlanFromJson` cannot catch a `fullBatchYield` corrupted on its
+/// own: it reconstructs `target` from `fullBatchYield` and
+/// `fullBatchCount`, so `BatchPlan.decompose` echoes an altered
+/// `fullBatchYield` straight back whenever the stored `remainderYield`
+/// still satisfies `0 <= remainder < fullBatchYield`. This checks a
+/// second, independent source instead: a proportional component's own
+/// stored per-batch quantities.
+///
+/// Per `ProductionCalculator._scale` / `_batchRatios`
+/// (`lib/domain/scaling/production_calculator.dart:110-113,199-212`), a
+/// proportional component's per-batch exact quantity is
+/// `base.scaleBy(ratio * batchRatio)`, where every full batch shares
+/// `batchRatio == fullBatchYield.amount / total.amount` and the remainder
+/// batch (when there is one) gets `remainderYield.amount / total.amount`,
+/// for the same `total = fullBatchYield * fullBatchCount + remainderYield`.
+/// Dividing a full batch's quantity by the remainder batch's quantity
+/// cancels `base`, the run's scale ratio, and `total`, leaving exactly
+/// `fullBatchYield.amount / remainderYield.amount` — a ratio that depends
+/// on `fullBatchYield` but was computed from data stored entirely inside
+/// the component, not read back from [batchPlan]. Checked here as a
+/// cross-multiplication (`full * remainderYield == remainder *
+/// fullBatchYield`) so no division or zero-amount special case is needed.
+///
+/// No witness exists, and this is a deliberate no-op, when there is no
+/// remainder batch — every full batch then shares one ratio regardless of
+/// `fullBatchYield`'s actual magnitude, so nothing distinguishes a doubled
+/// yield from the real one — or when every component is manual, per-batch,
+/// or fixed-once, none of which route the batch ratio into their stored
+/// quantity at all (`ProductionCalculator._scale`'s other two branches).
+/// A run with no such witness is not made to fail a check it cannot
+/// possibly satisfy.
+void _checkFullBatchYieldWitness(
+  BatchPlan batchPlan,
+  List<ScaledComponent> components,
+) {
+  final remainderYield = batchPlan.remainderYield;
+  if (remainderYield == null || batchPlan.fullBatchCount < 1) return;
+
+  for (final component in components) {
+    if (component.source.behavior != ScalingBehavior.proportional) continue;
+    final fullBatch = component.perBatch.first;
+    final remainderBatch = component.perBatch.last;
+    if (fullBatch == null || remainderBatch == null) continue;
+
+    final lhs = fullBatch.exact.amount * remainderYield.amount;
+    final rhs = remainderBatch.exact.amount * batchPlan.fullBatchYield.amount;
+    if (lhs != rhs) {
+      throw CorruptDatabaseError(
+        'batch plan full-batch yield ${batchPlan.fullBatchYield} is '
+        "inconsistent with component ${component.source.id}'s per-batch "
+        'quantities',
+      );
+    }
+  }
 }
 
 // --- ProductionWarning -----------------------------------------------------
