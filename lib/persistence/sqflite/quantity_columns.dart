@@ -41,15 +41,18 @@ String unitToStorage(Unit unit) {
 ///
 /// A bare symbol matching one of [_fixedUnits] decodes to that unit. A
 /// `count:<symbol>` or `yield:<symbol>` form decodes to `Unit.count` or
-/// `Unit.namedYield` on the trailing payload. Anything else — an
-/// unrecognised bare symbol, an unrecognised prefix, or a prefixed form
-/// with an empty payload — is a corrupt row, never a guessed unit.
+/// `Unit.namedYield` on the trailing payload, including an empty one
+/// (`count:` decodes to `Unit.count('')`) — the domain places no
+/// restriction on that symbol being non-empty, and persistence must be
+/// able to store everything the domain can construct. Anything else — an
+/// unrecognised bare symbol, or a prefix that is neither `count` nor
+/// `yield` — is a corrupt row, never a guessed unit.
 Unit unitFromStorage(String stored) {
   for (final fixed in _fixedUnits) {
     if (fixed.symbol == stored) return fixed;
   }
   final separator = stored.indexOf(':');
-  if (separator > 0 && separator < stored.length - 1) {
+  if (separator > 0) {
     final kind = stored.substring(0, separator);
     final symbol = stored.substring(separator + 1);
     if (kind == 'count') return Unit.count(symbol);
