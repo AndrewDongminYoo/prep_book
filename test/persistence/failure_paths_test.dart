@@ -14,11 +14,16 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 /// A one-component recipe, built through the domain's real factory. Kept
 /// independent of the other suites' fixtures, matching this directory's
 /// convention of self-contained per-file fixtures.
-Recipe buildRecipe({String id = 'r', int revision = 1}) => Recipe(
+Recipe buildRecipe({
+  String id = 'r',
+  int revision = 1,
+  Quantity? maxBatchYield,
+}) => Recipe(
   id: id,
   revision: revision,
   name: 'Test recipe',
   baseYield: Quantity.parse('1000', Unit.gram),
+  maxBatchYield: maxBatchYield,
   modifiedAt: DateTime.utc(2026, 9, 7),
   components: [
     RecipeComponent(
@@ -163,8 +168,7 @@ void main() {
   // `default_unit_symbol` is `NOT NULL` and so cannot be set to NULL at all.
   // `recipe_components.base_numerator` is legitimately nullable — a manual
   // component stores the whole group as NULL — so a group filled in *part
-  // way* is the hazard that can really occur: `_componentFromRow` decides
-  // whether to read a quantity by looking at `base_unit` alone.
+  // way* is the hazard that can really occur.
   //
   // The asserted fragment carries the row label as well as the column group.
   // `base` and `target` name column groups on more than one table, so the
@@ -188,6 +192,59 @@ void main() {
       );
     },
   );
+
+  // The mirror of the test above, and the direction the reader used to fail
+  // open on. `quantityFromColumns` guards "all three present or throw", but
+  // it was only called when the *unit* column was non-null, so a group whose
+  // unit alone is NULL never reached the guard: the component read as
+  // manual and its stored amount was dropped. On a proportional component
+  // the domain then rejects the missing quantity with a `DomainError`, which
+  // is neither `TypeError` nor `FormatException` and escapes both of
+  // `_componentFromRow`'s clauses — so a caller wrapping storage reads in
+  // `on CorruptDatabaseError` saw nothing at all.
+  //
+  // A CHECK constraint would make the half-filled group unrepresentable, but
+  // it would also block the `UPDATE … SET base_numerator = NULL` the test
+  // above uses to plant its corruption. The decision moves to the reader
+  // instead.
+  test(
+    'a component quantity group missing only its unit throws too',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate('UPDATE recipe_components SET base_unit = NULL');
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipe_components row r revision 1 component flour',
+            'incomplete quantity in column group base',
+          ),
+        ),
+      );
+    },
+  );
+
+  // The same fail-open shape on `recipes.max_batch`, where it is worse
+  // because nothing downstream objects: a recipe with no maximum batch
+  // yield is entirely legal, so the stored amount was dropped in silence
+  // and the recipe read back as one that never batched at all.
+  test('a max batch group missing only its unit throws too', () async {
+    await recipes.saveRevision(
+      buildRecipe(maxBatchYield: Quantity.parse('250', Unit.gram)),
+    );
+    await db.rawUpdate('UPDATE recipes SET max_batch_unit = NULL');
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'incomplete quantity in column group max_batch',
+        ),
+      ),
+    );
+  });
 
   // SQLite has type affinity rather than strict typing, and TEXT affinity
   // leaves a BLOB alone while it would convert a number to text. So a BLOB

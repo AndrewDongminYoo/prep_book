@@ -16,6 +16,30 @@ INNER JOIN (
 ORDER BY recipes.id
 ''';
 
+/// Whether the nullable quantity group named [prefix] holds anything at all
+/// in [row].
+///
+/// The two nullable quantity groups this file reads — a recipe's maximum
+/// batch yield and a component's base amount — are written all-NULL or
+/// all-present. Deciding on the unit column alone was a fail-open read: a
+/// group whose unit is NULL while its numerator is populated never reached
+/// `quantityFromColumns`, whose own "all three or throw" guard is the thing
+/// that would have caught it. The amount was dropped instead — silently on
+/// a manual component, and on any other behavior as a bare `DomainError`
+/// escaping both of [SqfliteRecipeRepository._componentFromRow]'s clauses,
+/// which a caller wrapping storage reads in `on CorruptDatabaseError` never
+/// sees.
+///
+/// So any one of the three columns being present is enough to commit to
+/// reading the group and let that guard rule on it. A `CHECK` constraint
+/// would express the same rule in the schema, but it would make a
+/// half-filled group unrepresentable and so block the `UPDATE` the failure
+/// tests use to plant exactly this corruption.
+bool _quantityGroupPresent(Map<String, Object?> row, String prefix) =>
+    row['${prefix}_numerator'] != null ||
+    row['${prefix}_denominator'] != null ||
+    row['${prefix}_unit'] != null;
+
 /// [RecipeRepository] backed by the `recipes` and `recipe_components`
 /// tables.
 ///
@@ -136,9 +160,9 @@ final class SqfliteRecipeRepository implements RecipeRepository {
         name: row['name']! as String,
         category: row['category'] as String?,
         baseYield: quantityFromColumns(row, 'base_yield', rowLabel: rowLabel),
-        maxBatchYield: row['max_batch_unit'] == null
-            ? null
-            : quantityFromColumns(row, 'max_batch', rowLabel: rowLabel),
+        maxBatchYield: _quantityGroupPresent(row, 'max_batch')
+            ? quantityFromColumns(row, 'max_batch', rowLabel: rowLabel)
+            : null,
         components: components,
         preparationNotes:
             (jsonDecode(row['preparation_notes']! as String) as List<dynamic>)
@@ -238,9 +262,9 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       return RecipeComponent(
         id: row['component_id']! as String,
         target: target,
-        baseQuantity: row['base_unit'] == null
-            ? null
-            : quantityFromColumns(row, 'base', rowLabel: _componentLabel(row)),
+        baseQuantity: _quantityGroupPresent(row, 'base')
+            ? quantityFromColumns(row, 'base', rowLabel: _componentLabel(row))
+            : null,
         behavior: behavior,
         displayOrder: row['display_order']! as int,
         rounding: roundingIncrement == null
