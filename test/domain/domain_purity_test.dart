@@ -87,21 +87,33 @@ Expression _unparenthesized(Expression expression) {
 /// plus, and `!` takes a boolean, so these two are the whole set.
 final _integerPrefixOperators = <TokenType>{TokenType.MINUS, TokenType.TILDE};
 
-/// Binary operators that produce an integer from two integers. `/` is
-/// deliberately absent: it is the operator that produces a double, which is
-/// the thing being looked for.
-final _integerBinaryOperators = <TokenType>{
-  TokenType.PLUS,
-  TokenType.MINUS,
-  TokenType.STAR,
+/// Binary operators that leave an integer receiver an integer whatever the
+/// right operand is, for two different reasons.
+///
+/// `int.~/` is declared to return an `int` for any `num` it accepts, so
+/// `7 ~/ 2.5` really is an `int`. The bitwise and shift operators arrive at the
+/// same place by another route: they refuse a non-`int` right operand at
+/// compile time, so any code that compiles has an `int` on both sides. Either
+/// way the right operand needs no inspection.
+final _integerPreservingOperators = <TokenType>{
   TokenType.TILDE_SLASH,
-  TokenType.PERCENT,
   TokenType.AMPERSAND,
   TokenType.BAR,
   TokenType.CARET,
   TokenType.LT_LT,
   TokenType.GT_GT,
   TokenType.GT_GT_GT,
+};
+
+/// Binary operators that produce an integer only when both operands are.
+/// `int.+` is declared to return `num`, and `1 + 2.5` is a double, so an
+/// integer on the left settles nothing by itself. `/` is absent from both sets
+/// deliberately: it is the operator that produces the double being looked for.
+final _integerBothOperandOperators = <TokenType>{
+  TokenType.PLUS,
+  TokenType.MINUS,
+  TokenType.STAR,
+  TokenType.PERCENT,
 };
 
 /// Whether the parser alone settles [expression] as an integer.
@@ -124,10 +136,14 @@ bool _isSyntacticInteger(Expression expression) {
       _integerPrefixOperators.contains(node.operator.type)) {
     return _isSyntacticInteger(node.operand);
   }
-  if (node is BinaryExpression &&
-      _integerBinaryOperators.contains(node.operator.type)) {
-    return _isSyntacticInteger(node.leftOperand) &&
-        _isSyntacticInteger(node.rightOperand);
+  if (node is BinaryExpression) {
+    if (_integerPreservingOperators.contains(node.operator.type)) {
+      return _isSyntacticInteger(node.leftOperand);
+    }
+    if (_integerBothOperandOperators.contains(node.operator.type)) {
+      return _isSyntacticInteger(node.leftOperand) &&
+          _isSyntacticInteger(node.rightOperand);
+    }
   }
   return false;
 }
@@ -253,6 +269,22 @@ void main() {
       expect(findNumericViolations('final a = -1 / count;'), isNotEmpty);
     });
 
+    test('a division whose receiver is a truncating division', () {
+      // `int.~/` returns an int for any operand it accepts, so the right
+      // operand's type does not matter here.
+      expect(findNumericViolations('final a = (7 ~/ count) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is a bitwise expression', () {
+      // A bitwise operator on an int refuses a non-int right operand at
+      // compile time, so anything that compiles yields an int.
+      expect(findNumericViolations('final a = (7 & mask) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is a shifted integer', () {
+      expect(findNumericViolations('final a = (7 >>> bits) / 3;'), isNotEmpty);
+    });
+
     test('an integer division inside a string interpolation', () {
       expect(
         findNumericViolations(r"String f() => 'x ${1 / 3}';"),
@@ -313,6 +345,16 @@ void main() {
 
     test('a method call on an integer literal, which is not a double', () {
       expect(findNumericViolations('final a = 1.abs();'), isEmpty);
+    });
+
+    test('a division whose receiver adds an unknown operand', () {
+      // Unlike `~/`, `int.+` returns a double for a double operand, so a
+      // literal on the left settles nothing here. `1 + half` is a double.
+      expect(findNumericViolations('final a = (1 + other) / 3;'), isEmpty);
+    });
+
+    test('a division whose receiver takes a modulo of an unknown operand', () {
+      expect(findNumericViolations('final a = (1 % other) / 3;'), isEmpty);
     });
 
     test('a truncating integer division', () {
