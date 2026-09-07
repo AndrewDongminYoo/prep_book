@@ -62,13 +62,19 @@ CREATE TABLE production_runs (
   created_at            TEXT NOT NULL,
   result_json           TEXT NOT NULL
 )''',
+  // No PRIMARY KEY here: SQLite treats NULLs in a PRIMARY KEY or UNIQUE
+  // index as distinct from one another, so a composite key that includes
+  // the nullable component_id would not reject a second insert of the same
+  // (run_id, warning_kind, recipe_id, NULL) tuple — it would permit the
+  // duplicate. The two partial unique indexes below are what actually
+  // enforce one row per acknowledgement, for the with-component and
+  // without-component shapes separately.
   '''
 CREATE TABLE run_acknowledgements (
   run_id       TEXT NOT NULL,
   warning_kind TEXT NOT NULL,
   recipe_id    TEXT NOT NULL,
   component_id TEXT,
-  PRIMARY KEY (run_id, warning_kind, recipe_id, component_id),
   FOREIGN KEY (run_id) REFERENCES production_runs (id) ON DELETE CASCADE
 )''',
   '''
@@ -84,4 +90,14 @@ CREATE TABLE run_overrides (
 )''',
   _createIdxRunsRecipe,
   'CREATE INDEX idx_runs_created ON production_runs (created_at DESC)',
+  '''
+CREATE UNIQUE INDEX idx_ack_with_component
+  ON run_acknowledgements (run_id, warning_kind, recipe_id, component_id)
+  WHERE component_id IS NOT NULL
+''',
+  '''
+CREATE UNIQUE INDEX idx_ack_without_component
+  ON run_acknowledgements (run_id, warning_kind, recipe_id)
+  WHERE component_id IS NULL
+''',
 ];
