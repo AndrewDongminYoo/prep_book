@@ -116,7 +116,7 @@ void main() {
       await db.insert('ingredients', <String, Object?>{
         'id': 'x',
         'name': 'X',
-        'default_unit_symbol': 'parsec',
+        'default_unit': 'parsec',
         'category': null,
       });
 
@@ -165,7 +165,7 @@ void main() {
   );
 
   // The brief's third corruption test targeted `ingredients`, whose
-  // `default_unit_symbol` is `NOT NULL` and so cannot be set to NULL at all.
+  // `default_unit` is `NOT NULL` and so cannot be set to NULL at all.
   // `recipe_components.base_numerator` is legitimately nullable — a manual
   // component stores the whole group as NULL — so a group filled in *part
   // way* is the hazard that can really occur.
@@ -255,7 +255,7 @@ void main() {
     await db.insert('ingredients', <String, Object?>{
       'id': 'blob',
       'name': Uint8List.fromList(const [1, 2, 3]),
-      'default_unit_symbol': 'g',
+      'default_unit': 'g',
       'category': null,
     });
 

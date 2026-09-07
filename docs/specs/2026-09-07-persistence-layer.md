@@ -85,7 +85,7 @@ A `Decimal` is by definition a terminating decimal, so those are stored as a sin
 Column lists below are the shape, not the full DDL; the implementation plan owns the exact statements.
 
 **`ingredients`** — mutable.
-`id` primary key, `name`, `default_unit_symbol`, `category` nullable.
+`id` primary key, `name`, `default_unit`, `category` nullable.
 
 **`recipes`** — insert-only per revision.
 Composite primary key `(id, revision)`.

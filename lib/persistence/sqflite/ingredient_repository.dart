@@ -35,7 +35,7 @@ final class SqfliteIngredientRepository implements IngredientRepository {
     <String, Object?>{
       'id': ingredient.id,
       'name': ingredient.name,
-      'default_unit_symbol': unitToStorage(ingredient.defaultUnit),
+      'default_unit': unitToStorage(ingredient.defaultUnit),
       'category': ingredient.category,
     },
     conflictAlgorithm: ConflictAlgorithm.replace,
@@ -68,7 +68,7 @@ final class SqfliteIngredientRepository implements IngredientRepository {
         id: row['id']! as String,
         name: row['name']! as String,
         defaultUnit: unitFromStorage(
-          row['default_unit_symbol']! as String,
+          row['default_unit']! as String,
           location: rowLabel,
         ),
         category: row['category'] as String?,

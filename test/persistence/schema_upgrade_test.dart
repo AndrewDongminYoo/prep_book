@@ -35,7 +35,7 @@ void main() {
     await db.insert('ingredients', <String, Object?>{
       'id': 'flour',
       'name': 'Flour',
-      'default_unit_symbol': 'g',
+      'default_unit': 'g',
       'category': null,
     });
     return db;
@@ -124,7 +124,7 @@ void main() {
     await db.insert('ingredients', <String, Object?>{
       'id': 'flour',
       'name': 'Flour',
-      'default_unit_symbol': 'g',
+      'default_unit': 'g',
       'category': null,
     });
 

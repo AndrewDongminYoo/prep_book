@@ -9,11 +9,15 @@ const _createIdxRunsRecipe =
     '(recipe_id, recipe_revision)';
 
 const schemaV1Statements = <String>[
+  // `default_unit` carries the same encoding as every other `_unit` column:
+  // a bare symbol for one of the domain's fixed units, and a `count:` or
+  // `yield:` prefixed form for one built from an arbitrary symbol. It is not
+  // a bare symbol, so it is not named one.
   '''
 CREATE TABLE ingredients (
   id                  TEXT PRIMARY KEY,
   name                TEXT NOT NULL,
-  default_unit_symbol TEXT NOT NULL,
+  default_unit        TEXT NOT NULL,
   category            TEXT
 )''',
   '''
