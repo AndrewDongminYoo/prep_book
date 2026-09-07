@@ -83,6 +83,55 @@ Expression _unparenthesized(Expression expression) {
   return current;
 }
 
+/// Prefix operators that keep an integer an integer. Dart defines no unary
+/// plus, and `!` takes a boolean, so these two are the whole set.
+final _integerPrefixOperators = <TokenType>{TokenType.MINUS, TokenType.TILDE};
+
+/// Binary operators that produce an integer from two integers. `/` is
+/// deliberately absent: it is the operator that produces a double, which is
+/// the thing being looked for.
+final _integerBinaryOperators = <TokenType>{
+  TokenType.PLUS,
+  TokenType.MINUS,
+  TokenType.STAR,
+  TokenType.TILDE_SLASH,
+  TokenType.PERCENT,
+  TokenType.AMPERSAND,
+  TokenType.BAR,
+  TokenType.CARET,
+  TokenType.LT_LT,
+  TokenType.GT_GT,
+  TokenType.GT_GT_GT,
+};
+
+/// Whether the parser alone settles [expression] as an integer.
+///
+/// This is the boundary the whole integer-division rule converges on, and it
+/// is drawn on a principle rather than on the shapes reported so far. An
+/// integer literal qualifies, and so does any integer operator applied to
+/// expressions that qualify — which closes `-1`, `~1`, `(1)`, `1 + 2` and
+/// every nesting of them in one rule instead of one round each.
+///
+/// An identifier or a method call does not qualify, however obviously integral
+/// it looks. `1.abs()` is an `int` at runtime, but reading a return type is
+/// precisely the work a parsed tree cannot do, and guessing would report the
+/// domain's own `Rational` arithmetic. Those cases are pinned as accepted by
+/// tests; closing them needs resolved types, which is a separate decision.
+bool _isSyntacticInteger(Expression expression) {
+  final node = _unparenthesized(expression);
+  if (node is IntegerLiteral) return true;
+  if (node is PrefixExpression &&
+      _integerPrefixOperators.contains(node.operator.type)) {
+    return _isSyntacticInteger(node.operand);
+  }
+  if (node is BinaryExpression &&
+      _integerBinaryOperators.contains(node.operator.type)) {
+    return _isSyntacticInteger(node.leftOperand) &&
+        _isSyntacticInteger(node.rightOperand);
+  }
+  return false;
+}
+
 class _NumericVisitor extends RecursiveAstVisitor<void> {
   final violations = <String>[];
 
@@ -116,19 +165,19 @@ class _NumericVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitBinaryExpression(BinaryExpression node) {
     // In Dart `/` always yields a double, including between two integers;
-    // `~/` is the truncating one. The left operand selects the operator, so
-    // an integer literal there means `int./` and therefore a double, whatever
-    // the right operand turns out to be. That is safe against the domain's own
-    // divisions without needing types: an integer literal cannot be the left
-    // operand of a Rational division at all, because Rational is not a `num`
-    // and the analyzer rejects it outright.
+    // `~/` is the truncating one. The left operand selects the operator, so a
+    // receiver the parser settles as an integer means `int./` and therefore a
+    // double, whatever the right operand turns out to be. That is safe against
+    // the domain's own divisions without needing types: an integer cannot be
+    // the left operand of a Rational division at all, because Rational is not
+    // a `num` and the analyzer rejects it outright.
     //
     // The converse does not hold. A literal on the right says nothing about
     // the left operand's type, and the domain divides Rationals at six call
     // sites, so requiring a literal there would report every one of them. Both
     // directions are pinned by tests.
     if (node.operator.type == TokenType.SLASH &&
-        _unparenthesized(node.leftOperand) is IntegerLiteral) {
+        _isSyntacticInteger(node.leftOperand)) {
       violations.add('integer division yields a double: $node');
     }
     super.visitBinaryExpression(node);
@@ -188,6 +237,22 @@ void main() {
       expect(findNumericViolations('final a = 1 / count;'), isNotEmpty);
     });
 
+    test('a division by a negated integer receiver', () {
+      expect(findNumericViolations('final a = -1 / 3;'), isNotEmpty);
+    });
+
+    test('a division by a bitwise-complemented integer receiver', () {
+      expect(findNumericViolations('final a = ~1 / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is integer arithmetic', () {
+      expect(findNumericViolations('final a = (1 + 2) / 3;'), isNotEmpty);
+    });
+
+    test('a division by a negated integer receiver over a variable', () {
+      expect(findNumericViolations('final a = -1 / count;'), isNotEmpty);
+    });
+
     test('an integer division inside a string interpolation', () {
       expect(
         findNumericViolations(r"String f() => 'x ${1 / 3}';"),
@@ -229,11 +294,25 @@ void main() {
       expect(findNumericViolations('final a = x.amount / y.amount;'), isEmpty);
     });
 
-    // The known limit, pinned rather than left to be rediscovered. A literal on
-    // the right says nothing about the left operand's type, and the left is
-    // what selects the operator.
+    // The known limits, pinned rather than left to be rediscovered. This guard
+    // reads a parsed tree and has no types, so it reports only receivers the
+    // parser alone settles as integers. Everything below yields a double at
+    // runtime and is deliberately not reported; closing these needs resolved
+    // types, which is a separate decision.
     test('a division whose right operand alone is an integer literal', () {
+      // A literal on the right says nothing about the left operand's type,
+      // and the left is what selects the operator.
       expect(findNumericViolations('final a = x.amount / 3;'), isEmpty);
+    });
+
+    test('a division whose receiver is a method call on an integer', () {
+      // `1.abs()` is an int at runtime, but resolving a return type is
+      // exactly the work a parsed tree cannot do.
+      expect(findNumericViolations('final a = 1.abs() / 3;'), isEmpty);
+    });
+
+    test('a method call on an integer literal, which is not a double', () {
+      expect(findNumericViolations('final a = 1.abs();'), isEmpty);
     });
 
     test('a truncating integer division', () {
