@@ -210,9 +210,12 @@ void main() {
   // unit alone is NULL never reached the guard: the component read as
   // manual and its stored amount was dropped. On a proportional component
   // the domain then rejects the missing quantity with a `DomainError`, which
-  // is neither `TypeError` nor `FormatException` and escapes both of
-  // `_componentFromRow`'s clauses — so a caller wrapping storage reads in
-  // `on CorruptDatabaseError` saw nothing at all.
+  // is neither `TypeError` nor `FormatException` and escaped the only two
+  // clauses `_componentFromRow` had then — so a caller wrapping storage
+  // reads in `on CorruptDatabaseError` saw nothing at all. That block has an
+  // `on DomainError` clause now (see the last section of this file), but
+  // this test still pins the presence check: the label it asserts is the
+  // column group's, which only the reached guard can name.
   //
   // A CHECK constraint would make the half-filled group unrepresentable, but
   // it would also block the `UPDATE … SET base_numerator = NULL` the test
@@ -935,4 +938,187 @@ void main() {
       );
     },
   );
+
+  // --- a stored value the domain itself rejects ---------------------------
+  //
+  // The whole class the guards above miss. Every read path rebuilds its
+  // domain object through the domain's real factory, and those factories
+  // raise `DomainError`, which is `sealed class DomainError implements
+  // Exception` — neither a `TypeError` nor a `FormatException`. So a stored
+  // value that is well-typed and parses cleanly, but that the domain
+  // refuses, escaped every clause in this layer unlabelled, straight past a
+  // caller wrapping its storage reads in `on CorruptDatabaseError`.
+  //
+  // Four reading sites can actually reach a rejecting factory, and the four
+  // tests below reach one clause each. The remaining wrapper blocks in this
+  // layer construct nothing that validates, so they were deliberately left
+  // without a clause: an unreachable clause fails the coverage gate and
+  // proves nothing.
+
+  // `parseStoredRational` accepts a negative numerator — `BigInt.parse` and
+  // `Rational` both take one — and `Quantity.fromRational` then rejects it.
+  // Guarded in `quantityFromColumns` rather than at each of its callers,
+  // because that is the one function every stored quantity group goes
+  // through: `recipes.base_yield`, `recipes.max_batch`,
+  // `recipe_components.base`, `production_runs.target`, and
+  // `run_overrides.override` all reach the domain factory only there.
+  test('a negative stored amount is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipe_components SET base_numerator = '-500'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipe_components row r revision 1 component flour',
+          'invalid quantity in column group base',
+        ),
+      ),
+    );
+  });
+
+  // The same guard reached through the other four callers, so a clause
+  // added at one call site instead of inside `quantityFromColumns` cannot
+  // pass. Each asserts its own row label, which is what says the failure
+  // was reported against the table it was read from.
+  test('a negative stored amount is a corrupt row on every path', () async {
+    await recipes.saveRevision(
+      buildRecipe(maxBatchYield: Quantity.parse('250', Unit.gram)),
+    );
+    await db.rawUpdate("UPDATE recipes SET max_batch_numerator = '-250'");
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'invalid quantity in column group max_batch',
+        ),
+      ),
+    );
+
+    await runs.save(buildRun());
+    await runs.recordOverride(
+      'run-1',
+      ('r', 'flour'),
+      Quantity.parse('5', Unit.gram),
+    );
+    await db.rawUpdate("UPDATE run_overrides SET override_numerator = '-5'");
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNaming(
+          'run_overrides row for run run-1 recipe r component flour',
+          'invalid quantity in column group override',
+        ),
+      ),
+    );
+
+    await db.rawUpdate("UPDATE production_runs SET target_numerator = '-1000'");
+    await expectLater(
+      runs.listSummaries(),
+      throwsA(
+        corruptRowNaming(
+          'production_runs row run-1',
+          'invalid quantity in column group target',
+        ),
+      ),
+    );
+  });
+
+  // The second named instance: a row whose every column is well-typed and
+  // parses, and which the recipe factory still refuses. A zero base yield is
+  // the reachable one — `Quantity.fromRational` accepts zero, since zero is
+  // not negative, so the value survives every guard below `Recipe`.
+  test('a zero stored base yield is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipes SET base_yield_numerator = '0'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'holds a value the domain rejects',
+        ),
+      ),
+    );
+  });
+
+  // A component's own factory, proven separately from the recipe's, because
+  // the two blocks are separate and the message must name the
+  // `recipe_components` row rather than the `recipes` row that reads it.
+  // `RoundingRule.upToIncrement` rejects a non-positive increment, and `'0'`
+  // is a decimal literal `Decimal.parse` accepts, so it reaches that factory
+  // rather than the `FormatException` clause beside it.
+  test('a non-positive stored rounding increment is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipe_components SET rounding_increment = '0'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipe_components row r revision 1 component flour',
+          'holds a value the domain rejects',
+        ),
+      ),
+    );
+  });
+
+  // The payload side of the same class. Every domain factory the codec
+  // calls sits inside one try block, so one corruption reaches the clause
+  // that covers `Recipe`, `RecipeComponent`, `RoundingRule`, `BatchPlan`,
+  // and `Quantity` alike.
+  //
+  // `corruptRowNamedOnce` rather than `corruptRowNaming`: the new clause
+  // interpolates the row itself, so a nested rather than sibling clause
+  // would label it a second time.
+  test('a negative amount in a stored run payload is corrupt', () async {
+    await runs.save(buildRun());
+    await corruptStoredPayload((payload) {
+      final recipe = payload['recipe']! as Map<String, Object?>;
+      (recipe['baseYield']! as Map<String, Object?>)['n'] = '-1000';
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNamedOnce(
+          'production_runs row run-1',
+          'holds a value the domain rejects',
+        ),
+      ),
+    );
+  });
+
+  // The other direction, and the reason each new clause names `DomainError`
+  // rather than `Exception`: `CorruptDatabaseError` is an `Exception` too,
+  // so a clause widened by one word would catch the labelled failures the
+  // inner guards already raised and relabel them against the outer row.
+  //
+  // Asserted with `startsWith` rather than `contains`, for the reason
+  // `result_codec_test.dart` gives for the same choice: the wrapper
+  // interpolates the inner message, so a `contains` assertion passes under
+  // the relabel it exists to rule out. The corruption travels through both
+  // blocks that gained a clause — `_componentFromRow` raises it and
+  // `_recipeFromRow` reads that component — so either one widened fails
+  // here.
+  test('a labelled failure is not relabelled by the new clauses', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipe_components SET base_denominator = '0'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          startsWith(
+            'amount in column group base of recipe_components row r '
+            'revision 1 component flour has a zero denominator',
+          ),
+        ),
+      ),
+    );
+  });
 }

@@ -61,9 +61,13 @@ ORDER BY recipes.id
 /// `quantityFromColumns`, whose own "all three or throw" guard is the thing
 /// that would have caught it. The amount was dropped instead — silently on
 /// a manual component, and on any other behavior as a bare `DomainError`
-/// escaping both of [SqfliteRecipeRepository._componentFromRow]'s clauses,
-/// which a caller wrapping storage reads in `on CorruptDatabaseError` never
-/// sees.
+/// escaping the `TypeError` and `FormatException` clauses of
+/// [SqfliteRecipeRepository._componentFromRow], which were the only two it
+/// had at the time; a caller wrapping storage reads in
+/// `on CorruptDatabaseError` never saw it. That block now carries an
+/// `on DomainError` clause as well, so the escape route is closed from both
+/// ends: this check keeps the half-filled group reaching the guard that
+/// names it, and the clause labels whatever the domain still refuses.
 ///
 /// So any one of the three columns being present is enough to commit to
 /// reading the group and let that guard rule on it. A `CHECK` constraint
@@ -235,10 +239,20 @@ final class SqfliteRecipeRepository implements RecipeRepository {
   /// is a property of a domain internal rather than of anything visible
   /// here, so `failure_paths_test.dart` asserts it against the domain
   /// directly as well as reaching this guard through a stored row.
-  /// A domain rejection is not swallowed by this — every modelled domain
-  /// failure extends `DomainError`, never `TypeError` — and neither is a
-  /// component's own corruption, which [_componentFromRow] has already
-  /// turned into a [CorruptDatabaseError] before it reaches here.
+  /// A domain rejection is caught too, by the third clause. `Recipe`'s
+  /// factory refuses a zero base yield, a maximum batch yield in another
+  /// dimension, and a repeated component id, and every one of those is
+  /// reachable from a row whose columns are all well-typed and all parse.
+  /// The rejection is a `DomainError`, which is `sealed class DomainError
+  /// implements Exception` and so is neither of the two above; before that
+  /// clause existed it escaped this block unlabelled, past a caller
+  /// wrapping its storage reads in `on CorruptDatabaseError`.
+  ///
+  /// A component's own corruption is not swallowed by any of the three:
+  /// [_componentFromRow] has already turned it into a
+  /// [CorruptDatabaseError], which is an `Exception` but neither a
+  /// `DomainError` nor a `TypeError`, so it passes through naming its own
+  /// `recipe_components` row rather than this one.
   Future<Recipe> _recipeFromRow(Map<String, Object?> row) async {
     try {
       final id = row['id']! as String;
@@ -282,6 +296,14 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       throw CorruptDatabaseError(
         'recipes row ${row['id']} revision ${row['revision']} has an '
         'unparseable column: $error',
+      );
+    } on DomainError catch (error) {
+      // Reached by `Recipe`'s own factory — see the doc comment above. No
+      // `avoid_catching_errors` ignore: `DomainError` implements
+      // `Exception`, not `Error`.
+      throw CorruptDatabaseError(
+        'recipes row ${row['id']} revision ${row['revision']} holds a '
+        'value the domain rejects: $error',
       );
     }
   }
@@ -398,6 +420,16 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       // decimal literal.
       throw CorruptDatabaseError(
         '${_componentLabel(row)} has an unparseable column: $error',
+      );
+    } on DomainError catch (error) {
+      // Reached by `RoundingRule.upToIncrement` on a stored
+      // `rounding_increment` that parses as a decimal but is not positive,
+      // and by `RecipeComponent`'s factory on a stored behavior that
+      // contradicts the presence or absence of the base quantity group. No
+      // `avoid_catching_errors` ignore: `DomainError` implements
+      // `Exception`, not `Error`.
+      throw CorruptDatabaseError(
+        '${_componentLabel(row)} holds a value the domain rejects: $error',
       );
     }
   }

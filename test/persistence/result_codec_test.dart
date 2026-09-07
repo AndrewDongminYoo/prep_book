@@ -493,13 +493,15 @@ void main() {
   //
   // A failure raised in the try *body* is labelled by the sibling
   // `on CorruptDatabaseError` clause, which prefixes the row: `<row>: <what
-  // went wrong>`. The two messages the `on TypeError` and `on
-  // FormatException` clauses build cannot be labelled that way at all — a
-  // throw from inside a catch clause leaves the whole try statement rather
-  // than reaching a sibling — so those interpolate the label themselves,
-  // reading `run payload of <row> …`.
+  // went wrong>`. The three messages the `on TypeError`, `on
+  // FormatException`, and `on DomainError` clauses build cannot be labelled
+  // that way at all — a throw from inside a catch clause leaves the whole
+  // try statement rather than reaching a sibling — so those interpolate the
+  // label themselves, reading `run payload of <row> …`.
   //
-  // The two tests below assert that second form with `startsWith`. Nesting
+  // The two tests below assert that second form with `startsWith`, and
+  // `failure_paths_test.dart` reaches the third through a stored row.
+  // Nesting
   // the clause instead of leaving it a sibling would prefix these messages a
   // second time and push `run payload of` off the front, so `startsWith`
   // still discriminates sibling from nested. `contains` would not: it passes

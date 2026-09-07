@@ -65,15 +65,15 @@ String encodeRunPayload(ProductionRun run) => jsonEncode(<String, Object?>{
 ///
 /// Every message this function can raise names the row, which is what
 /// [CorruptDatabaseError]'s own "always names the row" contract requires
-/// without qualification. Four of them do not get there through the clause:
+/// without qualification. Five of them do not get there through the clause:
 /// `result_json` that does not parse at all is raised before the labelling
 /// block starts, an unrecognized warning kind is named at its own level, and
-/// the two messages the `on TypeError` and `on FormatException` clauses
-/// build interpolate [rowLabel] themselves — a throw from inside a catch
-/// clause leaves the whole try statement rather than reaching the sibling
-/// clause beside it, so the clause could never have labelled those two. The
-/// clause skips any message that already carries the label, so none of the
-/// four is named twice.
+/// the three messages the `on TypeError`, `on FormatException`, and
+/// `on DomainError` clauses build interpolate [rowLabel] themselves — a
+/// throw from inside a catch clause leaves the whole try statement rather
+/// than reaching the sibling clause beside it, so the clause could never
+/// have labelled those three. The clause skips any message that already
+/// carries the label, so none of the five is named twice.
 RunPayload decodeRunPayload(String json, {required String rowLabel}) {
   final Object? decoded;
   try {
@@ -116,13 +116,34 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
     throw CorruptDatabaseError(
       'run payload of $rowLabel holds an unparseable value: $error',
     );
+  } on DomainError catch (error) {
+    // A stored value that is well-typed and parses cleanly, and that the
+    // domain still refuses. Every domain factory this decoder calls is
+    // inside this one try block — `Quantity`, `Recipe`, `RecipeComponent`,
+    // `RoundingRule`, `ScaledQuantity`, and `BatchPlan.decompose` — so one
+    // clause labels whatever any of them rejects, rather than each site
+    // needing a guard of its own. `failure_paths_test.dart` reaches it with
+    // a negative amount on a payload's base yield.
+    //
+    // `DomainError` is `sealed class DomainError implements Exception`, so
+    // it is neither a `TypeError` nor a `FormatException` and needs no
+    // `avoid_catching_errors` ignore, unlike the clause above.
+    throw CorruptDatabaseError(
+      'run payload of $rowLabel holds a value the domain rejects: $error',
+    );
   } on CorruptDatabaseError catch (error) {
     // The labelling clause described in this function's doc comment. It sees
-    // only what the try body raised: the two clauses above throw from inside
-    // a catch clause, which leaves the try statement instead of reaching a
-    // sibling, so they carry the row in their own text rather than through
-    // here — `result_codec_test.dart` pins that with `startsWith` on the
-    // label-plus-message form, which a re-labelled message would fail.
+    // only what the try body raised: the three clauses above throw from
+    // inside a catch clause, which leaves the try statement instead of
+    // reaching a sibling, so they carry the row in their own text rather
+    // than through here — `result_codec_test.dart` pins that with
+    // `startsWith` on the label-plus-message form, which a re-labelled
+    // message would fail.
+    //
+    // It is also why the clause above names `DomainError` and not
+    // `Exception`: a [CorruptDatabaseError] is an `Exception` too, so a
+    // clause one word wider would catch the failures the payload's own
+    // helpers already labelled and prefix the row a second time.
     //
     // The row is added only when the message does not already carry it, so a
     // failure that names the row at its own level (an unrecognized warning

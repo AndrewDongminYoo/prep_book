@@ -53,8 +53,16 @@ final class SqfliteIngredientRepository implements IngredientRepository {
   /// these `TEXT` columns comes back from sqflite as a `Uint8List` and the
   /// cast throws a bare `TypeError` naming no row. Restating it as a
   /// [CorruptDatabaseError] here mirrors `decodeRunPayload`'s handling of
-  /// the same shape. A domain rejection is not swallowed by this: every
-  /// modelled domain failure extends `DomainError`, never `TypeError`.
+  /// the same shape.
+  ///
+  /// There is deliberately no `on DomainError` clause, unlike the recipe
+  /// and run readers. Nothing this block constructs can raise one:
+  /// `Ingredient` has a plain generative constructor that validates
+  /// nothing, and the only domain call beside it is [unitFromStorage],
+  /// which raises a [CorruptDatabaseError] naming this row itself. A clause
+  /// here would be unreachable, which the 100 percent coverage gate would
+  /// fail and which would prove nothing about the promise it appears to
+  /// keep.
   Ingredient _fromRow(Map<String, Object?> row) {
     // Shared by this method's own guard and the [unitFromStorage] call
     // inside it, so a row that fails on its stored unit is named the same

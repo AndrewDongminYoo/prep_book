@@ -135,8 +135,21 @@ Map<String, Object?> quantityToColumns(Quantity quantity, String prefix) =>
 ///
 /// Throws [CorruptDatabaseError] when any of the three columns is missing or
 /// is not a `String`, when the numerator and denominator are not an integer
-/// pair [Rational] accepts, or when the unit column is not one
-/// [unitFromStorage] recognises.
+/// pair [Rational] accepts, when the unit column is not one
+/// [unitFromStorage] recognises, or when the amount and unit are a pair the
+/// domain refuses — a negative amount is the reachable case, since
+/// [parseStoredRational] accepts a negative numerator and `Quantity` rejects
+/// it.
+///
+/// That last guard sits here rather than at each of the five callers because
+/// this is the one function every stored quantity group passes through:
+/// `recipes.base_yield`, `recipes.max_batch`, `recipe_components.base`,
+/// `production_runs.target`, and `run_overrides.override` all reach a domain
+/// factory only on the line below. A `DomainError` is neither a `TypeError`
+/// nor a `FormatException` — it is `sealed class DomainError implements
+/// Exception` — so before this clause existed it escaped every guard in this
+/// layer unlabelled, past a caller wrapping its storage reads in
+/// `on CorruptDatabaseError`.
 ///
 /// [rowLabel] is required rather than optional because a quantity group
 /// says nothing about which row holds it, and the column-group name alone
@@ -160,8 +173,19 @@ Quantity quantityFromColumns(
     );
   }
   final location = 'column group $prefix of $rowLabel';
-  return Quantity.fromRational(
-    parseStoredRational(numerator, denominator, location: location),
-    unitFromStorage(symbol, location: location),
+  final amount = parseStoredRational(
+    numerator,
+    denominator,
+    location: location,
   );
+  final unit = unitFromStorage(symbol, location: location);
+  // Only the domain factory is inside the try. Both helpers above already
+  // raise a [CorruptDatabaseError] naming this same location, and keeping
+  // them outside means this clause never has to be read against what they
+  // might throw.
+  try {
+    return Quantity.fromRational(amount, unit);
+  } on DomainError catch (error) {
+    throw CorruptDatabaseError('invalid quantity in $location: $error');
+  }
 }
