@@ -74,13 +74,35 @@ Matcher corruptRowNaming(String row, String detail) =>
       allOf(contains(row), contains(detail)),
     );
 
-/// Matches a [CorruptDatabaseError] raised inside a run payload, whose
+/// Matches a [CorruptDatabaseError] whose message names [row] exactly once
+/// and contains [detail].
+///
+/// [decodeRunPayload] labels every failure raised inside a run payload with
+/// the row it read the payload from, and one of the messages it can label —
+/// an unknown warning kind — already names that row itself. A `contains`
+/// assertion cannot tell a single label from a doubled one, so
+/// [corruptRowNaming] would certify `<row>: … in <row>: …` just as readily.
+/// Counting the occurrences is what pins the label's idempotence.
+Matcher corruptRowNamedOnce(String row, String detail) =>
+    isA<CorruptDatabaseError>()
+        .having((error) => error.message, 'message', contains(detail))
+        .having(
+          (error) => row.allMatches(error.message).length,
+          'occurrences of the row label',
+          1,
+        );
+
+/// Matches a [CorruptDatabaseError] raised inside a run payload whose
 /// message names a position within that payload rather than a row.
 ///
-/// Exists only for those messages: a separate ruling on this branch left
-/// the payload-internal failures naming their position, and the row they
-/// came from is named by the two decoder messages that carry it
-/// ([decodeRunPayload]'s parse failure and an unknown warning kind).
+/// Only two messages are left in that shape, and both are constructed by
+/// [decodeRunPayload]'s own `on TypeError` and `on FormatException` clauses.
+/// A throw from inside a catch clause leaves the whole try statement instead
+/// of reaching a sibling clause, so the `on CorruptDatabaseError` clause
+/// beside them — which labels every failure raised in the try *body* with
+/// its row — cannot see either. `result_codec_test.dart` pins that with
+/// `startsWith`, which a prefixed message would fail.
+///
 /// It is not an escape hatch from [corruptRowNaming]'s row argument — a
 /// failure that reads a stored *column* must use that matcher.
 Matcher corruptPayloadDetail(String detail) =>
@@ -459,7 +481,10 @@ void main() {
     expect(
       () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
       throwsA(
-        corruptPayloadDetail('a run payload quantity has a zero denominator'),
+        corruptRowNaming(
+          _payloadRowLabel,
+          'a run payload quantity has a zero denominator',
+        ),
       ),
     );
   });
@@ -770,4 +795,77 @@ void main() {
       throwsA(corruptPayloadDetail('run payload holds an unparseable value')),
     );
   });
+
+  // --- a corrupt value inside a stored result_json ------------------------
+
+  /// Rewrites the `result_json` of the run `run-1` after [edit] has mutated
+  /// the decoded payload in place, so the corruption reaches [findById]
+  /// through the column rather than through a hand-built argument.
+  Future<void> corruptStoredPayload(
+    void Function(Map<String, Object?> payload) edit,
+  ) async {
+    final stored =
+        (await db.query(
+              'production_runs',
+              columns: ['result_json'],
+            )).single['result_json']!
+            as String;
+    final payload = jsonDecode(stored) as Map<String, Object?>;
+    edit(payload);
+    await db.update('production_runs', <String, Object?>{
+      'result_json': jsonEncode(payload),
+    });
+  }
+
+  // The specification requires an unknown unit symbol to name the row without
+  // qualifying where it was read from, and a stored payload carries units of
+  // its own. `unitFromStorage` is handed one string and can only name a
+  // position inside the payload; the row is knowledge `decodeRunPayload`
+  // has and nothing deeper does, so it is labelled there.
+  test(
+    'an unknown unit symbol inside a stored payload names the row',
+    () async {
+      await runs.save(buildRun());
+      await corruptStoredPayload((payload) {
+        final recipe = payload['recipe']! as Map<String, Object?>;
+        (recipe['baseYield']! as Map<String, Object?>)['u'] = 'parsec';
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNaming(
+            'production_runs row run-1',
+            'unknown unit symbol in a run payload quantity: parsec',
+          ),
+        ),
+      );
+    },
+  );
+
+  // The idempotence half of the same label. An unknown warning kind names the
+  // row itself, so the wrapper must leave it alone rather than prefixing a
+  // second copy — a message naming two rows reads as a failure spanning two
+  // rows.
+  test(
+    'a payload failure that already names the row is labelled only once',
+    () async {
+      await runs.save(buildRun());
+      await corruptStoredPayload((payload) {
+        (payload['result']! as Map<String, Object?>)['warnings'] = <Object?>[
+          <String, Object?>{'kind': 'invented'},
+        ];
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNamedOnce(
+            'production_runs row run-1',
+            'unknown warning kind',
+          ),
+        ),
+      );
+    },
+  );
 }

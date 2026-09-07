@@ -405,6 +405,72 @@ void main() {
     );
   });
 
+  // --- what the row label does and does not reach -------------------------
+  //
+  // `decodeRunPayload` labels every `CorruptDatabaseError` raised in its try
+  // *body* with the row, so a failure raised deep in the payload — where
+  // nothing knows which stored run it came from — still names one. The two
+  // messages its own `on TypeError` and `on FormatException` clauses build
+  // are not labelled: a throw from inside a catch clause leaves the whole try
+  // statement rather than reaching the sibling clause beside it.
+  //
+  // Both tests assert with `startsWith`, not `contains`. The label is a
+  // prefix, so a `contains` assertion would pass whether or not the clause
+  // had fired and would discriminate nothing.
+
+  test('a shape failure is not labelled with the row', () {
+    expect(
+      () => decodeRunPayload('{"warnings":[]}', rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          startsWith('run payload has an unexpected shape'),
+        ),
+      ),
+    );
+  });
+
+  test('an unparseable payload value is not labelled with the row', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunScaledByOneThird()))
+            as Map<String, Object?>;
+    (encoded['recipe']! as Map<String, Object?>)['modifiedAt'] = 'yesterday';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          startsWith('run payload holds an unparseable value'),
+        ),
+      ),
+    );
+  });
+
+  // The other side of the same boundary: a failure raised in the try body,
+  // by a helper that names only its position inside the payload, comes back
+  // carrying the row.
+  test('a payload-internal failure is labelled with the row', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunScaledByOneThird()))
+            as Map<String, Object?>;
+    final recipe = encoded['recipe']! as Map<String, Object?>;
+    (recipe['baseYield']! as Map<String, Object?>)['u'] = 'parsec';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          startsWith('$_rowLabel: unknown unit symbol'),
+        ),
+      ),
+    );
+  });
+
   test('an unrecognized warning kind is a corrupt database naming the row', () {
     final encoded =
         jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds()))

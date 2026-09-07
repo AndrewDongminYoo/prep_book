@@ -54,12 +54,22 @@ String encodeRunPayload(ProductionRun run) => jsonEncode(<String, Object?>{
 /// unrecognized warning kind is never dropped — a silently dropped blocking
 /// warning would make a run that must not be finalized look finalizable.
 ///
-/// [rowLabel] is required because two of those failures — a `result_json`
-/// that does not parse at all, and an unrecognized warning kind — say
-/// nothing on their own about *which* stored run holds the bad value. Both
-/// are failures the specification requires to name the row. The remaining
-/// messages this file raises each name a position inside the payload
-/// instead, which is the level they are useful at.
+/// [rowLabel] is required because nothing below this function knows which
+/// stored run it is decoding. The helpers it calls are handed a fragment of
+/// JSON and can name only a position inside the payload, so every
+/// [CorruptDatabaseError] raised while decoding the payload is labelled with
+/// the row here. Every value decoded inside this function came out of one
+/// `production_runs` row, so that label is always the right one — this is
+/// not one row's failure being relabelled as another's.
+///
+/// Two messages are not labelled, both by construction. `result_json` that
+/// does not parse at all is raised before the labelling block starts, and
+/// already names the row itself. The two messages the `on TypeError` and
+/// `on FormatException` clauses build are raised from inside a catch clause,
+/// which leaves the whole try statement rather than reaching the sibling
+/// clause beside it. An unrecognized warning kind is labelled at its own
+/// level rather than here, so the label is added only when the message does
+/// not already carry it.
 RunPayload decodeRunPayload(String json, {required String rowLabel}) {
   final Object? decoded;
   try {
@@ -100,6 +110,18 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
     throw CorruptDatabaseError(
       'run payload holds an unparseable value: $error',
     );
+  } on CorruptDatabaseError catch (error) {
+    // The labelling clause described in this function's doc comment. It sees
+    // only what the try body raised: the two clauses above throw from inside
+    // a catch clause, which leaves the try statement instead of reaching a
+    // sibling — `result_codec_test.dart` pins that with `startsWith`.
+    //
+    // The row is added only when the message does not already carry it, so a
+    // failure that names the row at its own level (an unrecognized warning
+    // kind) is not made to name it twice — a message naming two rows reads
+    // as a failure spanning two rows.
+    if (error.message.contains(rowLabel)) rethrow;
+    throw CorruptDatabaseError('$rowLabel: ${error.message}');
   }
 }
 
