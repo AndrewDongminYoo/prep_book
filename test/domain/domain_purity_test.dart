@@ -1,5 +1,9 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// `package:` prefixes a domain file may import or export. Everything else —
@@ -22,25 +26,6 @@ final _directiveStatement = RegExp(r'\b(?:import|export)\b[^;]*;');
 /// Matches one quoted URI, either quote style.
 final _quotedUri = RegExp("'([^']*)'|\"([^\"]*)\"");
 
-final _lineComment = RegExp(r'//[^\n]*');
-
-// Deliberately excludes newline from the string body: a triple-quoted
-// string then survives stripping only partially, which can under-strip
-// (false positive, a loud failure to investigate) but can never
-// over-strip past a line comment's stray apostrophe and swallow real code
-// (false negative, a silent pass). Do not widen this to span newlines.
-final _stringLiteral = RegExp(
-  r'''r?'(?:[^'\\\n]|\\.)*'|r?"(?:[^"\\\n]|\\.)*"''',
-);
-// Catches both the decimal-point form (`1.5`, and `1.5e10` with an
-// exponent) and the exponent-only form (`1e10`) — Dart infers a `double`
-// for either shape. A plain integer literal (`1000`) matches neither
-// alternative and must keep passing.
-final _floatLiteral = RegExp(
-  r'\b\d+\.\d+(?:[eE][+-]?\d+)?\b|\b\d+[eE][+-]?\d+\b',
-);
-final _doubleKeyword = RegExp(r'\bdouble\b');
-
 /// Plain substrings that must never appear in a domain file, checked
 /// against the raw, unstripped source as a second, independent gate. The
 /// allowlist above is the primary check; this denylist is deliberately
@@ -59,12 +44,89 @@ const _bannedSubstrings = <String>[
   'package:http',
 ];
 
-/// Blanks out string contents and line comments so a legitimate string
-/// (e.g. `Decimal.parse('0.001')`) or a dartdoc comment cannot trip the
-/// numeric scans below.
-String _stripCommentsAndStrings(String source) {
-  final withoutStrings = source.replaceAll(_stringLiteral, "''");
-  return withoutStrings.replaceAll(_lineComment, '');
+/// Reports every prohibited floating-point construct in [source], one
+/// description per finding, or an empty list when the source is clean.
+///
+/// Walks the parsed syntax tree rather than matching patterns against text.
+/// Six of this guard's eleven historical bypasses were text-handling failures
+/// — an apostrophe in prose, a semicolon in a comment, a literal shape the
+/// pattern did not anticipate, an expression hidden inside a string
+/// interpolation — and the tree removes that whole class rather than one
+/// alternation at a time. Comments are absent from the tree, so they cannot
+/// produce a finding; the body of a string is likewise absent, while an
+/// interpolated expression is a real child node and is visited like any other
+/// code.
+///
+/// Takes source text rather than a file so that every bypass, past and future,
+/// can be pinned by a test that plants the construct directly. A reading of
+/// this guard has never caught one of its own holes; only planting has.
+List<String> findNumericViolations(String source) {
+  final parsed = parseString(content: source, throwIfDiagnostics: false);
+  if (parsed.errors.isNotEmpty) {
+    // Fail closed. Source that does not parse has not been checked, and
+    // reporting it clean would be the silent pass this guard exists to stop.
+    return ['does not parse, so it was never checked: ${parsed.errors.first}'];
+  }
+
+  final visitor = _NumericVisitor();
+  parsed.unit.visitChildren(visitor);
+  return visitor.violations;
+}
+
+/// Unwraps redundant parentheses so `(1) / (3)` is recognised as the integer
+/// division it is.
+Expression _unparenthesized(Expression expression) {
+  var current = expression;
+  while (current is ParenthesizedExpression) {
+    current = current.expression;
+  }
+  return current;
+}
+
+class _NumericVisitor extends RecursiveAstVisitor<void> {
+  final violations = <String>[];
+
+  @override
+  void visitDoubleLiteral(DoubleLiteral node) {
+    // Every literal Dart infers as binary floating point arrives here,
+    // whatever its written shape: 1.5, .5, 1e10, 1.5e-3, 1_000.5.
+    violations.add('floating-point literal: $node');
+    super.visitDoubleLiteral(node);
+  }
+
+  @override
+  void visitNamedType(NamedType node) {
+    if (node.name.lexeme == 'double') {
+      violations.add('binary floating-point type: $node');
+    }
+    super.visitNamedType(node);
+  }
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    // Catches the type used as a value rather than as an annotation, such as
+    // a static call on it. A type annotation arrives as a NamedType instead,
+    // so the two overrides do not double-report the same occurrence.
+    if (node.name == 'double') {
+      violations.add('binary floating-point type: $node');
+    }
+    super.visitSimpleIdentifier(node);
+  }
+
+  @override
+  void visitBinaryExpression(BinaryExpression node) {
+    // In Dart `/` always yields a double, including between two integers;
+    // `~/` is the truncating one. Only literal operands are reported, because
+    // the parsed tree carries no types: a division between two expressions
+    // may well be the exact Rational division the domain relies on. That is a
+    // deliberate limit, not an oversight — see the test that pins it.
+    if (node.operator.type == TokenType.SLASH &&
+        _unparenthesized(node.leftOperand) is IntegerLiteral &&
+        _unparenthesized(node.rightOperand) is IntegerLiteral) {
+      violations.add('integer division yields a double: $node');
+    }
+    super.visitBinaryExpression(node);
+  }
 }
 
 /// A `package:` URI must start with an allowed prefix. A relative URI may
@@ -86,6 +148,82 @@ List<File> _dartFilesUnder(String path) {
 }
 
 void main() {
+  // Every bypass this guard has had is pinned here as a planted construct.
+  // A reading of the patterns has never caught one; only planting has.
+  group('findNumericViolations detects', () {
+    test('a plain decimal literal', () {
+      expect(findNumericViolations('final a = 1.5;'), isNotEmpty);
+    });
+
+    test('an exponent-only literal', () {
+      expect(findNumericViolations('final a = 1e10;'), isNotEmpty);
+    });
+
+    test('a leading-dot literal, which Dart accepts as a double', () {
+      expect(findNumericViolations('final a = .5;'), isNotEmpty);
+    });
+
+    test('a float literal inside a string interpolation', () {
+      expect(
+        findNumericViolations(r"String f(int x) => 'value ${1.5 * x}';"),
+        isNotEmpty,
+      );
+    });
+
+    test('an integer divided by an integer, which yields a double', () {
+      expect(findNumericViolations('final a = 1 / 3;'), isNotEmpty);
+    });
+
+    test('an integer division wrapped in parentheses', () {
+      expect(findNumericViolations('final a = (1) / (3);'), isNotEmpty);
+    });
+
+    test('an integer division inside a string interpolation', () {
+      expect(
+        findNumericViolations(r"String f() => 'x ${1 / 3}';"),
+        isNotEmpty,
+      );
+    });
+
+    test('the binary floating-point type in a signature', () {
+      expect(findNumericViolations('double f() => 0;'), isNotEmpty);
+    });
+
+    test('the binary floating-point type as a static receiver', () {
+      expect(findNumericViolations("final a = double.parse('1');"), isNotEmpty);
+    });
+  });
+
+  group('findNumericViolations accepts', () {
+    test('an integer literal', () {
+      expect(findNumericViolations('final a = 1000;'), isEmpty);
+    });
+
+    test('digits inside a string, so Decimal.parse stays usable', () {
+      expect(findNumericViolations("final a = P.parse('0.001');"), isEmpty);
+    });
+
+    test('a decimal in a line comment', () {
+      expect(findNumericViolations('// 2.5 in prose\nfinal a = 1;'), isEmpty);
+    });
+
+    test('a decimal in a block comment', () {
+      expect(findNumericViolations('/* 2.5 */\nfinal a = 1;'), isEmpty);
+    });
+
+    test('a decimal in a doc comment', () {
+      expect(findNumericViolations('/// 2.5 in prose\nfinal a = 1;'), isEmpty);
+    });
+
+    test('an exact division between non-literal operands', () {
+      expect(findNumericViolations('final a = x.amount / y.amount;'), isEmpty);
+    });
+
+    test('a truncating integer division', () {
+      expect(findNumericViolations('final a = 7 ~/ 2;'), isEmpty);
+    });
+  });
+
   test(
     'every domain import or export resolves inside the domain boundary',
     () {
@@ -123,10 +261,10 @@ void main() {
 
       final offenders = <String>[];
       for (final file in files) {
-        final stripped = _stripCommentsAndStrings(file.readAsStringSync());
-        if (_doubleKeyword.hasMatch(stripped) ||
-            _floatLiteral.hasMatch(stripped)) {
-          offenders.add(file.path);
+        for (final violation in findNumericViolations(
+          file.readAsStringSync(),
+        )) {
+          offenders.add('${file.path}: $violation');
         }
       }
 

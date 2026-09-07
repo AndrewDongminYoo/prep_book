@@ -20,6 +20,7 @@ dependencies:
   rational: ^2.2.3
 
 dev_dependencies:
+  analyzer: ^13.3.0
   bloc_lint: ^0.4.1
   bloc_test: ^10.0.0
   bloc_tools: ^0.1.0-dev.24
