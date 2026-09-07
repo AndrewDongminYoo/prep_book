@@ -66,7 +66,15 @@ const _payloadRowLabel = 'production_runs row run-1';
 /// because a one-argument matcher can certify a message that names no row at
 /// all — which is what this file exists to rule out, and what an earlier
 /// revision of this suite pinned as correct for `unknown unit symbol`.
-/// Splitting the two makes that omission impossible to write down.
+///
+/// Splitting the two does not make that omission unwritable, and the comment
+/// here claimed it did. The arguments are `contains`ed independently, so a
+/// [detail] that already spells the row out satisfies the row check for
+/// free — which two of this file's calls do, legitimately, because their
+/// guard's message really does name the row inside its own text. What the
+/// split buys is that the row each call claims is stated in an argument of
+/// its own, where a reader sees it missing, instead of being hidden inside a
+/// fragment nobody reads for that.
 Matcher corruptRowNaming(String row, String detail) =>
     isA<CorruptDatabaseError>().having(
       (error) => error.message,
