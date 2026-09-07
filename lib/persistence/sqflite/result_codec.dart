@@ -367,18 +367,42 @@ Map<String, Object?> _resultToJson(
   'warnings': [for (final w in result.warnings) _warningToJson(w)],
 };
 
-ProductionResult _resultFromJson(Map<String, Object?> json) => ProductionResult(
-  scaleRatio: _rationalFromJson(json['scaleRatio']! as Map<String, Object?>),
-  batchPlan: _batchPlanFromJson(json['batchPlan']! as Map<String, Object?>),
-  components: [
+/// Rebuilds a [ProductionResult].
+///
+/// `batchPlan.fullBatchCount` alone is not enough to catch every corrupt
+/// row: [_batchPlanFromJson] reconstructs `target` from the stored count
+/// and remainder, so a count mutated together with a still-valid remainder
+/// reconstructs a self-consistent (but wrong) plan. Each component's
+/// `perBatch` is an independent witness of how many batches the run
+/// actually has — the calculator always sizes it to
+/// `batchPlan.batchCount` — so comparing the two here catches what
+/// [_batchPlanFromJson]'s own check cannot.
+ProductionResult _resultFromJson(Map<String, Object?> json) {
+  final batchPlan = _batchPlanFromJson(
+    json['batchPlan']! as Map<String, Object?>,
+  );
+  final components = [
     for (final c in json['components']! as List<Object?>)
       _scaledComponentFromJson(c! as Map<String, Object?>),
-  ],
-  warnings: [
-    for (final w in json['warnings']! as List<Object?>)
-      _warningFromJson(w! as Map<String, Object?>),
-  ],
-);
+  ];
+  for (final component in components) {
+    if (component.perBatch.length != batchPlan.batchCount) {
+      throw CorruptDatabaseError(
+        'batch plan reports ${batchPlan.batchCount} batches but component '
+        '${component.source.id} has ${component.perBatch.length}',
+      );
+    }
+  }
+  return ProductionResult(
+    scaleRatio: _rationalFromJson(json['scaleRatio']! as Map<String, Object?>),
+    batchPlan: batchPlan,
+    components: components,
+    warnings: [
+      for (final w in json['warnings']! as List<Object?>)
+        _warningFromJson(w! as Map<String, Object?>),
+    ],
+  );
+}
 
 // --- ProductionWarning -----------------------------------------------------
 

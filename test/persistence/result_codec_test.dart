@@ -393,4 +393,25 @@ void main() {
       throwsA(isA<CorruptDatabaseError>()),
     );
   });
+
+  test(
+    'a batch count that disagrees with a component perBatch length '
+    'is a corrupt database',
+    () {
+      final encoded =
+          jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
+              as Map<String, Object?>;
+      final result = encoded['result']! as Map<String, Object?>;
+      final batchPlan = result['batchPlan']! as Map<String, Object?>;
+      // fullBatchCount changes, but remainderYield is left alone, so
+      // BatchPlan.decompose still reconstructs a self-consistent triple —
+      // only the components' perBatch length still remembers the truth.
+      batchPlan['fullBatchCount'] = (batchPlan['fullBatchCount']! as int) + 3;
+
+      expect(
+        () => decodeRunPayload(jsonEncode(encoded)),
+        throwsA(isA<CorruptDatabaseError>()),
+      );
+    },
+  );
 }
