@@ -1,9 +1,12 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// `package:` prefixes a domain file may import or export. Everything else —
@@ -73,94 +76,6 @@ List<String> findNumericViolations(String source) {
   return visitor.violations;
 }
 
-/// Unwraps redundant parentheses so `(1) / (3)` is recognised as the integer
-/// division it is.
-Expression _unparenthesized(Expression expression) {
-  var current = expression;
-  while (current is ParenthesizedExpression) {
-    current = current.expression;
-  }
-  return current;
-}
-
-/// Type names a cast can settle a receiver as numeric with. A nullable cast
-/// settles nothing, because `/` cannot be applied to it without a null check.
-const _numericTypeNames = <String>{'int', 'double', 'num'};
-
-/// Prefix operators that keep a number a number. Dart defines no unary plus,
-/// and `!` takes a boolean, so these two are the whole set.
-final _numericPrefixOperators = <TokenType>{TokenType.MINUS, TokenType.TILDE};
-
-/// Binary operators that leave a numeric receiver numeric, whatever the right
-/// operand is. Each is declared on `num` or `int` to return a number, so the
-/// right operand never needs inspecting.
-///
-/// `/` is absent deliberately, and not because it breaks the rule: it is the
-/// operator being looked for, so its own result is already reported where it
-/// appears and nesting it would only duplicate the finding.
-final _numericBinaryOperators = <TokenType>{
-  TokenType.PLUS,
-  TokenType.MINUS,
-  TokenType.STAR,
-  TokenType.PERCENT,
-  TokenType.TILDE_SLASH,
-  TokenType.AMPERSAND,
-  TokenType.BAR,
-  TokenType.CARET,
-  TokenType.LT_LT,
-  TokenType.GT_GT,
-  TokenType.GT_GT_GT,
-};
-
-/// Whether the parser alone settles [expression] as a number.
-///
-/// `num./` is declared to return a `double` whichever runtime type it holds,
-/// so settling the receiver as *numeric* is the whole question — settling it
-/// as an integer specifically is more than the rule needs, and asking for it
-/// was what made earlier versions of this predicate miss `(v as num) / 3` and
-/// `(1 + other) / 3`.
-///
-/// A numeric literal qualifies. So does a cast that names `int`, `double` or
-/// `num`, because the cast writes the type into the source and needs no
-/// resolution; a nullable cast does not, since `/` could not be applied to it
-/// without a null check. A conditional qualifies when both arms do. Any
-/// numeric operator applied to a qualifying receiver qualifies, and the right
-/// operand never matters, because none of those operators can turn a number
-/// into something that is not one.
-///
-/// An identifier, a method call or a getter does not qualify, however
-/// obviously numeric it looks. `1.abs()` is an `int` at runtime, but reading a
-/// return type is precisely the work a parsed tree cannot do, and guessing
-/// would report the domain's own `Rational` arithmetic, which divides with
-/// this same operator at six call sites. That is the whole of what sits
-/// outside this function, and it sits outside because the parser genuinely
-/// cannot reach it rather than because it has not been implemented. Those
-/// cases are pinned as accepted by tests; closing them needs resolved types,
-/// which is tracked separately.
-bool _isSyntacticNum(Expression expression) {
-  final node = _unparenthesized(expression);
-  if (node is IntegerLiteral || node is DoubleLiteral) return true;
-  if (node is AsExpression) {
-    final type = node.type;
-    return type is NamedType &&
-        _numericTypeNames.contains(type.name.lexeme) &&
-        type.question == null;
-  }
-  if (node is ConditionalExpression) {
-    return _isSyntacticNum(node.thenExpression) &&
-        _isSyntacticNum(node.elseExpression);
-  }
-  if (node is PrefixExpression &&
-      _numericPrefixOperators.contains(node.operator.type)) {
-    return _isSyntacticNum(node.operand);
-  }
-  if (node is BinaryExpression &&
-      _numericBinaryOperators.contains(node.operator.type)) {
-    return _isSyntacticNum(node.leftOperand);
-  }
-  return false;
-}
-
 class _NumericVisitor extends RecursiveAstVisitor<void> {
   final violations = <String>[];
 
@@ -190,24 +105,115 @@ class _NumericVisitor extends RecursiveAstVisitor<void> {
     }
     super.visitSimpleIdentifier(node);
   }
+}
+
+/// Divisions under [directories] whose left operand statically resolves to a
+/// number, which is every division Dart evaluates as a `double`.
+///
+/// Resolves the sources rather than parsing them, so `Rational` is excluded by
+/// its own type instead of by a syntactic proxy. That proxy is what the parsed
+/// version could never get right: it took six review rounds and still could not
+/// see through an identifier, a method's return type or a getter.
+///
+/// Fails closed: a file that does not resolve is itself reported, and so is any
+/// expected file the resolver never reached. "Nothing was checked" must never
+/// look like "nothing was wrong" — this repository has already met that shape
+/// once, when cspell reported zero issues from zero files checked.
+Future<List<String>> findDivisionViolations(List<String> directories) async {
+  final expected = directories
+      .expand(_dartFilesUnder)
+      .map((file) => file.absolute.path)
+      .toSet();
+
+  final collection = AnalysisContextCollection(
+    includedPaths: directories
+        .map((path) => Directory(path).absolute.path)
+        .toList(),
+    sdkPath: _dartSdkPath(),
+  );
+
+  final violations = <String>[];
+  final resolvedPaths = <String>{};
+
+  for (final context in collection.contexts) {
+    for (final path in context.contextRoot.analyzedFiles()) {
+      if (!path.endsWith('.dart')) continue;
+      final result = await context.currentSession.getResolvedUnit(path);
+      if (result is! ResolvedUnitResult) {
+        violations.add(
+          '$path did not resolve (${result.runtimeType}), '
+          'so it was never checked',
+        );
+        continue;
+      }
+      resolvedPaths.add(result.path);
+      final visitor = _DivisionVisitor(result.path);
+      result.unit.visitChildren(visitor);
+      violations.addAll(visitor.violations);
+    }
+  }
+
+  final unreached = expected.difference(resolvedPaths);
+  if (unreached.isNotEmpty) {
+    violations.add(
+      '${unreached.length} of ${expected.length} expected files were never '
+      'resolved, so this is not a clean result: '
+      '${unreached.take(3).join(', ')}',
+    );
+  }
+
+  return violations;
+}
+
+/// Locates the Dart SDK that `flutter test` runs against.
+///
+/// The analyzer's own discovery reads `Platform.resolvedExecutable`, which here
+/// is `flutter_tester` rather than a Dart binary, and dies inside SDK
+/// construction with a `PathNotFoundException` on `libraries.dart`. So the path
+/// is passed explicitly, and `FLUTTER_ROOT` is the only reliable source for it
+/// in this environment.
+///
+/// Its absence throws rather than falling back. A guard that cannot read the
+/// SDK cannot read anything, and must not answer "clean".
+String _dartSdkPath() {
+  final root = Platform.environment['FLUTTER_ROOT'];
+  if (root == null || root.isEmpty) {
+    throw StateError(
+      'FLUTTER_ROOT is unset, so no Dart SDK can be located and nothing can '
+      'be resolved. Refusing to report a clean result.',
+    );
+  }
+  final sdk = '$root/bin/cache/dart-sdk';
+  if (!Directory(sdk).existsSync()) {
+    throw StateError(
+      'No Dart SDK at $sdk, so nothing can be resolved. '
+      'Refusing to report a clean result.',
+    );
+  }
+  return sdk;
+}
+
+bool _isNumericType(DartType type) =>
+    type.isDartCoreNum || type.isDartCoreInt || type.isDartCoreDouble;
+
+class _DivisionVisitor extends RecursiveAstVisitor<void> {
+  _DivisionVisitor(this.path);
+
+  final String path;
+  final violations = <String>[];
 
   @override
   void visitBinaryExpression(BinaryExpression node) {
-    // In Dart `/` always yields a double, including between two integers;
-    // `~/` is the truncating one. The left operand selects the operator, so a
-    // receiver the parser settles as numeric means `num./` and therefore a
-    // double, whatever the right operand turns out to be. That is safe against
-    // the domain's own divisions without needing types: a number cannot be the
-    // left operand of a Rational division at all, because Rational is not a
-    // `num` and the analyzer rejects it outright.
-    //
-    // The converse does not hold. A literal on the right says nothing about
-    // the left operand's type, and the domain divides Rationals at six call
-    // sites, so requiring a literal there would report every one of them. Both
-    // directions are pinned by tests.
-    if (node.operator.type == TokenType.SLASH &&
-        _isSyntacticNum(node.leftOperand)) {
-      violations.add('division of a number yields a double: $node');
+    // `num./` is declared to return a double, so a numeric left operand
+    // settles it. The type comes from resolution, so an identifier, a method's
+    // return type and a getter are all read exactly, and `Rational` is
+    // excluded because it is not a `num` rather than because it looks unlike
+    // one.
+    if (node.operator.type == TokenType.SLASH) {
+      final type = node.leftOperand.staticType;
+      if (type != null && _isNumericType(type)) {
+        violations.add('$path: division of a number yields a double: $node');
+      }
     }
     super.visitBinaryExpression(node);
   }
@@ -232,8 +238,71 @@ List<File> _dartFilesUnder(String path) {
 }
 
 void main() {
-  // Every bypass this guard has had is pinned here as a planted construct.
-  // A reading of the patterns has never caught one; only planting has.
+  // The forms issue #5 recorded as beyond a parser's reach. Each is planted in
+  // a real file, because resolution needs one — a source string has no types.
+  // One resolution serves the whole group; it costs about a second.
+  group('findDivisionViolations resolves what parsing could not', () {
+    const probeDirectory = 'test/_division_probe';
+    late List<String> violations;
+
+    setUpAll(() async {
+      Directory(probeDirectory).createSync(recursive: true);
+      File('$probeDirectory/probe.dart').writeAsStringSync('''
+import 'package:rational/rational.dart';
+
+int counter() => 3;
+int get batches => 4;
+
+final byMethodReturn = 1 / counter();
+final byIdentifier = counter() / 3;
+final byStaticMethod = int.parse('1') / 3;
+final byGetter = batches / 3;
+final byNullAssertion = (counter() as int?)! / 3;
+final byNullCoalescing = ((counter() as int?) ?? 0) / 3;
+
+Rational exact(Rational a, Rational b) => a / b;
+''');
+      violations = await findDivisionViolations([probeDirectory]);
+    });
+
+    tearDownAll(() {
+      Directory(probeDirectory).deleteSync(recursive: true);
+    });
+
+    test("a method's return type", () {
+      expect(violations, contains(contains('1 / counter()')));
+    });
+
+    test('an identifier resolved through a function call', () {
+      expect(violations, contains(contains('counter() / 3')));
+    });
+
+    test("a static method's return type", () {
+      expect(violations, contains(contains("int.parse('1') / 3")));
+    });
+
+    test('a getter', () {
+      expect(violations, contains(contains('batches / 3')));
+    });
+
+    test('a null assertion', () {
+      expect(violations, contains(contains('(counter() as int?)! / 3')));
+    });
+
+    test('a null-coalescing receiver', () {
+      expect(violations, contains(contains('?? 0) / 3')));
+    });
+
+    test('and leaves an exact Rational division alone', () {
+      // The control. Resolution excludes this by its type, where every
+      // syntactic version had to approximate it.
+      expect(violations, isNot(contains(contains('a / b'))));
+    });
+  });
+
+  // Every literal-shaped bypass this guard has had is pinned here as a planted
+  // construct. A reading of the patterns never caught one; only planting did.
+  // Division is not here: it needs types, and lives in the resolved gate above.
   group('findNumericViolations detects', () {
     test('a plain decimal literal', () {
       expect(findNumericViolations('final a = 1.5;'), isNotEmpty);
@@ -250,86 +319,6 @@ void main() {
     test('a float literal inside a string interpolation', () {
       expect(
         findNumericViolations(r"String f(int x) => 'value ${1.5 * x}';"),
-        isNotEmpty,
-      );
-    });
-
-    test('an integer divided by an integer, which yields a double', () {
-      expect(findNumericViolations('final a = 1 / 3;'), isNotEmpty);
-    });
-
-    test('an integer division wrapped in parentheses', () {
-      expect(findNumericViolations('final a = (1) / (3);'), isNotEmpty);
-    });
-
-    test('a division whose left operand alone is an integer literal', () {
-      expect(findNumericViolations('final a = 1 / count;'), isNotEmpty);
-    });
-
-    test('a division by a negated integer receiver', () {
-      expect(findNumericViolations('final a = -1 / 3;'), isNotEmpty);
-    });
-
-    test('a division by a bitwise-complemented integer receiver', () {
-      expect(findNumericViolations('final a = ~1 / 3;'), isNotEmpty);
-    });
-
-    test('a division whose receiver is integer arithmetic', () {
-      expect(findNumericViolations('final a = (1 + 2) / 3;'), isNotEmpty);
-    });
-
-    test('a division by a negated integer receiver over a variable', () {
-      expect(findNumericViolations('final a = -1 / count;'), isNotEmpty);
-    });
-
-    test('a division whose receiver is a truncating division', () {
-      // `int.~/` returns an int for any operand it accepts, so the right
-      // operand's type does not matter here.
-      expect(findNumericViolations('final a = (7 ~/ count) / 3;'), isNotEmpty);
-    });
-
-    test('a division whose receiver is a bitwise expression', () {
-      // A bitwise operator on an int refuses a non-int right operand at
-      // compile time, so anything that compiles yields an int.
-      expect(findNumericViolations('final a = (7 & mask) / 3;'), isNotEmpty);
-    });
-
-    test('a division whose receiver is a shifted integer', () {
-      expect(findNumericViolations('final a = (7 >>> bits) / 3;'), isNotEmpty);
-    });
-
-    test('a division whose receiver is explicitly cast to an integer', () {
-      // The cast names the type in the source, so no resolution is needed.
-      expect(findNumericViolations('final a = (v as int) / 3;'), isNotEmpty);
-    });
-
-    test('a division whose receiver is a conditional of integers', () {
-      expect(findNumericViolations('final a = (f ? 1 : 2) / 3;'), isNotEmpty);
-    });
-
-    test('a division whose receiver is cast to num', () {
-      // `num./` is declared to return a double whichever runtime type it
-      // holds, so a num receiver settles the result without settling itself.
-      expect(findNumericViolations('final a = (v as num) / 3;'), isNotEmpty);
-    });
-
-    test('a division whose receiver is cast to double', () {
-      expect(findNumericViolations('final a = (v as double) / 3;'), isNotEmpty);
-    });
-
-    test('a division whose receiver adds an unknown operand', () {
-      // `1 + other` is a num whatever `other` is, and a num receiver is
-      // enough. The right operand never needed inspecting.
-      expect(findNumericViolations('final a = (1 + other) / 3;'), isNotEmpty);
-    });
-
-    test('a division whose receiver takes a modulo of an unknown operand', () {
-      expect(findNumericViolations('final a = (1 % other) / 3;'), isNotEmpty);
-    });
-
-    test('an integer division inside a string interpolation', () {
-      expect(
-        findNumericViolations(r"String f() => 'x ${1 / 3}';"),
         isNotEmpty,
       );
     });
@@ -364,43 +353,9 @@ void main() {
       expect(findNumericViolations('/// 2.5 in prose\nfinal a = 1;'), isEmpty);
     });
 
-    test('an exact division between non-literal operands', () {
-      expect(findNumericViolations('final a = x.amount / y.amount;'), isEmpty);
-    });
-
-    // The known limits, pinned rather than left to be rediscovered. This guard
-    // reads a parsed tree and has no types, so it reports only receivers the
-    // parser alone settles as integers. Everything below yields a double at
-    // runtime and is deliberately not reported; closing these needs resolved
-    // types, which is a separate decision.
-    test('a division whose right operand alone is an integer literal', () {
-      // A literal on the right says nothing about the left operand's type,
-      // and the left is what selects the operator.
-      expect(findNumericViolations('final a = x.amount / 3;'), isEmpty);
-    });
-
-    test('a division whose receiver is a method call on an integer', () {
-      // `1.abs()` is an int at runtime, but resolving a return type is
-      // exactly the work a parsed tree cannot do.
-      expect(findNumericViolations('final a = 1.abs() / 3;'), isEmpty);
-    });
-
     test('a method call on an integer literal, which is not a double', () {
+      // `1.abs()` must not be read as the double literal `1.`.
       expect(findNumericViolations('final a = 1.abs();'), isEmpty);
-    });
-
-    test('a division whose receiver is cast to a nullable number', () {
-      // `int?` is not an integer receiver, and `/` cannot be applied to it
-      // without a null check anyway.
-      expect(findNumericViolations('final a = (v as int?) / 3;'), isEmpty);
-    });
-
-    test('a division whose receiver is a conditional with one unknown arm', () {
-      expect(findNumericViolations('final a = (f ? 1 : other) / 3;'), isEmpty);
-    });
-
-    test('a truncating integer division', () {
-      expect(findNumericViolations('final a = 7 ~/ 2;'), isEmpty);
     });
   });
 
@@ -467,5 +422,25 @@ void main() {
 
       expect(offenders, isEmpty);
     },
+  );
+
+  test(
+    'no domain source divides a number',
+    () async {
+      // The one gate that resolves rather than parses, and the only check
+      // here that tells a `Rational` division from a numeric one exactly.
+      //
+      // Scoped to `lib/domain` alone, unlike the scans above. The invariant
+      // is about domain arithmetic, and resolution is not free: measured on
+      // this machine `lib/domain` costs about 1.5 seconds, while adding
+      // `test/domain` took the whole suite from roughly 3 seconds to 21.
+      // Test sources stay covered for `double` literals and the `double`
+      // type by the parsed scan, which is where a test would realistically
+      // introduce one.
+      final violations = await findDivisionViolations(['lib/domain']);
+
+      expect(violations, isEmpty);
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 }
