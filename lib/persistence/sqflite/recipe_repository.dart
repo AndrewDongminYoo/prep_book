@@ -354,7 +354,8 @@ final class SqfliteRecipeRepository implements RecipeRepository {
         'ingredient' => IngredientRef(targetId),
         'sub_recipe' => SubRecipeRef(targetId),
         _ => throw CorruptDatabaseError(
-          'unknown component target kind: $targetKind',
+          '${_componentLabel(row)} names an unknown component target kind: '
+          '$targetKind',
         ),
       };
 
@@ -362,7 +363,8 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       final behavior = ScalingBehavior.values.asNameMap()[behaviorName];
       if (behavior == null) {
         throw CorruptDatabaseError(
-          'unknown component behavior: $behaviorName',
+          '${_componentLabel(row)} names an unknown component behavior: '
+          '$behaviorName',
         );
       }
 

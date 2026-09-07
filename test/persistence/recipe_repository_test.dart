@@ -444,7 +444,19 @@ void main() {
 
     await expectLater(
       repository.findRevision('corrupt-target', 1),
-      throwsA(isA<CorruptDatabaseError>()),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          allOf(
+            contains(
+              'recipe_components row corrupt-target revision 1 '
+              'component x',
+            ),
+            contains('unknown component target kind'),
+          ),
+        ),
+      ),
     );
   });
 
@@ -464,7 +476,19 @@ void main() {
 
     await expectLater(
       repository.findRevision('corrupt-behavior', 1),
-      throwsA(isA<CorruptDatabaseError>()),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          allOf(
+            contains(
+              'recipe_components row corrupt-behavior revision 1 '
+              'component x',
+            ),
+            contains('unknown component behavior'),
+          ),
+        ),
+      ),
     );
   });
 }
