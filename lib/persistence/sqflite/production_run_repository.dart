@@ -41,16 +41,41 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
       columns: _summaryColumns,
       orderBy: 'created_at DESC',
     );
-    return [
-      for (final row in rows)
-        ProductionRunSummary(
-          id: row['id']! as String,
-          recipeId: row['recipe_id']! as String,
-          recipeRevision: row['recipe_revision']! as int,
-          targetYield: quantityFromColumns(row, 'target'),
-          createdAt: DateTime.parse(row['created_at']! as String),
-        ),
-    ];
+    return rows.map(_summaryFromRow).toList();
+  }
+
+  /// Rebuilds the [ProductionRunSummary] a `production_runs` row holds.
+  ///
+  /// Guarded against a wrong-typed or unparseable column the same way, and
+  /// for the same reason, as `SqfliteRecipeRepository._recipeFromRow`:
+  /// SQLite applies affinity rather than a strict type, so a BLOB in a
+  /// `TEXT` column and a non-numeric string in an `INTEGER` one both reach
+  /// the casts below and would otherwise throw a bare `TypeError` naming no
+  /// row.
+  ProductionRunSummary _summaryFromRow(Map<String, Object?> row) {
+    try {
+      return ProductionRunSummary(
+        id: row['id']! as String,
+        recipeId: row['recipe_id']! as String,
+        recipeRevision: row['recipe_revision']! as int,
+        targetYield: quantityFromColumns(row, 'target'),
+        createdAt: DateTime.parse(row['created_at']! as String),
+      );
+      // A wrong-typed column is a corrupt row, not a programmer bug, so its
+      // `TypeError` is caught rather than left to escape.
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error) {
+      throw CorruptDatabaseError(
+        'production_runs row ${row['id']} holds a column of the wrong type: '
+        '$error',
+      );
+    } on FormatException catch (error) {
+      // Reached by `DateTime.parse` on a `created_at` that is not an ISO
+      // 8601 instant.
+      throw CorruptDatabaseError(
+        'production_runs row ${row['id']} has an unparseable column: $error',
+      );
+    }
   }
 
   @override
@@ -64,13 +89,36 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
     if (rows.isEmpty) return null;
     final row = rows.single;
 
-    final payload = decodeRunPayload(row['result_json']! as String);
+    // Only the two columns this method reads itself are wrapped. Everything
+    // else it goes on to call — `decodeRunPayload`, `quantityFromColumns`,
+    // `_acknowledgementsFor`, `_overridesFor` — already names its own row in
+    // a [CorruptDatabaseError], and catching those here would relabel a
+    // corrupt acknowledgement or override as a corrupt `production_runs` row.
+    final String resultJson;
+    final DateTime createdAt;
+    try {
+      resultJson = row['result_json']! as String;
+      createdAt = DateTime.parse(row['created_at']! as String);
+      // A wrong-typed column is a corrupt row, not a programmer bug, so its
+      // `TypeError` is caught rather than left to escape.
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error) {
+      throw CorruptDatabaseError(
+        'production_runs row $id holds a column of the wrong type: $error',
+      );
+    } on FormatException catch (error) {
+      throw CorruptDatabaseError(
+        'production_runs row $id has an unparseable column: $error',
+      );
+    }
+
+    final payload = decodeRunPayload(resultJson);
     final acknowledgedWarnings = await _acknowledgementsFor(id);
     final overrides = await _overridesFor(id);
 
     return ProductionRun(
       id: id,
-      createdAt: DateTime.parse(row['created_at']! as String),
+      createdAt: createdAt,
       recipe: payload.recipe,
       dependencySnapshot: payload.dependencySnapshot,
       targetYield: quantityFromColumns(row, 'target'),
@@ -140,9 +188,27 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
     );
     return <OverrideKey, Quantity>{
       for (final row in rows)
-        (row['recipe_id']! as String, row['component_id']! as String):
-            quantityFromColumns(row, 'override'),
+        _overrideKeyFromRow(row): quantityFromColumns(row, 'override'),
     };
+  }
+
+  /// Rebuilds the [OverrideKey] a `run_overrides` row is stored under.
+  ///
+  /// Read on [findById]'s own call path, so an unguarded cast here would
+  /// surface a bare `TypeError` out of the one method whose every other
+  /// failure mode names its row.
+  OverrideKey _overrideKeyFromRow(Map<String, Object?> row) {
+    try {
+      return (row['recipe_id']! as String, row['component_id']! as String);
+      // A wrong-typed column is a corrupt row, not a programmer bug, so its
+      // `TypeError` is caught rather than left to escape.
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error) {
+      throw CorruptDatabaseError(
+        'run_overrides row for run ${row['run_id']} holds a column of the '
+        'wrong type: $error',
+      );
+    }
   }
 
   /// Encodes [warning] as a `run_acknowledgements` row for [runId].
@@ -187,24 +253,33 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
   /// acknowledgement would make an already-accepted warning block the run
   /// again, and guessing a component id would attach it to the wrong line.
   ProductionWarning _warningFromRow(Map<String, Object?> row) {
-    final kind = row['warning_kind'];
-    final recipeId = row['recipe_id']! as String;
-    final componentId = row['component_id'];
-    return switch (kind) {
-      'manual_component' when componentId is String => ManualComponentWarning(
-        recipeId,
-        componentId,
-      ),
-      'rounding_adjusted' when componentId is String => RoundingAdjustedWarning(
-        recipeId,
-        componentId,
-      ),
-      'archived_dependency' => ArchivedDependencyWarning(recipeId),
-      _ => throw CorruptDatabaseError(
-        'unrecognised acknowledgement row: warning_kind=$kind, '
-        'component_id=$componentId',
-      ),
-    };
+    try {
+      final kind = row['warning_kind'];
+      final recipeId = row['recipe_id']! as String;
+      final componentId = row['component_id'];
+      return switch (kind) {
+        'manual_component' when componentId is String => ManualComponentWarning(
+          recipeId,
+          componentId,
+        ),
+        'rounding_adjusted' when componentId is String =>
+          RoundingAdjustedWarning(recipeId, componentId),
+        'archived_dependency' => ArchivedDependencyWarning(recipeId),
+        _ => throw CorruptDatabaseError(
+          'unrecognised acknowledgement row: warning_kind=$kind, '
+          'component_id=$componentId',
+        ),
+      };
+      // A wrong-typed column is a corrupt row, not a programmer bug, so its
+      // `TypeError` is caught rather than left to escape. Read on
+      // [findById]'s own call path, like [_overrideKeyFromRow].
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error) {
+      throw CorruptDatabaseError(
+        'run_acknowledgements row for run ${row['run_id']} holds a column of '
+        'the wrong type: $error',
+      );
+    }
   }
 
   /// Encodes an operator override [value] for [key] on [runId] as a

@@ -77,6 +77,16 @@ RunPayload decodeRunPayload(String json) {
     // ignore: avoid_catching_errors
   } on TypeError catch (error) {
     throw CorruptDatabaseError('run payload has an unexpected shape: $error');
+  } on FormatException catch (error) {
+    // Reached by `Decimal.parse` on a component's rounding increment and by
+    // `DateTime.parse` on a recipe's `modifiedAt` — the two payload values
+    // stored as text and parsed back. Neither failure is a `TypeError`, so
+    // neither is caught above. `jsonDecode`'s own `FormatException` cannot
+    // arrive here: it is raised and handled in the separate block above,
+    // which completes before this one starts.
+    throw CorruptDatabaseError(
+      'run payload holds an unparseable value: $error',
+    );
   }
 }
 

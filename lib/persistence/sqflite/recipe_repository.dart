@@ -147,6 +147,16 @@ final class SqfliteRecipeRepository implements RecipeRepository {
         'recipes row ${row['id']} revision ${row['revision']} holds a '
         'column of the wrong type: $error',
       );
+    } on FormatException catch (error) {
+      // Reached by `jsonDecode` on `preparation_notes` text that is not JSON
+      // at all, and by `DateTime.parse` on a `modified_at` that is not an
+      // ISO 8601 instant. `preparation_notes` that *is* valid JSON but is
+      // not a list fails one step later, at the `as List<dynamic>` cast, so
+      // it lands in the `TypeError` clause above instead.
+      throw CorruptDatabaseError(
+        'recipes row ${row['id']} revision ${row['revision']} has an '
+        'unparseable column: $error',
+      );
     }
   }
 
@@ -241,6 +251,14 @@ final class SqfliteRecipeRepository implements RecipeRepository {
         'recipe_components row ${row['recipe_id']} revision '
         '${row['recipe_revision']} component ${row['component_id']} holds a '
         'column of the wrong type: $error',
+      );
+    } on FormatException catch (error) {
+      // Reached by `Decimal.parse` on a `rounding_increment` that is not a
+      // decimal literal.
+      throw CorruptDatabaseError(
+        'recipe_components row ${row['recipe_id']} revision '
+        '${row['recipe_revision']} component ${row['component_id']} has an '
+        'unparseable column: $error',
       );
     }
   }

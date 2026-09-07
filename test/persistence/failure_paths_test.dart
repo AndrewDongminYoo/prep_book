@@ -238,4 +238,198 @@ void main() {
       throwsA(corruptRowNaming('column group base is not an integer pair')),
     );
   });
+
+  // --- production_runs and its two side tables ----------------------------
+  //
+  // The same wrong-typed-column hazard as `ingredients` and `recipes`, on the
+  // fourth repository. `findById` is the reason these matter beyond
+  // symmetry: `_overridesFor` and `_acknowledgementsFor` are read on its own
+  // call path, so without a guard there a corrupt override row surfaces a
+  // raw `TypeError` out of the very method whose other failure modes name
+  // their row.
+
+  test('a BLOB in a production_runs TEXT column is a corrupt row', () async {
+    await runs.save(buildRun());
+    await db.update('production_runs', <String, Object?>{
+      'recipe_id': Uint8List.fromList(const [1, 2, 3]),
+    });
+
+    await expectLater(
+      runs.listSummaries(),
+      throwsA(
+        corruptRowNaming('production_runs row run-1 holds a column of the'),
+      ),
+    );
+  });
+
+  test('an unparseable production_runs.created_at is a corrupt row', () async {
+    await runs.save(buildRun());
+    await db.update('production_runs', <String, Object?>{
+      'created_at': 'yesterday',
+    });
+
+    await expectLater(
+      runs.listSummaries(),
+      throwsA(
+        corruptRowNaming('production_runs row run-1 has an unparseable'),
+      ),
+    );
+  });
+
+  // `findById` reads `result_json` and `created_at` itself rather than
+  // through `_summaryFromRow`, so both of its clauses need their own reach.
+  test('a BLOB in production_runs.result_json is a corrupt row', () async {
+    await runs.save(buildRun());
+    await db.update('production_runs', <String, Object?>{
+      'result_json': Uint8List.fromList(const [1, 2, 3]),
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNaming('production_runs row run-1 holds a column of the'),
+      ),
+    );
+  });
+
+  test(
+    'an unparseable created_at is a corrupt row on the findById path too',
+    () async {
+      await runs.save(buildRun());
+      await db.update('production_runs', <String, Object?>{
+        'created_at': 'yesterday',
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNaming('production_runs row run-1 has an unparseable'),
+        ),
+      );
+    },
+  );
+
+  test('a BLOB in a run_acknowledgements column is a corrupt row', () async {
+    await runs.save(buildRun());
+    await db.insert('run_acknowledgements', <String, Object?>{
+      'run_id': 'run-1',
+      'warning_kind': 'archived_dependency',
+      'recipe_id': Uint8List.fromList(const [7]),
+      'component_id': null,
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(corruptRowNaming('run_acknowledgements row for run run-1')),
+    );
+  });
+
+  test('a BLOB in a run_overrides key column is a corrupt row', () async {
+    await runs.save(buildRun());
+    await runs.recordOverride(
+      'run-1',
+      ('r', 'flour'),
+      Quantity.parse('5', Unit.gram),
+    );
+    await db.update('run_overrides', <String, Object?>{
+      'component_id': Uint8List.fromList(const [8]),
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(corruptRowNaming('run_overrides row for run run-1')),
+    );
+  });
+
+  // --- parses that read a stored column -----------------------------------
+  //
+  // `DateTime.parse`, `Decimal.parse`, and `jsonDecode` all throw
+  // `FormatException`, which is not an `Error` and so is not caught by the
+  // `on TypeError` guards above. Each block that owns one of these parses
+  // needs its own clause, and each clause needs a test that reaches it.
+
+  test('an unparseable recipes.preparation_notes is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipes SET preparation_notes = 'not json'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming('recipes row r revision 1 has an unparseable'),
+      ),
+    );
+  });
+
+  // The second corrupt input to the same column, and it takes a different
+  // clause: text that parses as JSON but is not a list fails at the
+  // `as List<dynamic>` cast, which is a `TypeError`, not at the parse.
+  test(
+    'a preparation_notes that is valid JSON but not a list is a corrupt row',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate(
+        'UPDATE recipes SET preparation_notes = \'{"a":1}\'',
+      );
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming('recipes row r revision 1 holds a column of the'),
+        ),
+      );
+    },
+  );
+
+  test('an unparseable recipes.modified_at is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipes SET modified_at = 'yesterday'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming('recipes row r revision 1 has an unparseable'),
+      ),
+    );
+  });
+
+  test(
+    'an unparseable recipe_components.rounding_increment is a corrupt row',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate(
+        "UPDATE recipe_components SET rounding_increment = 'a lot'",
+      );
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming('recipe_components row r revision 1'),
+        ),
+      );
+    },
+  );
+
+  test('an unparseable rounding increment in a run payload is corrupt', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
+    final recipe = encoded['recipe']! as Map<String, Object?>;
+    final components = recipe['components']! as List<Object?>;
+    (components.first! as Map<String, Object?>)['roundingIncrement'] = 'a lot';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded)),
+      throwsA(corruptRowNaming('run payload holds an unparseable value')),
+    );
+  });
+
+  test('an unparseable modifiedAt in a run payload is corrupt', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
+    (encoded['recipe']! as Map<String, Object?>)['modifiedAt'] = 'yesterday';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded)),
+      throwsA(corruptRowNaming('run payload holds an unparseable value')),
+    );
+  });
 }
