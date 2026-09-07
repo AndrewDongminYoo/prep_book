@@ -39,7 +39,13 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
     final rows = await _db.query(
       'production_runs',
       columns: _summaryColumns,
-      orderBy: 'created_at DESC',
+      // `id` breaks a tie rather than leaving one. Two runs saved within
+      // the same millisecond carry the same `created_at`, and an ORDER BY
+      // that does not distinguish them lets SQLite return them in any
+      // order — and in a different one between two queries, so the same
+      // history list could reorder under the operator. The direction is
+      // arbitrary; being settled is not.
+      orderBy: 'created_at DESC, id ASC',
     );
     return rows.map(_summaryFromRow).toList();
   }

@@ -258,6 +258,27 @@ void main() {
     expect(summaries.map((s) => s.id), ['new', 'old']);
   });
 
+  // Two runs saved within the same millisecond tie on `created_at`, and an
+  // ORDER BY with no tiebreaker leaves SQLite free to return them in any
+  // order — including a different one between two queries, so the same list
+  // could reorder under the operator.
+  //
+  // The two are inserted in reverse of the expected result on purpose. With
+  // no tiebreaker SQLite falls back to the scan order, which returns them
+  // as inserted, so a test that inserted them in the expected order would
+  // pass without the tiebreaker and prove nothing.
+  test('runs saved in the same instant come back in a settled order', () async {
+    final sameInstant = DateTime.utc(2026, 9, 7, 12);
+    await repository.save(buildRun(id: 'run-b', createdAt: sameInstant));
+    await repository.save(buildRun(id: 'run-a', createdAt: sameInstant));
+
+    final first = await repository.listSummaries();
+    final second = await repository.listSummaries();
+
+    expect(first.map((s) => s.id), ['run-a', 'run-b']);
+    expect(second.map((s) => s.id), first.map((s) => s.id));
+  });
+
   // Proves `listSummaries` never reaches `result_json`: `decodeRunPayload`
   // would throw `CorruptDatabaseError` on this row (see
   // `result_codec_test.dart`'s own "malformed json" case), so a passing
