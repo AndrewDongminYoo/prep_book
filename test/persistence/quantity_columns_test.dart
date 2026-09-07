@@ -77,18 +77,23 @@ void main() {
 
   test('unitToStorage and unitFromStorage agree for every fixed unit', () {
     for (final unit in _knownFixedUnits) {
-      expect(unitFromStorage(unitToStorage(unit)), unit);
+      expect(unitFromStorage(unitToStorage(unit), location: _testRow), unit);
     }
   });
 
+  // The message carries the caller's location as well as the rejected
+  // symbol. `listAll`, `listLatestRevisions` and `listSummaries` all reach
+  // this function while scanning many rows, so a message naming the symbol
+  // alone would fail a whole screen and still leave the operator with no row
+  // to repair.
   test('an unknown bare unit symbol is a corrupt database, not a new unit', () {
     expect(
-      () => unitFromStorage('parsec'),
+      () => unitFromStorage('parsec', location: _testRow),
       throwsA(
         isA<CorruptDatabaseError>().having(
           (error) => error.toString(),
           'toString',
-          'CorruptDatabaseError: unknown unit symbol: parsec',
+          'CorruptDatabaseError: unknown unit symbol in test row: parsec',
         ),
       ),
     );
@@ -99,7 +104,7 @@ void main() {
     'database',
     () {
       expect(
-        () => unitFromStorage('inch:5'),
+        () => unitFromStorage('inch:5', location: _testRow),
         throwsA(isA<CorruptDatabaseError>()),
       );
     },

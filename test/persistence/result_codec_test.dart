@@ -5,6 +5,12 @@ import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/errors.dart';
 import 'package:prep_book/persistence/sqflite/result_codec.dart';
 
+/// Stands in for the row label a repository threads into the codec. These
+/// tests drive [decodeRunPayload] with hand-built payloads that belong to no
+/// stored row, so the label only has to be present. The test that proves a
+/// real row's id reaches the message lives in `failure_paths_test.dart`.
+const _rowLabel = 'production_runs row test';
+
 /// A run scaled by a ratio that has no finite decimal form (`1 kg` against
 /// a `3 kg` base yield), with one unrounded component and one rounded one.
 ProductionRun buildRunScaledByOneThird() {
@@ -279,7 +285,10 @@ void expectDependencySnapshot(
 void main() {
   test('a run payload round-trips including a non-terminating quantity', () {
     final run = buildRunScaledByOneThird();
-    final decoded = decodeRunPayload(encodeRunPayload(run));
+    final decoded = decodeRunPayload(
+      encodeRunPayload(run),
+      rowLabel: _rowLabel,
+    );
 
     expectRecipe(decoded.recipe, run.recipe);
     expectDependencySnapshot(
@@ -302,7 +311,10 @@ void main() {
 
   test('every warning kind survives the round trip', () {
     final run = buildRunWithAllWarningKinds();
-    final decoded = decodeRunPayload(encodeRunPayload(run));
+    final decoded = decodeRunPayload(
+      encodeRunPayload(run),
+      rowLabel: _rowLabel,
+    );
 
     expect(decoded.result.warnings, run.result.warnings);
     expect(decoded.result.warnings, hasLength(3));
@@ -320,7 +332,10 @@ void main() {
     'a run with a sub-recipe and multiple batches round-trips',
     () {
       final run = buildRunWithSubRecipeAndBatches();
-      final decoded = decodeRunPayload(encodeRunPayload(run));
+      final decoded = decodeRunPayload(
+        encodeRunPayload(run),
+        rowLabel: _rowLabel,
+      );
 
       expectRecipe(decoded.recipe, run.recipe);
       expectDependencySnapshot(
@@ -339,7 +354,10 @@ void main() {
 
   test('a run with dynamic count and named-yield units round-trips', () {
     final run = buildRunWithDynamicUnits();
-    final decoded = decodeRunPayload(encodeRunPayload(run));
+    final decoded = decodeRunPayload(
+      encodeRunPayload(run),
+      rowLabel: _rowLabel,
+    );
 
     expectRecipe(decoded.recipe, run.recipe);
     expectResult(decoded.result, run.result);
@@ -356,21 +374,38 @@ void main() {
     expect(eggs.source.baseQuantity!.unit.dimension, UnitDimension.count);
   });
 
-  test('malformed json is a corrupt database', () {
+  // Both of the codec's row-naming failures are asserted on their message,
+  // not only their type: they are the two the specification requires to name
+  // the row, and a message that named only the bad value would satisfy
+  // `isA<CorruptDatabaseError>()` just as well.
+  test('malformed json is a corrupt database naming the row', () {
     expect(
-      () => decodeRunPayload('{not json'),
-      throwsA(isA<CorruptDatabaseError>()),
+      () => decodeRunPayload('{not json', rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          allOf(
+            contains(_rowLabel),
+            contains('run payload of'),
+            contains('is not valid JSON'),
+          ),
+        ),
+      ),
     );
   });
 
   test('a json value that is not a run payload is a corrupt database', () {
     expect(
-      () => decodeRunPayload('{"warnings":[{"kind":"invented"}]}'),
+      () => decodeRunPayload(
+        '{"warnings":[{"kind":"invented"}]}',
+        rowLabel: _rowLabel,
+      ),
       throwsA(isA<CorruptDatabaseError>()),
     );
   });
 
-  test('an unrecognized warning kind is a corrupt database', () {
+  test('an unrecognized warning kind is a corrupt database naming the row', () {
     final encoded =
         jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds()))
             as Map<String, Object?>;
@@ -379,10 +414,52 @@ void main() {
     (warnings.first! as Map<String, Object?>)['kind'] = 'invented';
 
     expect(
-      () => decodeRunPayload(jsonEncode(encoded)),
-      throwsA(isA<CorruptDatabaseError>()),
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          allOf(contains(_rowLabel), contains('unknown warning kind')),
+        ),
+      ),
     );
   });
+
+  // A warning inside an expanded sub-recipe is decoded through a second,
+  // nested `_resultFromJson`, so it reaches `_warningFromJson` down a path
+  // the test above never walks. It must still name the row, which is the
+  // whole reason the label is threaded through `_scaledComponentFromJson`
+  // rather than only used at the top level.
+  test(
+    "an unrecognized warning kind inside a sub-recipe's result names the "
+    'row too',
+    () {
+      final encoded =
+          jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
+              as Map<String, Object?>;
+      final result = encoded['result']! as Map<String, Object?>;
+      final components = result['components']! as List<Object?>;
+      final syrup = components.last! as Map<String, Object?>;
+      final subResult = syrup['subRecipe']! as Map<String, Object?>;
+      // The sub-recipe's own result carries no warnings of its own, so one
+      // is planted rather than mutated — the decoder must reject it wherever
+      // in the tree it appears.
+      subResult['warnings'] = <Object?>[
+        <String, Object?>{'kind': 'invented'},
+      ];
+
+      expect(
+        () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+        throwsA(
+          isA<CorruptDatabaseError>().having(
+            (error) => error.message,
+            'message',
+            allOf(contains(_rowLabel), contains('unknown warning kind')),
+          ),
+        ),
+      );
+    },
+  );
 
   test('an unrecognized component target kind is a corrupt database', () {
     final encoded =
@@ -396,7 +473,7 @@ void main() {
     target['kind'] = 'invented';
 
     expect(
-      () => decodeRunPayload(jsonEncode(encoded)),
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
       throwsA(isA<CorruptDatabaseError>()),
     );
   });
@@ -410,7 +487,7 @@ void main() {
     (components.first! as Map<String, Object?>)['behavior'] = 'invented';
 
     expect(
-      () => decodeRunPayload(jsonEncode(encoded)),
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
       throwsA(isA<CorruptDatabaseError>()),
     );
   });
@@ -429,7 +506,7 @@ void main() {
     total['displayed'] = exact;
 
     expect(
-      () => decodeRunPayload(jsonEncode(encoded)),
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
       throwsA(isA<CorruptDatabaseError>()),
     );
   });
@@ -445,7 +522,7 @@ void main() {
     batchPlan['remainderYield'] = batchPlan['fullBatchYield'];
 
     expect(
-      () => decodeRunPayload(jsonEncode(encoded)),
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
       throwsA(isA<CorruptDatabaseError>()),
     );
   });
@@ -465,7 +542,7 @@ void main() {
       batchPlan['fullBatchCount'] = (batchPlan['fullBatchCount']! as int) + 3;
 
       expect(
-        () => decodeRunPayload(jsonEncode(encoded)),
+        () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
         throwsA(isA<CorruptDatabaseError>()),
       );
     },
@@ -492,7 +569,7 @@ void main() {
       fullBatchYield['d'] = '1';
 
       expect(
-        () => decodeRunPayload(jsonEncode(encoded)),
+        () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
         throwsA(isA<CorruptDatabaseError>()),
       );
     },

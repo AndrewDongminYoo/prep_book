@@ -48,13 +48,42 @@ ProductionRun buildRun({String id = 'run-1'}) {
   );
 }
 
-/// Matches a [CorruptDatabaseError] whose message contains [fragment], so a
-/// test proves *which* guard fired rather than only that something did.
-Matcher corruptRowNaming(String fragment) => isA<CorruptDatabaseError>().having(
-  (error) => error.message,
-  'message',
-  contains(fragment),
-);
+/// The label the repositories would thread into [decodeRunPayload]. The two
+/// payload tests in this file call the codec directly on a payload that
+/// belongs to no stored row, so the label only has to be present.
+const _payloadRowLabel = 'production_runs row run-1';
+
+/// Matches a [CorruptDatabaseError] whose message names [row] *and* contains
+/// [detail], so a test proves both that the failure identifies the stored row
+/// and *which* guard fired.
+///
+/// The row is a separate argument rather than one half of a single fragment
+/// because a one-argument matcher can certify a message that names no row at
+/// all — which is what this file exists to rule out, and what an earlier
+/// revision of this suite pinned as correct for `unknown unit symbol`.
+/// Splitting the two makes that omission impossible to write down.
+Matcher corruptRowNaming(String row, String detail) =>
+    isA<CorruptDatabaseError>().having(
+      (error) => error.message,
+      'message',
+      allOf(contains(row), contains(detail)),
+    );
+
+/// Matches a [CorruptDatabaseError] raised inside a run payload, whose
+/// message names a position within that payload rather than a row.
+///
+/// Exists only for those messages: a separate ruling on this branch left
+/// the payload-internal failures naming their position, and the row they
+/// came from is named by the two decoder messages that carry it
+/// ([decodeRunPayload]'s parse failure and an unknown warning kind).
+/// It is not an escape hatch from [corruptRowNaming]'s row argument — a
+/// failure that reads a stored *column* must use that matcher.
+Matcher corruptPayloadDetail(String detail) =>
+    isA<CorruptDatabaseError>().having(
+      (error) => error.message,
+      'message',
+      contains(detail),
+    );
 
 void main() {
   setUpAll(sqfliteFfiInit);
@@ -88,7 +117,12 @@ void main() {
 
       await expectLater(
         ingredients.findById('x'),
-        throwsA(corruptRowNaming('unknown unit symbol: parsec')),
+        throwsA(
+          corruptRowNaming(
+            'ingredients row x',
+            'unknown unit symbol in ingredients row x: parsec',
+          ),
+        ),
       );
     },
   );
@@ -115,7 +149,12 @@ void main() {
 
       await expectLater(
         runs.findById('broken'),
-        throwsA(corruptRowNaming('run payload is not valid JSON')),
+        throwsA(
+          corruptRowNaming(
+            'production_runs row broken',
+            'run payload of production_runs row broken is not valid JSON',
+          ),
+        ),
       );
     },
   );
@@ -142,8 +181,8 @@ void main() {
         recipes.findLatest('r'),
         throwsA(
           corruptRowNaming(
-            'incomplete quantity in column group base of recipe_components '
-            'row r revision 1 component flour',
+            'recipe_components row r revision 1 component flour',
+            'incomplete quantity in column group base',
           ),
         ),
       );
@@ -165,7 +204,12 @@ void main() {
 
     await expectLater(
       ingredients.findById('blob'),
-      throwsA(corruptRowNaming('ingredients row blob')),
+      throwsA(
+        corruptRowNaming(
+          'ingredients row blob',
+          'holds a column of the wrong type',
+        ),
+      ),
     );
   });
 
@@ -187,7 +231,12 @@ void main() {
 
     await expectLater(
       recipes.findLatest('r'),
-      throwsA(corruptRowNaming('recipes row r revision not-an-integer')),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision not-an-integer',
+          'holds a column of the wrong type',
+        ),
+      ),
     );
   });
 
@@ -210,8 +259,8 @@ void main() {
       recipes.findLatest('r'),
       throwsA(
         corruptRowNaming(
-          'recipe_components row r revision 1 component [4, 5, 6] holds a '
-          'column of the wrong type',
+          'recipe_components row r revision 1 component [4, 5, 6]',
+          'holds a column of the wrong type',
         ),
       ),
     );
@@ -244,8 +293,8 @@ void main() {
       recipes.findLatest('r'),
       throwsA(
         corruptRowNaming(
-          'incomplete quantity in column group base_yield of recipes row r '
-          'revision 1',
+          'recipes row r revision 1',
+          'incomplete quantity in column group base_yield',
         ),
       ),
     );
@@ -267,8 +316,8 @@ void main() {
         runs.listSummaries(),
         throwsA(
           corruptRowNaming(
-            'incomplete quantity in column group target of production_runs '
-            'row run-1',
+            'production_runs row run-1',
+            'incomplete quantity in column group target',
           ),
         ),
       );
@@ -287,8 +336,8 @@ void main() {
         runs.findById('run-1'),
         throwsA(
           corruptRowNaming(
-            'incomplete quantity in column group target of production_runs '
-            'row run-1',
+            'production_runs row run-1',
+            'incomplete quantity in column group target',
           ),
         ),
       );
@@ -310,8 +359,8 @@ void main() {
       runs.findById('run-1'),
       throwsA(
         corruptRowNaming(
-          'incomplete quantity in column group override of run_overrides row '
-          'for run run-1 recipe r component flour',
+          'run_overrides row for run run-1 recipe r component flour',
+          'incomplete quantity in column group override',
         ),
       ),
     );
@@ -336,8 +385,8 @@ void main() {
         recipes.findLatest('r'),
         throwsA(
           corruptRowNaming(
-            'column group base of recipe_components row r revision 1 '
-            'component flour has a zero denominator',
+            'recipe_components row r revision 1 component flour',
+            'has a zero denominator',
           ),
         ),
       );
@@ -351,8 +400,10 @@ void main() {
     (recipe['baseYield']! as Map<String, Object?>)['d'] = '0';
 
     expect(
-      () => decodeRunPayload(jsonEncode(encoded)),
-      throwsA(corruptRowNaming('a run payload quantity has a zero')),
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
+      throwsA(
+        corruptPayloadDetail('a run payload quantity has a zero denominator'),
+      ),
     );
   });
 
@@ -367,8 +418,8 @@ void main() {
       recipes.findLatest('r'),
       throwsA(
         corruptRowNaming(
-          'column group base of recipe_components row r revision 1 '
-          'component flour is not an integer pair',
+          'recipe_components row r revision 1 component flour',
+          'is not an integer pair',
         ),
       ),
     );
@@ -392,7 +443,10 @@ void main() {
     await expectLater(
       runs.listSummaries(),
       throwsA(
-        corruptRowNaming('production_runs row run-1 holds a column of the'),
+        corruptRowNaming(
+          'production_runs row run-1',
+          'holds a column of the wrong type',
+        ),
       ),
     );
   });
@@ -406,7 +460,10 @@ void main() {
     await expectLater(
       runs.listSummaries(),
       throwsA(
-        corruptRowNaming('production_runs row run-1 has an unparseable'),
+        corruptRowNaming(
+          'production_runs row run-1',
+          'has an unparseable column',
+        ),
       ),
     );
   });
@@ -422,7 +479,10 @@ void main() {
     await expectLater(
       runs.findById('run-1'),
       throwsA(
-        corruptRowNaming('production_runs row run-1 holds a column of the'),
+        corruptRowNaming(
+          'production_runs row run-1',
+          'holds a column of the wrong type',
+        ),
       ),
     );
   });
@@ -438,7 +498,10 @@ void main() {
       await expectLater(
         runs.findById('run-1'),
         throwsA(
-          corruptRowNaming('production_runs row run-1 has an unparseable'),
+          corruptRowNaming(
+            'production_runs row run-1',
+            'has an unparseable column',
+          ),
         ),
       );
     },
@@ -455,7 +518,12 @@ void main() {
 
     await expectLater(
       runs.findById('run-1'),
-      throwsA(corruptRowNaming('run_acknowledgements row for run run-1')),
+      throwsA(
+        corruptRowNaming(
+          'run_acknowledgements row for run run-1',
+          'holds a column of the wrong type',
+        ),
+      ),
     );
   });
 
@@ -472,7 +540,12 @@ void main() {
 
     await expectLater(
       runs.findById('run-1'),
-      throwsA(corruptRowNaming('run_overrides row for run run-1')),
+      throwsA(
+        corruptRowNaming(
+          'run_overrides row for run run-1',
+          'holds a column of the wrong type',
+        ),
+      ),
     );
   });
 
@@ -490,7 +563,10 @@ void main() {
     await expectLater(
       recipes.findLatest('r'),
       throwsA(
-        corruptRowNaming('recipes row r revision 1 has an unparseable'),
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'has an unparseable column',
+        ),
       ),
     );
   });
@@ -509,7 +585,10 @@ void main() {
       await expectLater(
         recipes.findLatest('r'),
         throwsA(
-          corruptRowNaming('recipes row r revision 1 holds a column of the'),
+          corruptRowNaming(
+            'recipes row r revision 1',
+            'holds a column of the wrong type',
+          ),
         ),
       );
     },
@@ -522,7 +601,10 @@ void main() {
     await expectLater(
       recipes.findLatest('r'),
       throwsA(
-        corruptRowNaming('recipes row r revision 1 has an unparseable'),
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'has an unparseable column',
+        ),
       ),
     );
   });
@@ -543,8 +625,8 @@ void main() {
         recipes.findLatest('r'),
         throwsA(
           corruptRowNaming(
-            'recipe_components row r revision 1 component flour has an '
-            'unparseable column',
+            'recipe_components row r revision 1 component flour',
+            'has an unparseable column',
           ),
         ),
       );
@@ -559,8 +641,8 @@ void main() {
     (components.first! as Map<String, Object?>)['roundingIncrement'] = 'a lot';
 
     expect(
-      () => decodeRunPayload(jsonEncode(encoded)),
-      throwsA(corruptRowNaming('run payload holds an unparseable value')),
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
+      throwsA(corruptPayloadDetail('run payload holds an unparseable value')),
     );
   });
 
@@ -570,8 +652,8 @@ void main() {
     (encoded['recipe']! as Map<String, Object?>)['modifiedAt'] = 'yesterday';
 
     expect(
-      () => decodeRunPayload(jsonEncode(encoded)),
-      throwsA(corruptRowNaming('run payload holds an unparseable value')),
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
+      throwsA(corruptPayloadDetail('run payload holds an unparseable value')),
     );
   });
 }

@@ -116,7 +116,10 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
       );
     }
 
-    final payload = decodeRunPayload(resultJson);
+    final payload = decodeRunPayload(
+      resultJson,
+      rowLabel: 'production_runs row $id',
+    );
     final acknowledgedWarnings = await _acknowledgementsFor(id);
     final overrides = await _overridesFor(id);
 
@@ -274,6 +277,7 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
   /// acknowledgement would make an already-accepted warning block the run
   /// again, and guessing a component id would attach it to the wrong line.
   ProductionWarning _warningFromRow(Map<String, Object?> row) {
+    final rowLabel = _acknowledgementLabel(row);
     try {
       final kind = row['warning_kind'];
       final recipeId = row['recipe_id']! as String;
@@ -287,7 +291,7 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
           RoundingAdjustedWarning(recipeId, componentId),
         'archived_dependency' => ArchivedDependencyWarning(recipeId),
         _ => throw CorruptDatabaseError(
-          'unrecognised acknowledgement row: warning_kind=$kind, '
+          'unrecognised acknowledgement in $rowLabel: warning_kind=$kind, '
           'component_id=$componentId',
         ),
       };
@@ -297,11 +301,19 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
       // ignore: avoid_catching_errors
     } on TypeError catch (error) {
       throw CorruptDatabaseError(
-        'run_acknowledgements row for run ${row['run_id']} holds a column of '
-        'the wrong type: $error',
+        '$rowLabel holds a column of the wrong type: $error',
       );
     }
   }
+
+  /// Identifies a `run_acknowledgements` row by the run that owns it.
+  ///
+  /// Shared by [_warningFromRow]'s two failures, so an unrecognised kind is
+  /// named the same way as a wrong-typed column. The run id is what makes
+  /// either message actionable: `warning_kind` and `component_id` repeat
+  /// across every run in the table, so they identify no row on their own.
+  String _acknowledgementLabel(Map<String, Object?> row) =>
+      'run_acknowledgements row for run ${row['run_id']}';
 
   /// Encodes an operator override [value] for [key] on [runId] as a
   /// `run_overrides` row.

@@ -45,19 +45,29 @@ String encodeRunPayload(ProductionRun run) => jsonEncode(<String, Object?>{
   'result': _resultToJson(run.result),
 });
 
-/// Rebuilds a [RunPayload] from [json], as produced by [encodeRunPayload].
+/// Rebuilds a [RunPayload] from [json], as produced by [encodeRunPayload],
+/// naming the row it was read from as [rowLabel] if it cannot.
 ///
 /// Throws [CorruptDatabaseError] when [json] is not valid JSON, does not
 /// have the shape a run payload has, or names a warning kind, component
 /// target kind, or scaling behavior this decoder does not recognize. An
 /// unrecognized warning kind is never dropped — a silently dropped blocking
 /// warning would make a run that must not be finalized look finalizable.
-RunPayload decodeRunPayload(String json) {
+///
+/// [rowLabel] is required because two of those failures — a `result_json`
+/// that does not parse at all, and an unrecognized warning kind — say
+/// nothing on their own about *which* stored run holds the bad value. Both
+/// are failures the specification requires to name the row. The remaining
+/// messages this file raises each name a position inside the payload
+/// instead, which is the level they are useful at.
+RunPayload decodeRunPayload(String json, {required String rowLabel}) {
   final Object? decoded;
   try {
     decoded = jsonDecode(json);
   } on FormatException catch (error) {
-    throw CorruptDatabaseError('run payload is not valid JSON: $error');
+    throw CorruptDatabaseError(
+      'run payload of $rowLabel is not valid JSON: $error',
+    );
   }
   try {
     final map = decoded! as Map<String, Object?>;
@@ -68,7 +78,10 @@ RunPayload decodeRunPayload(String json) {
         for (final entry in snapshotJson.entries)
           entry.key: _recipeFromJson(entry.value! as Map<String, Object?>),
       },
-      result: _resultFromJson(map['result']! as Map<String, Object?>),
+      result: _resultFromJson(
+        map['result']! as Map<String, Object?>,
+        rowLabel: rowLabel,
+      ),
     );
     // A cast failure here is Dart's `TypeError`, thrown for a `Map` whose
     // shape does not match, a missing key forced non-null by `!`, or a
@@ -109,7 +122,7 @@ Quantity _quantityFromJson(Map<String, Object?> json) => Quantity.fromRational(
     json['d']! as String,
     location: 'a run payload quantity',
   ),
-  unitFromStorage(json['u']! as String),
+  unitFromStorage(json['u']! as String, location: 'a run payload quantity'),
 );
 
 Map<String, Object?> _rationalToJson(Rational value) => <String, Object?>{
@@ -349,7 +362,12 @@ Map<String, Object?> _scaledComponentToJson(ScaledComponent component) =>
           : _resultToJson(component.subRecipe!),
     };
 
-ScaledComponent _scaledComponentFromJson(Map<String, Object?> json) {
+/// [rowLabel] is carried only so an expanded sub-recipe's own warnings can
+/// still name the stored run they came out of; nothing else here uses it.
+ScaledComponent _scaledComponentFromJson(
+  Map<String, Object?> json, {
+  required String rowLabel,
+}) {
   final totalJson = json['total'];
   final subRecipeJson = json['subRecipe'];
   return ScaledComponent(
@@ -366,7 +384,10 @@ ScaledComponent _scaledComponentFromJson(Map<String, Object?> json) {
     ],
     subRecipe: subRecipeJson == null
         ? null
-        : _resultFromJson(subRecipeJson as Map<String, Object?>),
+        : _resultFromJson(
+            subRecipeJson as Map<String, Object?>,
+            rowLabel: rowLabel,
+          ),
   );
 }
 
@@ -389,13 +410,19 @@ Map<String, Object?> _resultToJson(
 /// actually has — the calculator always sizes it to
 /// `batchPlan.batchCount` — so comparing the two here catches what
 /// [_batchPlanFromJson]'s own check cannot.
-ProductionResult _resultFromJson(Map<String, Object?> json) {
+///
+/// [rowLabel] is threaded through only to reach [_warningFromJson], whose
+/// failure names no position inside the payload and so needs the row.
+ProductionResult _resultFromJson(
+  Map<String, Object?> json, {
+  required String rowLabel,
+}) {
   final batchPlan = _batchPlanFromJson(
     json['batchPlan']! as Map<String, Object?>,
   );
   final components = [
     for (final c in json['components']! as List<Object?>)
-      _scaledComponentFromJson(c! as Map<String, Object?>),
+      _scaledComponentFromJson(c! as Map<String, Object?>, rowLabel: rowLabel),
   ];
   for (final component in components) {
     if (component.perBatch.length != batchPlan.batchCount) {
@@ -412,7 +439,7 @@ ProductionResult _resultFromJson(Map<String, Object?> json) {
     components: components,
     warnings: [
       for (final w in json['warnings']! as List<Object?>)
-        _warningFromJson(w! as Map<String, Object?>),
+        _warningFromJson(w! as Map<String, Object?>, rowLabel: rowLabel),
     ],
   );
 }
@@ -505,7 +532,14 @@ Map<String, Object?> _warningToJson(ProductionWarning warning) =>
 /// being dropped: a silently dropped blocking warning would make a run
 /// that must not be finalized look finalizable, which is the worst failure
 /// this layer can produce.
-ProductionWarning _warningFromJson(Map<String, Object?> json) {
+///
+/// The failure names [rowLabel] because a warning kind carries no position
+/// of its own — nothing in the message would otherwise say which stored run
+/// must be repaired.
+ProductionWarning _warningFromJson(
+  Map<String, Object?> json, {
+  required String rowLabel,
+}) {
   final kind = json['kind'];
   return switch (kind) {
     'manual_component' => ManualComponentWarning(
@@ -519,6 +553,8 @@ ProductionWarning _warningFromJson(Map<String, Object?> json) {
     'archived_dependency' => ArchivedDependencyWarning(
       json['recipeId']! as String,
     ),
-    _ => throw CorruptDatabaseError('unknown warning kind: $kind'),
+    _ => throw CorruptDatabaseError(
+      'unknown warning kind in $rowLabel: $kind',
+    ),
   };
 }

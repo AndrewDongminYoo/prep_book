@@ -56,11 +56,21 @@ final class SqfliteIngredientRepository implements IngredientRepository {
   /// the same shape. A domain rejection is not swallowed by this: every
   /// modelled domain failure extends `DomainError`, never `TypeError`.
   Ingredient _fromRow(Map<String, Object?> row) {
+    // Shared by this method's own guard and the [unitFromStorage] call
+    // inside it, so a row that fails on its stored unit is named the same
+    // way as one that fails on a cast — `listAll` scans the whole table, so
+    // an unnamed failure would say only that some ingredient somewhere was
+    // unreadable. Reads the raw id rather than the cast below, because the
+    // label has to survive the corruption it describes.
+    final rowLabel = 'ingredients row ${row['id']}';
     try {
       return Ingredient(
         id: row['id']! as String,
         name: row['name']! as String,
-        defaultUnit: unitFromStorage(row['default_unit_symbol']! as String),
+        defaultUnit: unitFromStorage(
+          row['default_unit_symbol']! as String,
+          location: rowLabel,
+        ),
         category: row['category'] as String?,
       );
       // A wrong-typed column is a corrupt row, not a programmer bug, so its
@@ -69,8 +79,7 @@ final class SqfliteIngredientRepository implements IngredientRepository {
       // ignore: avoid_catching_errors
     } on TypeError catch (error) {
       throw CorruptDatabaseError(
-        'ingredients row ${row['id']} holds a column of the wrong type: '
-        '$error',
+        '$rowLabel holds a column of the wrong type: $error',
       );
     }
   }

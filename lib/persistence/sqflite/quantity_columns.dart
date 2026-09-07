@@ -37,7 +37,8 @@ String unitToStorage(Unit unit) {
   return '$kind:${unit.symbol}';
 }
 
-/// Recovers the domain `Unit` a [stored] string encodes.
+/// Recovers the domain `Unit` a [stored] string encodes, naming [location]
+/// if it cannot.
 ///
 /// A bare symbol matching one of [_fixedUnits] decodes to that unit. A
 /// `count:<symbol>` or `yield:<symbol>` form decodes to `Unit.count` or
@@ -47,7 +48,16 @@ String unitToStorage(Unit unit) {
 /// able to store everything the domain can construct. Anything else — an
 /// unrecognised bare symbol, or a prefix that is neither `count` nor
 /// `yield` — is a corrupt row, never a guessed unit.
-Unit unitFromStorage(String stored) {
+///
+/// [location] is required for the same reason [parseStoredRational]'s is:
+/// this function is handed one string and can name nothing on its own,
+/// while every caller knows the row it read that string from. Three of the
+/// four repository reads that reach it scan many rows at once
+/// (`IngredientRepository.listAll`, `RecipeRepository.listLatestRevisions`,
+/// `ProductionRunRepository.listSummaries`), so an unnamed symbol would
+/// fail a whole history screen while telling the operator nothing about
+/// which row to repair.
+Unit unitFromStorage(String stored, {required String location}) {
   for (final fixed in _fixedUnits) {
     if (fixed.symbol == stored) return fixed;
   }
@@ -58,7 +68,7 @@ Unit unitFromStorage(String stored) {
     if (kind == 'count') return Unit.count(symbol);
     if (kind == 'yield') return Unit.namedYield(symbol);
   }
-  throw CorruptDatabaseError('unknown unit symbol: $stored');
+  throw CorruptDatabaseError('unknown unit symbol in $location: $stored');
 }
 
 /// Rebuilds the `Rational` a stored decimal-string pair encodes, naming
@@ -149,12 +159,9 @@ Quantity quantityFromColumns(
       'incomplete quantity in column group $prefix of $rowLabel',
     );
   }
+  final location = 'column group $prefix of $rowLabel';
   return Quantity.fromRational(
-    parseStoredRational(
-      numerator,
-      denominator,
-      location: 'column group $prefix of $rowLabel',
-    ),
-    unitFromStorage(symbol),
+    parseStoredRational(numerator, denominator, location: location),
+    unitFromStorage(symbol, location: location),
   );
 }

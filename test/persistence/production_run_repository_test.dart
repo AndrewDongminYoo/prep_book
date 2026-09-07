@@ -498,8 +498,14 @@ void main() {
     },
   );
 
+  // The message must name the run, not only the kind and component that
+  // were not recognised: both of those repeat across every run in the
+  // table, so on their own they identify no row to repair. `findById` is
+  // the only reader of this table, but it is reached from a history screen
+  // where the operator has many runs to choose between.
   test(
-    'an unrecognised acknowledgement warning kind is a corrupt database',
+    'an unrecognised acknowledgement warning kind is a corrupt database '
+    'naming the run',
     () async {
       await repository.save(buildRun(id: 'run-1'));
       await db.insert('run_acknowledgements', <String, Object?>{
@@ -511,7 +517,17 @@ void main() {
 
       await expectLater(
         repository.findById('run-1'),
-        throwsA(isA<CorruptDatabaseError>()),
+        throwsA(
+          isA<CorruptDatabaseError>().having(
+            (error) => error.message,
+            'message',
+            allOf(
+              contains('run_acknowledgements row for run run-1'),
+              contains('unrecognised acknowledgement'),
+              contains('warning_kind=invented'),
+            ),
+          ),
+        ),
       );
     },
   );
