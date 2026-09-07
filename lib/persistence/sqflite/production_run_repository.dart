@@ -288,10 +288,21 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
   /// Mirrors `result_codec.dart`'s `_warningToJson`/`_warningFromJson` kind
   /// strings, duplicated rather than shared for the same reason
   /// `result_codec.dart` duplicates `SqfliteRecipeRepository`'s row mapping.
-  /// An unrecognised `warning_kind`, or a `NULL` `component_id` on a kind
-  /// that requires one, is a corrupt row: silently dropping the
-  /// acknowledgement would make an already-accepted warning block the run
-  /// again, and guessing a component id would attach it to the wrong line.
+  /// An unrecognised `warning_kind`, a `NULL` `component_id` on a kind that
+  /// requires one, or a non-`NULL` one on the kind that has none, is a
+  /// corrupt row: silently dropping the acknowledgement would make an
+  /// already-accepted warning block the run again, and guessing a component
+  /// id would attach it to the wrong line.
+  ///
+  /// The third of those is why every arm carries a `when` clause rather than
+  /// only the two that read `componentId`. [_acknowledgementRow] writes
+  /// `NULL` for `archived_dependency` and the schema picks a *different*
+  /// partial unique index on that nullness, so a row carrying a component id
+  /// sits under `idx_ack_with_component` instead — where several of them,
+  /// one per component id, are all distinct to SQLite and then collapse into
+  /// a single entry in [_acknowledgementsFor]'s `.toSet()`, because
+  /// [ArchivedDependencyWarning] compares by recipe id alone. Absorbing the
+  /// value would leave that unrepairable and unreported.
   ProductionWarning _warningFromRow(Map<String, Object?> row) {
     final rowLabel = _acknowledgementLabel(row);
     try {
@@ -305,7 +316,8 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
         ),
         'rounding_adjusted' when componentId is String =>
           RoundingAdjustedWarning(recipeId, componentId),
-        'archived_dependency' => ArchivedDependencyWarning(recipeId),
+        'archived_dependency' when componentId == null =>
+          ArchivedDependencyWarning(recipeId),
         _ => throw CorruptDatabaseError(
           'unrecognised acknowledgement in $rowLabel: warning_kind=$kind, '
           'component_id=$componentId',

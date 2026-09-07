@@ -598,6 +598,44 @@ void main() {
     );
   });
 
+  // `archived_dependency` is the one acknowledgement kind this layer writes
+  // with `component_id = NULL`, and the schema picks a *different* partial
+  // unique index on exactly that nullness. A row carrying a component id
+  // lands under `idx_ack_with_component`, where several of them — one per
+  // component id — are all distinct to SQLite, and then collapse into a
+  // single entry in `_acknowledgementsFor`'s `.toSet()`, because
+  // `ArchivedDependencyWarning` compares by recipe id alone. Measured
+  // against the unguarded branch: two such rows stored, one warning decoded,
+  // no error raised.
+  //
+  // The planted `component_id` is a plain `String` on purpose.
+  // `_warningFromRow` never casts that column, so a wrong-typed value would
+  // reach this same branch rather than the `on TypeError` clause beside it,
+  // and a test that planted one could not tell the two apart.
+  test(
+    'an archived_dependency acknowledgement carrying a component id is a '
+    'corrupt row',
+    () async {
+      await runs.save(buildRun());
+      await db.insert('run_acknowledgements', <String, Object?>{
+        'run_id': 'run-1',
+        'warning_kind': 'archived_dependency',
+        'recipe_id': 'r',
+        'component_id': 'flour',
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNaming(
+            'run_acknowledgements row for run run-1',
+            'warning_kind=archived_dependency, component_id=flour',
+          ),
+        ),
+      );
+    },
+  );
+
   test('a BLOB in a run_overrides key column is a corrupt row', () async {
     await runs.save(buildRun());
     await runs.recordOverride(
