@@ -79,12 +79,12 @@ CREATE TABLE run_acknowledgements (
 )''',
   '''
 CREATE TABLE run_overrides (
-  run_id       TEXT NOT NULL,
-  recipe_id    TEXT NOT NULL,
-  component_id TEXT NOT NULL,
-  numerator    TEXT NOT NULL,
-  denominator  TEXT NOT NULL,
-  unit_symbol  TEXT NOT NULL,
+  run_id               TEXT NOT NULL,
+  recipe_id            TEXT NOT NULL,
+  component_id         TEXT NOT NULL,
+  override_numerator   TEXT NOT NULL,
+  override_denominator TEXT NOT NULL,
+  override_unit        TEXT NOT NULL,
   PRIMARY KEY (run_id, recipe_id, component_id),
   FOREIGN KEY (run_id) REFERENCES production_runs (id) ON DELETE CASCADE
 )''',
