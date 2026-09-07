@@ -7,7 +7,6 @@ import 'package:prep_book/persistence/database.dart';
 import 'package:prep_book/persistence/errors.dart';
 import 'package:prep_book/persistence/sqflite/ingredient_repository.dart';
 import 'package:prep_book/persistence/sqflite/production_run_repository.dart';
-import 'package:prep_book/persistence/sqflite/quantity_columns.dart';
 import 'package:prep_book/persistence/sqflite/recipe_repository.dart';
 import 'package:prep_book/persistence/sqflite/result_codec.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -127,6 +126,12 @@ void main() {
   // component stores the whole group as NULL — so a group filled in *part
   // way* is the hazard that can really occur: `_componentFromRow` decides
   // whether to read a quantity by looking at `base_unit` alone.
+  //
+  // The asserted fragment carries the row label as well as the column group.
+  // `base` and `target` name column groups on more than one table, so the
+  // group alone would leave the reader knowing only that some quantity
+  // somewhere was incomplete — which is what this whole file exists to
+  // rule out.
   test(
     'a half-filled quantity group throws rather than defaulting to zero',
     () async {
@@ -135,7 +140,12 @@ void main() {
 
       await expectLater(
         recipes.findLatest('r'),
-        throwsA(corruptRowNaming('incomplete quantity in column group base')),
+        throwsA(
+          corruptRowNaming(
+            'incomplete quantity in column group base of recipe_components '
+            'row r revision 1 component flour',
+          ),
+        ),
       );
     },
   );
@@ -191,9 +201,119 @@ void main() {
       'component_id': Uint8List.fromList(const [4, 5, 6]),
     });
 
+    // The corrupted column is the one the label itself names, so the label
+    // reports the BLOB rather than a component id — which is the point: it
+    // is built from the raw values so it survives the corruption it
+    // describes. `holds a column of the wrong type` pins which of this
+    // block's two clauses fired.
     await expectLater(
       recipes.findLatest('r'),
-      throwsA(corruptRowNaming('recipe_components row r revision 1')),
+      throwsA(
+        corruptRowNaming(
+          'recipe_components row r revision 1 component [4, 5, 6] holds a '
+          'column of the wrong type',
+        ),
+      ),
+    );
+  });
+
+  // --- the row label each caller threads into quantityFromColumns ---------
+  //
+  // A quantity group knows its column prefix but not its table, and the
+  // prefixes repeat: `base` is on `recipe_components`, `base_yield` on
+  // `recipes`, `target` on `production_runs`, `override` on `run_overrides`.
+  // Each caller therefore passes a row label, and each label needs a test
+  // that pins it — otherwise a wrong label is invisible, since the guard
+  // still throws the right *type*. The four tests below corrupt the same way
+  // in four tables and assert that the four messages differ.
+  //
+  // They corrupt by writing a BLOB rather than a NULL: only
+  // `recipe_components.base_*` is nullable, so `UPDATE … SET
+  // base_yield_numerator = NULL` is refused by the `NOT NULL` constraint
+  // before the read ever happens. A BLOB satisfies the constraint and still
+  // fails `quantityFromColumns`'s `is! String` check, which is the branch
+  // under test.
+
+  test('a wrong-typed quantity column names the recipes row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.update('recipes', <String, Object?>{
+      'base_yield_numerator': Uint8List.fromList(const [1]),
+    });
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'incomplete quantity in column group base_yield of recipes row r '
+          'revision 1',
+        ),
+      ),
+    );
+  });
+
+  // The worst case the row label exists for: `listSummaries` walks the whole
+  // run history, so a message naming only the column group would say a
+  // quantity somewhere in the table was incomplete and leave the reader to
+  // find which run.
+  test(
+    'a wrong-typed target column names the run on the summary path',
+    () async {
+      await runs.save(buildRun());
+      await db.update('production_runs', <String, Object?>{
+        'target_numerator': Uint8List.fromList(const [1]),
+      });
+
+      await expectLater(
+        runs.listSummaries(),
+        throwsA(
+          corruptRowNaming(
+            'incomplete quantity in column group target of production_runs '
+            'row run-1',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'a wrong-typed target column names the run on the findById path',
+    () async {
+      await runs.save(buildRun());
+      await db.update('production_runs', <String, Object?>{
+        'target_numerator': Uint8List.fromList(const [1]),
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNaming(
+            'incomplete quantity in column group target of production_runs '
+            'row run-1',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('a wrong-typed override column names the override row', () async {
+    await runs.save(buildRun());
+    await runs.recordOverride(
+      'run-1',
+      ('r', 'flour'),
+      Quantity.parse('5', Unit.gram),
+    );
+    await db.update('run_overrides', <String, Object?>{
+      'override_numerator': Uint8List.fromList(const [1]),
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNaming(
+          'incomplete quantity in column group override of run_overrides row '
+          'for run run-1 recipe r component flour',
+        ),
+      ),
     );
   });
 
@@ -202,16 +322,27 @@ void main() {
   // it escapes every shape guard this layer has. Both places that rebuild a
   // stored numerator/denominator pair go through `parseStoredRational`; each
   // is covered here so neither can regress to a raw `Rational` call.
-  test('a zero denominator in a stored quantity group is corrupt', () {
-    expect(
-      () => quantityFromColumns(<String, Object?>{
-        'base_numerator': '1',
-        'base_denominator': '0',
-        'base_unit': 'g',
-      }, 'base'),
-      throwsA(corruptRowNaming('column group base has a zero denominator')),
-    );
-  });
+  // Driven through the repository rather than by calling
+  // `quantityFromColumns` on a hand-built map, so the assertion pins the row
+  // label the caller threads in as well as the guard itself. A synthetic map
+  // belongs to no table and could not tell the two apart.
+  test(
+    'a zero denominator in a stored quantity group is corrupt',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate("UPDATE recipe_components SET base_denominator = '0'");
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'column group base of recipe_components row r revision 1 '
+            'component flour has a zero denominator',
+          ),
+        ),
+      );
+    },
+  );
 
   test('a zero denominator in a stored run payload is corrupt', () {
     final encoded =
@@ -228,14 +359,18 @@ void main() {
   // The other way `parseStoredRational` can fail: `BigInt.parse` throws a
   // `FormatException`, which is not an `Error` and so would have escaped
   // past a handler that only caught `ArgumentError`.
-  test('a non-integer stored amount is corrupt', () {
-    expect(
-      () => quantityFromColumns(<String, Object?>{
-        'base_numerator': 'half',
-        'base_denominator': '1',
-        'base_unit': 'g',
-      }, 'base'),
-      throwsA(corruptRowNaming('column group base is not an integer pair')),
+  test('a non-integer stored amount is corrupt', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipe_components SET base_numerator = 'half'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'column group base of recipe_components row r revision 1 '
+          'component flour is not an integer pair',
+        ),
+      ),
     );
   });
 
@@ -400,10 +535,17 @@ void main() {
         "UPDATE recipe_components SET rounding_increment = 'a lot'",
       );
 
+      // `recipe_components row …` alone is the prefix both of this block's
+      // clauses emit, so it would pass just as well if the `TypeError`
+      // clause had fired. `has an unparseable column` is the half that pins
+      // the clause.
       await expectLater(
         recipes.findLatest('r'),
         throwsA(
-          corruptRowNaming('recipe_components row r revision 1'),
+          corruptRowNaming(
+            'recipe_components row r revision 1 component flour has an '
+            'unparseable column',
+          ),
         ),
       );
     },

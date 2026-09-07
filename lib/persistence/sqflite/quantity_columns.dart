@@ -64,6 +64,13 @@ Unit unitFromStorage(String stored) {
 /// Rebuilds the `Rational` a stored decimal-string pair encodes, naming
 /// [location] if it cannot.
 ///
+/// [location] must identify the failing value well enough for a reader to
+/// find it, and that means the row whenever the caller knows it —
+/// [quantityFromColumns] passes a column group *and* its row label for
+/// exactly this reason. It is what [CorruptDatabaseError]'s "always names
+/// the row" contract reduces to at this depth: this function is handed two
+/// strings and can name nothing on its own.
+///
 /// Neither failure here is a `TypeError`, so neither is caught by the
 /// shape guards in `result_codec.dart` and the repositories:
 /// `BigInt.parse` throws a `FormatException` on a string that is not an
@@ -113,24 +120,40 @@ Map<String, Object?> quantityToColumns(Quantity quantity, String prefix) =>
       '${prefix}_unit': unitToStorage(quantity.unit),
     };
 
-/// Rebuilds the `Quantity` stored under [prefix] in [row].
+/// Rebuilds the `Quantity` stored under [prefix] in [row], identifying the
+/// row as [rowLabel] if it cannot.
 ///
 /// Throws [CorruptDatabaseError] when any of the three columns is missing or
 /// is not a `String`, when the numerator and denominator are not an integer
 /// pair [Rational] accepts, or when the unit column is not one
 /// [unitFromStorage] recognises.
-Quantity quantityFromColumns(Map<String, Object?> row, String prefix) {
+///
+/// [rowLabel] is required rather than optional because a quantity group
+/// says nothing about which row holds it, and the column-group name alone
+/// repeats across tables: `target` appears on `production_runs`, `base` on
+/// `recipe_components`. A caller scanning many rows — `listSummaries` over
+/// the whole run history, say — would otherwise be told only that some
+/// quantity somewhere was incomplete. Callers pass their table and the
+/// row's identifying columns, in the same shape their own guards use, so
+/// the two agree when a row fails both ways.
+Quantity quantityFromColumns(
+  Map<String, Object?> row,
+  String prefix, {
+  required String rowLabel,
+}) {
   final numerator = row['${prefix}_numerator'];
   final denominator = row['${prefix}_denominator'];
   final symbol = row['${prefix}_unit'];
   if (numerator is! String || denominator is! String || symbol is! String) {
-    throw CorruptDatabaseError('incomplete quantity in column group $prefix');
+    throw CorruptDatabaseError(
+      'incomplete quantity in column group $prefix of $rowLabel',
+    );
   }
   return Quantity.fromRational(
     parseStoredRational(
       numerator,
       denominator,
-      location: 'column group $prefix',
+      location: 'column group $prefix of $rowLabel',
     ),
     unitFromStorage(symbol),
   );

@@ -121,16 +121,17 @@ final class SqfliteRecipeRepository implements RecipeRepository {
     try {
       final id = row['id']! as String;
       final revision = row['revision']! as int;
+      final rowLabel = 'recipes row $id revision $revision';
       final components = await _componentsFor(id, revision);
       return Recipe(
         id: id,
         revision: revision,
         name: row['name']! as String,
         category: row['category'] as String?,
-        baseYield: quantityFromColumns(row, 'base_yield'),
+        baseYield: quantityFromColumns(row, 'base_yield', rowLabel: rowLabel),
         maxBatchYield: row['max_batch_unit'] == null
             ? null
-            : quantityFromColumns(row, 'max_batch'),
+            : quantityFromColumns(row, 'max_batch', rowLabel: rowLabel),
         components: components,
         preparationNotes:
             (jsonDecode(row['preparation_notes']! as String) as List<dynamic>)
@@ -232,7 +233,7 @@ final class SqfliteRecipeRepository implements RecipeRepository {
         target: target,
         baseQuantity: row['base_unit'] == null
             ? null
-            : quantityFromColumns(row, 'base'),
+            : quantityFromColumns(row, 'base', rowLabel: _componentLabel(row)),
         behavior: behavior,
         displayOrder: row['display_order']! as int,
         rounding: roundingIncrement == null
@@ -248,18 +249,25 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       // ignore: avoid_catching_errors
     } on TypeError catch (error) {
       throw CorruptDatabaseError(
-        'recipe_components row ${row['recipe_id']} revision '
-        '${row['recipe_revision']} component ${row['component_id']} holds a '
-        'column of the wrong type: $error',
+        '${_componentLabel(row)} holds a column of the wrong type: $error',
       );
     } on FormatException catch (error) {
       // Reached by `Decimal.parse` on a `rounding_increment` that is not a
       // decimal literal.
       throw CorruptDatabaseError(
-        'recipe_components row ${row['recipe_id']} revision '
-        '${row['recipe_revision']} component ${row['component_id']} has an '
-        'unparseable column: $error',
+        '${_componentLabel(row)} has an unparseable column: $error',
       );
     }
   }
+
+  /// Identifies a `recipe_components` row by its three key columns.
+  ///
+  /// Shared by [_componentFromRow]'s two guards and the [quantityFromColumns]
+  /// call inside them, so a row that fails on its base quantity is named the
+  /// same way as one that fails on a cast. Reads the raw values rather than
+  /// the casts, because the label has to survive the very corruption it
+  /// describes.
+  String _componentLabel(Map<String, Object?> row) =>
+      'recipe_components row ${row['recipe_id']} revision '
+      '${row['recipe_revision']} component ${row['component_id']}';
 }

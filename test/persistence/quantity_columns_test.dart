@@ -20,6 +20,12 @@ final List<Unit> _knownFixedUnits = [
   Unit.portion,
 ];
 
+/// Stands in for a caller's row label. These tests drive
+/// [quantityFromColumns] with hand-built column maps that belong to no
+/// table, so the label only has to be present. The tests that check a real
+/// row's label reaches the message live in `failure_paths_test.dart`.
+const _testRow = 'test row';
+
 void main() {
   test('a non-terminating quantity round-trips exactly', () {
     final third = Quantity.parse(
@@ -32,7 +38,7 @@ void main() {
     expect(columns['base_denominator'], '3');
     expect(columns['base_unit'], 'g');
 
-    expect(quantityFromColumns(columns, 'base'), third);
+    expect(quantityFromColumns(columns, 'base', rowLabel: _testRow), third);
   });
 
   test('a count unit outside the fixed table round-trips', () {
@@ -41,7 +47,7 @@ void main() {
     final columns = quantityToColumns(quantity, 'base');
     expect(columns['base_unit'], 'count:item');
 
-    expect(quantityFromColumns(columns, 'base'), quantity);
+    expect(quantityFromColumns(columns, 'base', rowLabel: _testRow), quantity);
   });
 
   test('a named-yield unit outside the fixed table round-trips', () {
@@ -50,7 +56,7 @@ void main() {
     final columns = quantityToColumns(quantity, 'base');
     expect(columns['base_unit'], 'yield:tray');
 
-    expect(quantityFromColumns(columns, 'base'), quantity);
+    expect(quantityFromColumns(columns, 'base', rowLabel: _testRow), quantity);
   });
 
   test(
@@ -62,7 +68,10 @@ void main() {
       final columns = quantityToColumns(quantity, 'base');
       expect(columns['base_unit'], 'count:');
 
-      expect(quantityFromColumns(columns, 'base'), quantity);
+      expect(
+        quantityFromColumns(columns, 'base', rowLabel: _testRow),
+        quantity,
+      );
     },
   );
 
@@ -98,10 +107,14 @@ void main() {
 
   test('a column group missing a column is a corrupt database', () {
     expect(
-      () => quantityFromColumns(<String, Object?>{
-        'base_numerator': '1',
-        'base_denominator': '3',
-      }, 'base'),
+      () => quantityFromColumns(
+        <String, Object?>{
+          'base_numerator': '1',
+          'base_denominator': '3',
+        },
+        'base',
+        rowLabel: _testRow,
+      ),
       throwsA(isA<CorruptDatabaseError>()),
     );
   });

@@ -58,7 +58,11 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
         id: row['id']! as String,
         recipeId: row['recipe_id']! as String,
         recipeRevision: row['recipe_revision']! as int,
-        targetYield: quantityFromColumns(row, 'target'),
+        targetYield: quantityFromColumns(
+          row,
+          'target',
+          rowLabel: 'production_runs row ${row['id']}',
+        ),
         createdAt: DateTime.parse(row['created_at']! as String),
       );
       // A wrong-typed column is a corrupt row, not a programmer bug, so its
@@ -121,7 +125,11 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
       createdAt: createdAt,
       recipe: payload.recipe,
       dependencySnapshot: payload.dependencySnapshot,
-      targetYield: quantityFromColumns(row, 'target'),
+      targetYield: quantityFromColumns(
+        row,
+        'target',
+        rowLabel: 'production_runs row $id',
+      ),
       result: payload.result,
       overrides: overrides,
       acknowledgedWarnings: acknowledgedWarnings,
@@ -188,9 +196,23 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
     );
     return <OverrideKey, Quantity>{
       for (final row in rows)
-        _overrideKeyFromRow(row): quantityFromColumns(row, 'override'),
+        _overrideKeyFromRow(row): quantityFromColumns(
+          row,
+          'override',
+          rowLabel: _overrideLabel(row),
+        ),
     };
   }
+
+  /// Identifies a `run_overrides` row by its three key columns.
+  ///
+  /// Shared by [_overrideKeyFromRow] and the [quantityFromColumns] call
+  /// beside it, so a row that fails on its stored amount is named the same
+  /// way as one that fails on its key. Reads the raw values rather than the
+  /// casts, because the label has to survive the corruption it describes.
+  String _overrideLabel(Map<String, Object?> row) =>
+      'run_overrides row for run ${row['run_id']} recipe '
+      '${row['recipe_id']} component ${row['component_id']}';
 
   /// Rebuilds the [OverrideKey] a `run_overrides` row is stored under.
   ///
@@ -205,8 +227,7 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
       // ignore: avoid_catching_errors
     } on TypeError catch (error) {
       throw CorruptDatabaseError(
-        'run_overrides row for run ${row['run_id']} holds a column of the '
-        'wrong type: $error',
+        '${_overrideLabel(row)} holds a column of the wrong type: $error',
       );
     }
   }
