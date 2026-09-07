@@ -124,14 +124,32 @@ final _integerBothOperandOperators = <TokenType>{
 /// expressions that qualify — which closes `-1`, `~1`, `(1)`, `1 + 2` and
 /// every nesting of them in one rule instead of one round each.
 ///
+/// A cast qualifies too, because the cast names the type in the source: no
+/// resolution is needed to read `v as int`. A nullable cast does not, and
+/// neither does a cast to `num`, since neither settles the receiver as an
+/// integer. A conditional qualifies when both of its arms do.
+///
 /// An identifier or a method call does not qualify, however obviously integral
 /// it looks. `1.abs()` is an `int` at runtime, but reading a return type is
 /// precisely the work a parsed tree cannot do, and guessing would report the
-/// domain's own `Rational` arithmetic. Those cases are pinned as accepted by
-/// tests; closing them needs resolved types, which is a separate decision.
+/// domain's own `Rational` arithmetic. That is now the whole of what sits
+/// outside this function, and it sits outside because the parser genuinely
+/// cannot reach it rather than because it has not been implemented. Those
+/// cases are pinned as accepted by tests; closing them needs resolved types,
+/// which is tracked separately.
 bool _isSyntacticInteger(Expression expression) {
   final node = _unparenthesized(expression);
   if (node is IntegerLiteral) return true;
+  if (node is AsExpression) {
+    final type = node.type;
+    return type is NamedType &&
+        type.name.lexeme == 'int' &&
+        type.question == null;
+  }
+  if (node is ConditionalExpression) {
+    return _isSyntacticInteger(node.thenExpression) &&
+        _isSyntacticInteger(node.elseExpression);
+  }
   if (node is PrefixExpression &&
       _integerPrefixOperators.contains(node.operator.type)) {
     return _isSyntacticInteger(node.operand);
@@ -285,6 +303,15 @@ void main() {
       expect(findNumericViolations('final a = (7 >>> bits) / 3;'), isNotEmpty);
     });
 
+    test('a division whose receiver is explicitly cast to an integer', () {
+      // The cast names the type in the source, so no resolution is needed.
+      expect(findNumericViolations('final a = (v as int) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is a conditional of integers', () {
+      expect(findNumericViolations('final a = (f ? 1 : 2) / 3;'), isNotEmpty);
+    });
+
     test('an integer division inside a string interpolation', () {
       expect(
         findNumericViolations(r"String f() => 'x ${1 / 3}';"),
@@ -355,6 +382,21 @@ void main() {
 
     test('a division whose receiver takes a modulo of an unknown operand', () {
       expect(findNumericViolations('final a = (1 % other) / 3;'), isEmpty);
+    });
+
+    test('a division whose receiver is cast to a nullable integer', () {
+      // `int?` is not an integer receiver, and `/` cannot be applied to it
+      // without a null check anyway.
+      expect(findNumericViolations('final a = (v as int?) / 3;'), isEmpty);
+    });
+
+    test('a division whose receiver is cast to num', () {
+      // `num` may hold either, so the cast settles nothing about `int./`.
+      expect(findNumericViolations('final a = (v as num) / 3;'), isEmpty);
+    });
+
+    test('a division whose receiver is a conditional with one unknown arm', () {
+      expect(findNumericViolations('final a = (f ? 1 : other) / 3;'), isEmpty);
     });
 
     test('a truncating integer division', () {
