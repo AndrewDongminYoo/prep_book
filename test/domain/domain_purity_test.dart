@@ -116,13 +116,19 @@ class _NumericVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitBinaryExpression(BinaryExpression node) {
     // In Dart `/` always yields a double, including between two integers;
-    // `~/` is the truncating one. Only literal operands are reported, because
-    // the parsed tree carries no types: a division between two expressions
-    // may well be the exact Rational division the domain relies on. That is a
-    // deliberate limit, not an oversight — see the test that pins it.
+    // `~/` is the truncating one. The left operand selects the operator, so
+    // an integer literal there means `int./` and therefore a double, whatever
+    // the right operand turns out to be. That is safe against the domain's own
+    // divisions without needing types: an integer literal cannot be the left
+    // operand of a Rational division at all, because Rational is not a `num`
+    // and the analyzer rejects it outright.
+    //
+    // The converse does not hold. A literal on the right says nothing about
+    // the left operand's type, and the domain divides Rationals at six call
+    // sites, so requiring a literal there would report every one of them. Both
+    // directions are pinned by tests.
     if (node.operator.type == TokenType.SLASH &&
-        _unparenthesized(node.leftOperand) is IntegerLiteral &&
-        _unparenthesized(node.rightOperand) is IntegerLiteral) {
+        _unparenthesized(node.leftOperand) is IntegerLiteral) {
       violations.add('integer division yields a double: $node');
     }
     super.visitBinaryExpression(node);
@@ -178,6 +184,10 @@ void main() {
       expect(findNumericViolations('final a = (1) / (3);'), isNotEmpty);
     });
 
+    test('a division whose left operand alone is an integer literal', () {
+      expect(findNumericViolations('final a = 1 / count;'), isNotEmpty);
+    });
+
     test('an integer division inside a string interpolation', () {
       expect(
         findNumericViolations(r"String f() => 'x ${1 / 3}';"),
@@ -217,6 +227,13 @@ void main() {
 
     test('an exact division between non-literal operands', () {
       expect(findNumericViolations('final a = x.amount / y.amount;'), isEmpty);
+    });
+
+    // The known limit, pinned rather than left to be rediscovered. A literal on
+    // the right says nothing about the left operand's type, and the left is
+    // what selects the operator.
+    test('a division whose right operand alone is an integer literal', () {
+      expect(findNumericViolations('final a = x.amount / 3;'), isEmpty);
     });
 
     test('a truncating integer division', () {
