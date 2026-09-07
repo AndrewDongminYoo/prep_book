@@ -75,6 +75,32 @@ bool _quantityGroupPresent(Map<String, Object?> row, String prefix) =>
     row['${prefix}_denominator'] != null ||
     row['${prefix}_unit'] != null;
 
+/// Decodes the `is_archived` flag [stored] holds, naming [rowLabel] when it
+/// is neither of the two values this file writes.
+///
+/// Reading the column as `== 1` accepted every other integer as `false`, and
+/// `false` is the direction this flag fails open in. An archived recipe read
+/// as active raises no [ArchivedDependencyWarning], that warning is
+/// blocking, and `ProductionRun.isFinalizable` is exactly "every blocking
+/// warning has been acknowledged" — so a corrupt `2` turns a run the domain
+/// would refuse to finalize into a finalizable one, with nothing reported.
+/// That is not a diagnosability problem, which is why both encoded values
+/// are checked rather than one.
+///
+/// Matching the raw column rather than a cast is deliberate: a wrong-typed
+/// value lands on the same throw instead of [SqfliteRecipeRepository]'s
+/// enclosing `on TypeError` clause. The two messages differ, but both name
+/// the row and neither guesses a value, so nothing this layer promises turns
+/// on which of them fires.
+bool _archivedFromColumn(Object? stored, {required String rowLabel}) =>
+    switch (stored) {
+      0 => false,
+      1 => true,
+      _ => throw CorruptDatabaseError(
+        'unrecognised is_archived value in $rowLabel: $stored',
+      ),
+    };
+
 /// [RecipeRepository] backed by the `recipes` and `recipe_components`
 /// tables.
 ///
@@ -233,7 +259,10 @@ final class SqfliteRecipeRepository implements RecipeRepository {
             (jsonDecode(row['preparation_notes']! as String) as List<dynamic>)
                 .cast<String>(),
         modifiedAt: DateTime.parse(row['modified_at']! as String),
-        isArchived: (row['is_archived']! as int) == 1,
+        isArchived: _archivedFromColumn(
+          row['is_archived'],
+          rowLabel: rowLabel,
+        ),
       );
       // A wrong-typed column is a corrupt row, not a programmer bug, so its
       // `TypeError` is caught rather than left to escape — see the doc

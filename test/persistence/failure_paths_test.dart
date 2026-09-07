@@ -308,6 +308,42 @@ void main() {
     );
   });
 
+  // `is_archived` is the one stored flag whose misreading is more than a
+  // diagnosability problem. Reading it as `== 1` made every other integer
+  // `false`, and `false` is the failing-open direction: an archived recipe
+  // read as active raises no blocking `ArchivedDependencyWarning`, so a run
+  // the domain would refuse to finalize becomes finalizable out of a corrupt
+  // stored value, with nothing reported. Measured against the unguarded read
+  // before this guard existed — a recipe saved archived, its column set to
+  // 2, came back with `isArchived` false, `ProductionCalculator` emitted no
+  // warning at all, and the resulting run's `isFinalizable` was true where
+  // the honest archived recipe's was false.
+  //
+  // 2 rather than a wrong-typed value on purpose. INTEGER affinity keeps it
+  // an `int`, so it reaches the read as one and is exactly the shape the old
+  // `== 1` absorbed. A BLOB would prove nothing about the widening: it threw
+  // against the old read too, out of the surrounding `on TypeError` clause,
+  // so such a test would have passed either way. It reaches the new guard
+  // instead, which changes that value's message and not its behavior — both
+  // name the row, and neither guesses.
+  test(
+    'an is_archived value that is neither 0 nor 1 is a corrupt row',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.update('recipes', <String, Object?>{'is_archived': 2});
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipes row r revision 1',
+            'unrecognised is_archived value in recipes row r revision 1: 2',
+          ),
+        ),
+      );
+    },
+  );
+
   // A component's own guard, proven separately from the recipe's: the
   // message must name the `recipe_components` row, not the `recipes` row
   // that reads it, or a corrupt component would be reported against the
