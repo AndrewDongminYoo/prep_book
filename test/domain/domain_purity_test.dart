@@ -83,19 +83,26 @@ Expression _unparenthesized(Expression expression) {
   return current;
 }
 
-/// Prefix operators that keep an integer an integer. Dart defines no unary
-/// plus, and `!` takes a boolean, so these two are the whole set.
-final _integerPrefixOperators = <TokenType>{TokenType.MINUS, TokenType.TILDE};
+/// Type names a cast can settle a receiver as numeric with. A nullable cast
+/// settles nothing, because `/` cannot be applied to it without a null check.
+const _numericTypeNames = <String>{'int', 'double', 'num'};
 
-/// Binary operators that leave an integer receiver an integer whatever the
-/// right operand is, for two different reasons.
+/// Prefix operators that keep a number a number. Dart defines no unary plus,
+/// and `!` takes a boolean, so these two are the whole set.
+final _numericPrefixOperators = <TokenType>{TokenType.MINUS, TokenType.TILDE};
+
+/// Binary operators that leave a numeric receiver numeric, whatever the right
+/// operand is. Each is declared on `num` or `int` to return a number, so the
+/// right operand never needs inspecting.
 ///
-/// `int.~/` is declared to return an `int` for any `num` it accepts, so
-/// `7 ~/ 2.5` really is an `int`. The bitwise and shift operators arrive at the
-/// same place by another route: they refuse a non-`int` right operand at
-/// compile time, so any code that compiles has an `int` on both sides. Either
-/// way the right operand needs no inspection.
-final _integerPreservingOperators = <TokenType>{
+/// `/` is absent deliberately, and not because it breaks the rule: it is the
+/// operator being looked for, so its own result is already reported where it
+/// appears and nesting it would only duplicate the finding.
+final _numericBinaryOperators = <TokenType>{
+  TokenType.PLUS,
+  TokenType.MINUS,
+  TokenType.STAR,
+  TokenType.PERCENT,
   TokenType.TILDE_SLASH,
   TokenType.AMPERSAND,
   TokenType.BAR,
@@ -105,63 +112,51 @@ final _integerPreservingOperators = <TokenType>{
   TokenType.GT_GT_GT,
 };
 
-/// Binary operators that produce an integer only when both operands are.
-/// `int.+` is declared to return `num`, and `1 + 2.5` is a double, so an
-/// integer on the left settles nothing by itself. `/` is absent from both sets
-/// deliberately: it is the operator that produces the double being looked for.
-final _integerBothOperandOperators = <TokenType>{
-  TokenType.PLUS,
-  TokenType.MINUS,
-  TokenType.STAR,
-  TokenType.PERCENT,
-};
-
-/// Whether the parser alone settles [expression] as an integer.
+/// Whether the parser alone settles [expression] as a number.
 ///
-/// This is the boundary the whole integer-division rule converges on, and it
-/// is drawn on a principle rather than on the shapes reported so far. An
-/// integer literal qualifies, and so does any integer operator applied to
-/// expressions that qualify — which closes `-1`, `~1`, `(1)`, `1 + 2` and
-/// every nesting of them in one rule instead of one round each.
+/// `num./` is declared to return a `double` whichever runtime type it holds,
+/// so settling the receiver as *numeric* is the whole question — settling it
+/// as an integer specifically is more than the rule needs, and asking for it
+/// was what made earlier versions of this predicate miss `(v as num) / 3` and
+/// `(1 + other) / 3`.
 ///
-/// A cast qualifies too, because the cast names the type in the source: no
-/// resolution is needed to read `v as int`. A nullable cast does not, and
-/// neither does a cast to `num`, since neither settles the receiver as an
-/// integer. A conditional qualifies when both of its arms do.
+/// A numeric literal qualifies. So does a cast that names `int`, `double` or
+/// `num`, because the cast writes the type into the source and needs no
+/// resolution; a nullable cast does not, since `/` could not be applied to it
+/// without a null check. A conditional qualifies when both arms do. Any
+/// numeric operator applied to a qualifying receiver qualifies, and the right
+/// operand never matters, because none of those operators can turn a number
+/// into something that is not one.
 ///
-/// An identifier or a method call does not qualify, however obviously integral
-/// it looks. `1.abs()` is an `int` at runtime, but reading a return type is
-/// precisely the work a parsed tree cannot do, and guessing would report the
-/// domain's own `Rational` arithmetic. That is now the whole of what sits
+/// An identifier, a method call or a getter does not qualify, however
+/// obviously numeric it looks. `1.abs()` is an `int` at runtime, but reading a
+/// return type is precisely the work a parsed tree cannot do, and guessing
+/// would report the domain's own `Rational` arithmetic, which divides with
+/// this same operator at six call sites. That is the whole of what sits
 /// outside this function, and it sits outside because the parser genuinely
 /// cannot reach it rather than because it has not been implemented. Those
 /// cases are pinned as accepted by tests; closing them needs resolved types,
 /// which is tracked separately.
-bool _isSyntacticInteger(Expression expression) {
+bool _isSyntacticNum(Expression expression) {
   final node = _unparenthesized(expression);
-  if (node is IntegerLiteral) return true;
+  if (node is IntegerLiteral || node is DoubleLiteral) return true;
   if (node is AsExpression) {
     final type = node.type;
     return type is NamedType &&
-        type.name.lexeme == 'int' &&
+        _numericTypeNames.contains(type.name.lexeme) &&
         type.question == null;
   }
   if (node is ConditionalExpression) {
-    return _isSyntacticInteger(node.thenExpression) &&
-        _isSyntacticInteger(node.elseExpression);
+    return _isSyntacticNum(node.thenExpression) &&
+        _isSyntacticNum(node.elseExpression);
   }
   if (node is PrefixExpression &&
-      _integerPrefixOperators.contains(node.operator.type)) {
-    return _isSyntacticInteger(node.operand);
+      _numericPrefixOperators.contains(node.operator.type)) {
+    return _isSyntacticNum(node.operand);
   }
-  if (node is BinaryExpression) {
-    if (_integerPreservingOperators.contains(node.operator.type)) {
-      return _isSyntacticInteger(node.leftOperand);
-    }
-    if (_integerBothOperandOperators.contains(node.operator.type)) {
-      return _isSyntacticInteger(node.leftOperand) &&
-          _isSyntacticInteger(node.rightOperand);
-    }
+  if (node is BinaryExpression &&
+      _numericBinaryOperators.contains(node.operator.type)) {
+    return _isSyntacticNum(node.leftOperand);
   }
   return false;
 }
@@ -200,19 +195,19 @@ class _NumericVisitor extends RecursiveAstVisitor<void> {
   void visitBinaryExpression(BinaryExpression node) {
     // In Dart `/` always yields a double, including between two integers;
     // `~/` is the truncating one. The left operand selects the operator, so a
-    // receiver the parser settles as an integer means `int./` and therefore a
+    // receiver the parser settles as numeric means `num./` and therefore a
     // double, whatever the right operand turns out to be. That is safe against
-    // the domain's own divisions without needing types: an integer cannot be
-    // the left operand of a Rational division at all, because Rational is not
-    // a `num` and the analyzer rejects it outright.
+    // the domain's own divisions without needing types: a number cannot be the
+    // left operand of a Rational division at all, because Rational is not a
+    // `num` and the analyzer rejects it outright.
     //
     // The converse does not hold. A literal on the right says nothing about
     // the left operand's type, and the domain divides Rationals at six call
     // sites, so requiring a literal there would report every one of them. Both
     // directions are pinned by tests.
     if (node.operator.type == TokenType.SLASH &&
-        _isSyntacticInteger(node.leftOperand)) {
-      violations.add('integer division yields a double: $node');
+        _isSyntacticNum(node.leftOperand)) {
+      violations.add('division of a number yields a double: $node');
     }
     super.visitBinaryExpression(node);
   }
@@ -312,6 +307,26 @@ void main() {
       expect(findNumericViolations('final a = (f ? 1 : 2) / 3;'), isNotEmpty);
     });
 
+    test('a division whose receiver is cast to num', () {
+      // `num./` is declared to return a double whichever runtime type it
+      // holds, so a num receiver settles the result without settling itself.
+      expect(findNumericViolations('final a = (v as num) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is cast to double', () {
+      expect(findNumericViolations('final a = (v as double) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver adds an unknown operand', () {
+      // `1 + other` is a num whatever `other` is, and a num receiver is
+      // enough. The right operand never needed inspecting.
+      expect(findNumericViolations('final a = (1 + other) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver takes a modulo of an unknown operand', () {
+      expect(findNumericViolations('final a = (1 % other) / 3;'), isNotEmpty);
+    });
+
     test('an integer division inside a string interpolation', () {
       expect(
         findNumericViolations(r"String f() => 'x ${1 / 3}';"),
@@ -374,25 +389,10 @@ void main() {
       expect(findNumericViolations('final a = 1.abs();'), isEmpty);
     });
 
-    test('a division whose receiver adds an unknown operand', () {
-      // Unlike `~/`, `int.+` returns a double for a double operand, so a
-      // literal on the left settles nothing here. `1 + half` is a double.
-      expect(findNumericViolations('final a = (1 + other) / 3;'), isEmpty);
-    });
-
-    test('a division whose receiver takes a modulo of an unknown operand', () {
-      expect(findNumericViolations('final a = (1 % other) / 3;'), isEmpty);
-    });
-
-    test('a division whose receiver is cast to a nullable integer', () {
+    test('a division whose receiver is cast to a nullable number', () {
       // `int?` is not an integer receiver, and `/` cannot be applied to it
       // without a null check anyway.
       expect(findNumericViolations('final a = (v as int?) / 3;'), isEmpty);
-    });
-
-    test('a division whose receiver is cast to num', () {
-      // `num` may hold either, so the cast settles nothing about `int./`.
-      expect(findNumericViolations('final a = (v as num) / 3;'), isEmpty);
     });
 
     test('a division whose receiver is a conditional with one unknown arm', () {
