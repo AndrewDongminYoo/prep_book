@@ -224,10 +224,37 @@ CREATE TABLE run_overrides (
 ];
 ```
 
-Note the composite primary key on `run_acknowledgements` includes a nullable
-`component_id`. SQLite treats NULLs as distinct in a primary key, so an
-`ArchivedDependencyWarning` row cannot collide with itself; Task 7 tests that a
-repeated acknowledgement does not duplicate.
+**Correction, made during Task 1's review.** An earlier version of this plan
+put a composite primary key on `run_acknowledgements` with a nullable
+`component_id`, and argued it was safe because SQLite treats NULLs as distinct.
+The premise is true and the conclusion is backwards: NULL-distinctness means
+such a key does not deduplicate those rows, it permits the duplicate. Verified
+against a real SQLite — two inserts of `('x', NULL)` under `PRIMARY KEY (a, b)`
+give `count(*) = 2`. An `ArchivedDependencyWarning` carries no component id, so
+it was exactly the shape that would have duplicated.
+
+The shipped version 1 therefore has no composite primary key on that table.
+It has two partial unique indexes, whose `WHERE` clauses are mutually exclusive
+and jointly exhaustive:
+
+```sql
+CREATE UNIQUE INDEX idx_ack_with_component
+  ON run_acknowledgements (run_id, warning_kind, recipe_id, component_id)
+  WHERE component_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_ack_without_component
+  ON run_acknowledgements (run_id, warning_kind, recipe_id)
+  WHERE component_id IS NULL;
+```
+
+The second omits `component_id` from its key rather than matching NULL, which
+is why the original bug cannot recur there.
+
+**This changes what Task 7 must do.** A unique index defaults to `ON CONFLICT
+ABORT`, so a repeated acknowledgement now throws rather than being silently
+replaced. Task 7's de-duplication test must either expect that exception or the
+write path must pass `ConflictAlgorithm.ignore`, which returns rowid `0` on a
+skip. Do not loosen the schema to make the test simpler.
 
 - [ ] **Step 5: Write the database opener**
 
