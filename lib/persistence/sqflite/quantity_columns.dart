@@ -61,6 +61,45 @@ Unit unitFromStorage(String stored) {
   throw CorruptDatabaseError('unknown unit symbol: $stored');
 }
 
+/// Rebuilds the `Rational` a stored decimal-string pair encodes, naming
+/// [location] if it cannot.
+///
+/// Neither failure here is a `TypeError`, so neither is caught by the
+/// shape guards in `result_codec.dart` and the repositories:
+/// `BigInt.parse` throws a `FormatException` on a string that is not an
+/// integer, and `Rational` throws an `ArgumentError` on a zero
+/// denominator. Both would otherwise escape this layer raw, and a caller
+/// wrapping storage reads in `on CorruptDatabaseError` would not see them.
+///
+/// Shared by [quantityFromColumns] and `result_codec.dart` rather than
+/// written twice: the column pair and the JSON pair are the same encoding,
+/// so a divergence between two copies of this check would be a bug, not a
+/// degree of freedom.
+Rational parseStoredRational(
+  String numerator,
+  String denominator, {
+  required String location,
+}) {
+  try {
+    return Rational(BigInt.parse(numerator), BigInt.parse(denominator));
+  } on FormatException catch (error) {
+    throw CorruptDatabaseError(
+      'amount in $location is not an integer pair: $numerator/$denominator '
+      '($error)',
+    );
+    // `ArgumentError` is an `Error`, so catching it needs this ignore for
+    // the same reason `result_codec.dart`'s `on TypeError` handler does: a
+    // zero denominator in a stored row is a corrupt row, not a programmer
+    // bug in the caller that read it.
+    // ignore: avoid_catching_errors
+  } on ArgumentError catch (error) {
+    throw CorruptDatabaseError(
+      'amount in $location has a zero denominator: $numerator/$denominator '
+      '($error)',
+    );
+  }
+}
+
 /// Splits [quantity] into the three text columns named by [prefix]:
 /// `<prefix>_numerator`, `<prefix>_denominator`, and `<prefix>_unit`.
 ///
@@ -77,8 +116,9 @@ Map<String, Object?> quantityToColumns(Quantity quantity, String prefix) =>
 /// Rebuilds the `Quantity` stored under [prefix] in [row].
 ///
 /// Throws [CorruptDatabaseError] when any of the three columns is missing or
-/// is not a `String`, or when the unit column is not one [unitFromStorage]
-/// recognises.
+/// is not a `String`, when the numerator and denominator are not an integer
+/// pair [Rational] accepts, or when the unit column is not one
+/// [unitFromStorage] recognises.
 Quantity quantityFromColumns(Map<String, Object?> row, String prefix) {
   final numerator = row['${prefix}_numerator'];
   final denominator = row['${prefix}_denominator'];
@@ -87,7 +127,11 @@ Quantity quantityFromColumns(Map<String, Object?> row, String prefix) {
     throw CorruptDatabaseError('incomplete quantity in column group $prefix');
   }
   return Quantity.fromRational(
-    Rational(BigInt.parse(numerator), BigInt.parse(denominator)),
+    parseStoredRational(
+      numerator,
+      denominator,
+      location: 'column group $prefix',
+    ),
     unitFromStorage(symbol),
   );
 }

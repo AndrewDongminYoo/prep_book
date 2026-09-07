@@ -1,4 +1,5 @@
 import 'package:prep_book/domain/domain.dart';
+import 'package:prep_book/persistence/errors.dart';
 import 'package:prep_book/persistence/repositories.dart';
 import 'package:prep_book/persistence/sqflite/quantity_columns.dart';
 import 'package:sqflite/sqflite.dart';
@@ -44,10 +45,33 @@ final class SqfliteIngredientRepository implements IngredientRepository {
   Future<void> delete(String id) =>
       _db.delete('ingredients', where: 'id = ?', whereArgs: [id]);
 
-  Ingredient _fromRow(Map<String, Object?> row) => Ingredient(
-    id: row['id']! as String,
-    name: row['name']! as String,
-    defaultUnit: unitFromStorage(row['default_unit_symbol']! as String),
-    category: row['category'] as String?,
-  );
+  /// Rebuilds the [Ingredient] an `ingredients` row holds.
+  ///
+  /// The column casts below are unchecked, and a value can reach them at a
+  /// type its column does not declare: SQLite's TEXT affinity converts a
+  /// number to text but leaves a BLOB alone, so a BLOB written into any of
+  /// these `TEXT` columns comes back from sqflite as a `Uint8List` and the
+  /// cast throws a bare `TypeError` naming no row. Restating it as a
+  /// [CorruptDatabaseError] here mirrors `decodeRunPayload`'s handling of
+  /// the same shape. A domain rejection is not swallowed by this: every
+  /// modelled domain failure extends `DomainError`, never `TypeError`.
+  Ingredient _fromRow(Map<String, Object?> row) {
+    try {
+      return Ingredient(
+        id: row['id']! as String,
+        name: row['name']! as String,
+        defaultUnit: unitFromStorage(row['default_unit_symbol']! as String),
+        category: row['category'] as String?,
+      );
+      // A wrong-typed column is a corrupt row, not a programmer bug, so its
+      // `TypeError` is caught rather than left to escape — see the doc
+      // comment above.
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error) {
+      throw CorruptDatabaseError(
+        'ingredients row ${row['id']} holds a column of the wrong type: '
+        '$error',
+      );
+    }
+  }
 }

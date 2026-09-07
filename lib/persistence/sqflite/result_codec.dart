@@ -94,9 +94,10 @@ Map<String, Object?> _quantityToJson(Quantity quantity) => <String, Object?>{
 };
 
 Quantity _quantityFromJson(Map<String, Object?> json) => Quantity.fromRational(
-  Rational(
-    BigInt.parse(json['n']! as String),
-    BigInt.parse(json['d']! as String),
+  parseStoredRational(
+    json['n']! as String,
+    json['d']! as String,
+    location: 'a run payload quantity',
   ),
   unitFromStorage(json['u']! as String),
 );
@@ -106,9 +107,10 @@ Map<String, Object?> _rationalToJson(Rational value) => <String, Object?>{
   'd': value.denominator.toString(),
 };
 
-Rational _rationalFromJson(Map<String, Object?> json) => Rational(
-  BigInt.parse(json['n']! as String),
-  BigInt.parse(json['d']! as String),
+Rational _rationalFromJson(Map<String, Object?> json) => parseStoredRational(
+  json['n']! as String,
+  json['d']! as String,
+  location: "a run payload's scale ratio",
 );
 
 // --- ScaledQuantity ------------------------------------------------------

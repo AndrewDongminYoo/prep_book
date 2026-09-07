@@ -302,6 +302,15 @@ void main() {
   // `run_acknowledgements`'s partial unique index, and the whole `save` —
   // including the `production_runs` row already inserted earlier in the
   // same transaction — must roll back with it.
+  //
+  // The row count is the stronger half of that claim. `findById` returning
+  // null only shows the `production_runs` row went away; the count shows
+  // every write `save` made did. It is not vacuous because the plant
+  // collides with the *second* acknowledgement `save` writes: the fixture's
+  // warnings are ordered archived_dependency, manual_component,
+  // rounding_adjusted, so the archived_dependency row is already inserted
+  // when the collision aborts the transaction. Without the transaction the
+  // table would be left holding two rows, not one.
   test(
     'a colliding acknowledgement rolls back the whole save',
     () async {
@@ -318,6 +327,7 @@ void main() {
       await expectLater(repository.save(run), throwsA(anything));
 
       expect(await repository.findById('run-1'), isNull);
+      expect(await db.query('run_acknowledgements'), hasLength(1));
     },
   );
 

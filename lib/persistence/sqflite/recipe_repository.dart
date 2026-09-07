@@ -100,26 +100,54 @@ final class SqfliteRecipeRepository implements RecipeRepository {
     whereArgs: [id],
   );
 
+  /// Rebuilds the [Recipe] a `recipes` row holds, together with its
+  /// components.
+  ///
+  /// The column casts are unchecked, and a value can reach them at a type
+  /// its column does not declare: SQLite applies affinity rather than a
+  /// strict type, so a BLOB written into a `TEXT` column and a
+  /// non-numeric string written into an `INTEGER` one both survive
+  /// unconverted and come back at the type they were written. The cast
+  /// then throws a bare `TypeError` naming no row, so it is restated here
+  /// as a [CorruptDatabaseError], the same way `decodeRunPayload` restates
+  /// a cast failure on decoded JSON. `preparationNotes` is covered too:
+  /// `Recipe`'s factory copies the list, which forces the lazy
+  /// `cast<String>()` below to check its elements inside this block.
+  /// A domain rejection is not swallowed by this — every modelled domain
+  /// failure extends `DomainError`, never `TypeError` — and neither is a
+  /// component's own corruption, which [_componentFromRow] has already
+  /// turned into a [CorruptDatabaseError] before it reaches here.
   Future<Recipe> _recipeFromRow(Map<String, Object?> row) async {
-    final id = row['id']! as String;
-    final revision = row['revision']! as int;
-    final components = await _componentsFor(id, revision);
-    return Recipe(
-      id: id,
-      revision: revision,
-      name: row['name']! as String,
-      category: row['category'] as String?,
-      baseYield: quantityFromColumns(row, 'base_yield'),
-      maxBatchYield: row['max_batch_unit'] == null
-          ? null
-          : quantityFromColumns(row, 'max_batch'),
-      components: components,
-      preparationNotes:
-          (jsonDecode(row['preparation_notes']! as String) as List<dynamic>)
-              .cast<String>(),
-      modifiedAt: DateTime.parse(row['modified_at']! as String),
-      isArchived: (row['is_archived']! as int) == 1,
-    );
+    try {
+      final id = row['id']! as String;
+      final revision = row['revision']! as int;
+      final components = await _componentsFor(id, revision);
+      return Recipe(
+        id: id,
+        revision: revision,
+        name: row['name']! as String,
+        category: row['category'] as String?,
+        baseYield: quantityFromColumns(row, 'base_yield'),
+        maxBatchYield: row['max_batch_unit'] == null
+            ? null
+            : quantityFromColumns(row, 'max_batch'),
+        components: components,
+        preparationNotes:
+            (jsonDecode(row['preparation_notes']! as String) as List<dynamic>)
+                .cast<String>(),
+        modifiedAt: DateTime.parse(row['modified_at']! as String),
+        isArchived: (row['is_archived']! as int) == 1,
+      );
+      // A wrong-typed column is a corrupt row, not a programmer bug, so its
+      // `TypeError` is caught rather than left to escape — see the doc
+      // comment above.
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error) {
+      throw CorruptDatabaseError(
+        'recipes row ${row['id']} revision ${row['revision']} holds a '
+        'column of the wrong type: $error',
+      );
+    }
   }
 
   Future<List<RecipeComponent>> _componentsFor(
@@ -163,41 +191,57 @@ final class SqfliteRecipeRepository implements RecipeRepository {
     };
   }
 
+  /// Rebuilds the [RecipeComponent] a `recipe_components` row holds.
+  ///
+  /// Guarded against a wrong-typed column for the same reason, and in the
+  /// same way, as [_recipeFromRow] — see its comment.
   RecipeComponent _componentFromRow(Map<String, Object?> row) {
-    final targetKind = row['target_kind'];
-    final targetId = row['target_id']! as String;
-    final target = switch (targetKind) {
-      'ingredient' => IngredientRef(targetId),
-      'recipe' => SubRecipeRef(targetId),
-      _ => throw CorruptDatabaseError(
-        'unknown component target kind: $targetKind',
-      ),
-    };
+    try {
+      final targetKind = row['target_kind'];
+      final targetId = row['target_id']! as String;
+      final target = switch (targetKind) {
+        'ingredient' => IngredientRef(targetId),
+        'recipe' => SubRecipeRef(targetId),
+        _ => throw CorruptDatabaseError(
+          'unknown component target kind: $targetKind',
+        ),
+      };
 
-    final behaviorName = row['behavior'];
-    final behavior = ScalingBehavior.values.asNameMap()[behaviorName];
-    if (behavior == null) {
+      final behaviorName = row['behavior'];
+      final behavior = ScalingBehavior.values.asNameMap()[behaviorName];
+      if (behavior == null) {
+        throw CorruptDatabaseError(
+          'unknown component behavior: $behaviorName',
+        );
+      }
+
+      final roundingIncrement = row['rounding_increment'];
+
+      return RecipeComponent(
+        id: row['component_id']! as String,
+        target: target,
+        baseQuantity: row['base_unit'] == null
+            ? null
+            : quantityFromColumns(row, 'base'),
+        behavior: behavior,
+        displayOrder: row['display_order']! as int,
+        rounding: roundingIncrement == null
+            ? null
+            : RoundingRule.upToIncrement(
+                Decimal.parse(roundingIncrement as String),
+              ),
+        note: row['note'] as String?,
+      );
+      // A wrong-typed column is a corrupt row, not a programmer bug, so its
+      // `TypeError` is caught rather than left to escape — see
+      // [_recipeFromRow]'s doc comment.
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error) {
       throw CorruptDatabaseError(
-        'unknown component behavior: $behaviorName',
+        'recipe_components row ${row['recipe_id']} revision '
+        '${row['recipe_revision']} component ${row['component_id']} holds a '
+        'column of the wrong type: $error',
       );
     }
-
-    final roundingIncrement = row['rounding_increment'];
-
-    return RecipeComponent(
-      id: row['component_id']! as String,
-      target: target,
-      baseQuantity: row['base_unit'] == null
-          ? null
-          : quantityFromColumns(row, 'base'),
-      behavior: behavior,
-      displayOrder: row['display_order']! as int,
-      rounding: roundingIncrement == null
-          ? null
-          : RoundingRule.upToIncrement(
-              Decimal.parse(roundingIncrement as String),
-            ),
-      note: row['note'] as String?,
-    );
   }
 }
