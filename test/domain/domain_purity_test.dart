@@ -372,70 +372,59 @@ Rational exact(Rational a, Rational b) => a / b;
     });
   });
 
-  test(
-    'every domain import or export resolves inside the domain boundary',
-    () {
-      final domain = Directory('lib/domain');
-      expect(domain.existsSync(), isTrue, reason: 'lib/domain must exist');
+  test('every domain import or export resolves inside the domain boundary', () {
+    final domain = Directory('lib/domain');
+    expect(domain.existsSync(), isTrue, reason: 'lib/domain must exist');
 
-      final offenders = <String>[];
-      for (final file in _dartFilesUnder('lib/domain')) {
-        final source = file.readAsStringSync();
-        for (final statement in _directiveStatement.allMatches(source)) {
-          final text = statement.group(0)!;
-          for (final match in _quotedUri.allMatches(text)) {
-            final uri = match.group(1) ?? match.group(2)!;
-            if (!_isAllowedUri(uri)) {
-              offenders.add('${file.path} references disallowed uri: $uri');
-            }
+    final offenders = <String>[];
+    for (final file in _dartFilesUnder('lib/domain')) {
+      final source = file.readAsStringSync();
+      for (final statement in _directiveStatement.allMatches(source)) {
+        final text = statement.group(0)!;
+        for (final match in _quotedUri.allMatches(text)) {
+          final uri = match.group(1) ?? match.group(2)!;
+          if (!_isAllowedUri(uri)) {
+            offenders.add('${file.path} references disallowed uri: $uri');
           }
         }
       }
+    }
 
-      expect(offenders, isEmpty);
-    },
-  );
+    expect(offenders, isEmpty);
+  });
 
-  test(
-    'no domain or test source uses double or a floating-point literal',
-    () {
-      final files = [
-        ..._dartFilesUnder('lib/domain'),
-        ..._dartFilesUnder('test/domain').where(
-          // Excludes this file itself, which necessarily names what it bans.
-          (file) => !file.path.endsWith('domain_purity_test.dart'),
-        ),
-      ];
+  test('no domain or test source uses double or a floating-point literal', () {
+    final files = [
+      ..._dartFilesUnder('lib/domain'),
+      ..._dartFilesUnder('test/domain').where(
+        // Excludes this file itself, which necessarily names what it bans.
+        (file) => !file.path.endsWith('domain_purity_test.dart'),
+      ),
+    ];
 
-      final offenders = <String>[];
-      for (final file in files) {
-        for (final violation in findNumericViolations(
-          file.readAsStringSync(),
-        )) {
-          offenders.add('${file.path}: $violation');
+    final offenders = <String>[];
+    for (final file in files) {
+      for (final violation in findNumericViolations(file.readAsStringSync())) {
+        offenders.add('${file.path}: $violation');
+      }
+    }
+
+    expect(offenders, isEmpty);
+  });
+
+  test('no domain source contains a banned substring (denylist backstop)', () {
+    final offenders = <String>[];
+    for (final file in _dartFilesUnder('lib/domain')) {
+      final source = file.readAsStringSync();
+      for (final banned in _bannedSubstrings) {
+        if (source.contains(banned)) {
+          offenders.add('${file.path} contains banned substring: $banned');
         }
       }
+    }
 
-      expect(offenders, isEmpty);
-    },
-  );
-
-  test(
-    'no domain source contains a banned substring (denylist backstop)',
-    () {
-      final offenders = <String>[];
-      for (final file in _dartFilesUnder('lib/domain')) {
-        final source = file.readAsStringSync();
-        for (final banned in _bannedSubstrings) {
-          if (source.contains(banned)) {
-            offenders.add('${file.path} contains banned substring: $banned');
-          }
-        }
-      }
-
-      expect(offenders, isEmpty);
-    },
-  );
+    expect(offenders, isEmpty);
+  });
 
   test(
     'no domain source divides a number',

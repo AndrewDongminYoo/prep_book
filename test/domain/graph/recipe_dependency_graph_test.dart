@@ -57,11 +57,11 @@ void main() {
       expect(
         () => graph.assertResolvable('a'),
         throwsA(
-          isA<RecipeCycleError>().having(
-            (e) => e.path,
-            'path',
-            ['a', 'b', 'a'],
-          ),
+          isA<RecipeCycleError>().having((e) => e.path, 'path', [
+            'a',
+            'b',
+            'a',
+          ]),
         ),
       );
     });

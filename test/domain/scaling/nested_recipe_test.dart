@@ -297,51 +297,45 @@ void main() {
       },
     );
 
-    test(
-      'a manual component sharing an id with one in its sub-recipe still '
-      'produces two distinct warnings',
-      () {
-        final result = calculator.calculate(
-          recipe: saltyPie(),
-          targetYield: Quantity.parse('4', Unit.portion),
-          recipeIndex: {'dough': dough()},
-        );
+    test('a manual component sharing an id with one in its sub-recipe still '
+        'produces two distinct warnings', () {
+      final result = calculator.calculate(
+        recipe: saltyPie(),
+        targetYield: Quantity.parse('4', Unit.portion),
+        recipeIndex: {'dough': dough()},
+      );
 
-        // Asserted as a raw count plus the distinguishing field (rather than
-        // via ManualComponentWarning's own equality) so this test still
-        // fails correctly if that equality itself is ever the thing that
-        // regresses.
-        final manualWarnings = result.warnings
-            .whereType<ManualComponentWarning>()
-            .toList();
-        expect(manualWarnings, hasLength(2));
-        expect(
-          manualWarnings.map((w) => w.recipeId),
-          unorderedEquals(['salty-pie', 'dough']),
-        );
-      },
-    );
+      // Asserted as a raw count plus the distinguishing field (rather than
+      // via ManualComponentWarning's own equality) so this test still
+      // fails correctly if that equality itself is ever the thing that
+      // regresses.
+      final manualWarnings = result.warnings
+          .whereType<ManualComponentWarning>()
+          .toList();
+      expect(manualWarnings, hasLength(2));
+      expect(
+        manualWarnings.map((w) => w.recipeId),
+        unorderedEquals(['salty-pie', 'dough']),
+      );
+    });
 
-    test(
-      'the same collision still produces two distinct warnings when the '
-      'sub-recipe line is listed first',
-      () {
-        final result = calculator.calculate(
-          recipe: saltyPieReversed(),
-          targetYield: Quantity.parse('4', Unit.portion),
-          recipeIndex: {'dough': dough()},
-        );
+    test('the same collision still produces two distinct warnings when the '
+        'sub-recipe line is listed first', () {
+      final result = calculator.calculate(
+        recipe: saltyPieReversed(),
+        targetYield: Quantity.parse('4', Unit.portion),
+        recipeIndex: {'dough': dough()},
+      );
 
-        final manualWarnings = result.warnings
-            .whereType<ManualComponentWarning>()
-            .toList();
-        expect(manualWarnings, hasLength(2));
-        expect(
-          manualWarnings.map((w) => w.recipeId),
-          unorderedEquals(['salty-pie-reversed', 'dough']),
-        );
-      },
-    );
+      final manualWarnings = result.warnings
+          .whereType<ManualComponentWarning>()
+          .toList();
+      expect(manualWarnings, hasLength(2));
+      expect(
+        manualWarnings.map((w) => w.recipeId),
+        unorderedEquals(['salty-pie-reversed', 'dough']),
+      );
+    });
 
     test('warns when a dependency is archived', () {
       final result = calculator.calculate(
@@ -362,129 +356,104 @@ void main() {
         targetYield: Quantity.parse('4', Unit.portion),
         recipeIndex: {'dough': dough(), 'pie': pie(isArchived: true)},
       );
-      expect(
-        result.warnings,
-        contains(const ArchivedDependencyWarning('pie')),
-      );
+      expect(result.warnings, contains(const ArchivedDependencyWarning('pie')));
       expect(result.hasBlockingWarnings, isTrue);
     });
 
-    test(
-      'reports both when the run is computed from an archived recipe that '
-      'also references an archived child, without collapsing them since '
-      'their recipe ids differ',
-      () {
-        final result = calculator.calculate(
-          recipe: pie(isArchived: true),
-          targetYield: Quantity.parse('4', Unit.portion),
-          recipeIndex: {
-            'dough': dough(isArchived: true),
-            'pie': pie(isArchived: true),
-          },
-        );
+    test('reports both when the run is computed from an archived recipe that '
+        'also references an archived child, without collapsing them since '
+        'their recipe ids differ', () {
+      final result = calculator.calculate(
+        recipe: pie(isArchived: true),
+        targetYield: Quantity.parse('4', Unit.portion),
+        recipeIndex: {
+          'dough': dough(isArchived: true),
+          'pie': pie(isArchived: true),
+        },
+      );
 
-        final archivedWarnings = result.warnings
-            .whereType<ArchivedDependencyWarning>()
-            .toList();
-        expect(archivedWarnings, hasLength(2));
-        expect(
-          archivedWarnings.map((w) => w.recipeId),
-          unorderedEquals(['pie', 'dough']),
-        );
-      },
-    );
+      final archivedWarnings = result.warnings
+          .whereType<ArchivedDependencyWarning>()
+          .toList();
+      expect(archivedWarnings, hasLength(2));
+      expect(
+        archivedWarnings.map((w) => w.recipeId),
+        unorderedEquals(['pie', 'dough']),
+      );
+    });
 
-    test(
-      'de-duplicates an archived-dependency warning when the sub-recipe is '
-      'referenced twice',
-      () {
-        final result = calculator.calculate(
-          recipe: twicePie(),
-          targetYield: Quantity.parse('4', Unit.portion),
-          recipeIndex: {'dough': dough(isArchived: true)},
-        );
+    test('de-duplicates an archived-dependency warning when the sub-recipe is '
+        'referenced twice', () {
+      final result = calculator.calculate(
+        recipe: twicePie(),
+        targetYield: Quantity.parse('4', Unit.portion),
+        recipeIndex: {'dough': dough(isArchived: true)},
+      );
 
-        expect(
-          result.warnings.whereType<ArchivedDependencyWarning>(),
-          hasLength(1),
-        );
-        expect(
-          result.warnings,
-          contains(const ArchivedDependencyWarning('dough')),
-        );
-      },
-    );
+      expect(
+        result.warnings.whereType<ArchivedDependencyWarning>(),
+        hasLength(1),
+      );
+      expect(
+        result.warnings,
+        contains(const ArchivedDependencyWarning('dough')),
+      );
+    });
 
-    test(
-      'warns that an archived sub-recipe is referenced by a manual line, '
-      'which has no total to expand it against',
-      () {
-        final result = calculator.calculate(
-          recipe: manualDoughPie(),
-          targetYield: Quantity.parse('4', Unit.portion),
-          recipeIndex: {'dough': dough(isArchived: true)},
-        );
+    test('warns that an archived sub-recipe is referenced by a manual line, '
+        'which has no total to expand it against', () {
+      final result = calculator.calculate(
+        recipe: manualDoughPie(),
+        targetYield: Quantity.parse('4', Unit.portion),
+        recipeIndex: {'dough': dough(isArchived: true)},
+      );
 
-        expect(
-          result.warnings,
-          contains(const ArchivedDependencyWarning('dough')),
-        );
-        expect(
-          result.warnings,
-          contains(
-            const ManualComponentWarning('manual-dough-pie', 'pie-dough'),
-          ),
-        );
-        expect(result.hasBlockingWarnings, isTrue);
-        // The line is still not expanded: there is no quantity to scale the
-        // sub-recipe to, so only its archived identity is reported.
-        expect(result.components.single.subRecipe, isNull);
-      },
-    );
+      expect(
+        result.warnings,
+        contains(const ArchivedDependencyWarning('dough')),
+      );
+      expect(
+        result.warnings,
+        contains(const ManualComponentWarning('manual-dough-pie', 'pie-dough')),
+      );
+      expect(result.hasBlockingWarnings, isTrue);
+      // The line is still not expanded: there is no quantity to scale the
+      // sub-recipe to, so only its archived identity is reported.
+      expect(result.components.single.subRecipe, isNull);
+    });
 
-    test(
-      'does not raise an archived warning for a manual line whose '
-      'sub-recipe is live',
-      () {
-        final result = calculator.calculate(
-          recipe: manualDoughPie(),
-          targetYield: Quantity.parse('4', Unit.portion),
-          recipeIndex: {'dough': dough()},
-        );
+    test('does not raise an archived warning for a manual line whose '
+        'sub-recipe is live', () {
+      final result = calculator.calculate(
+        recipe: manualDoughPie(),
+        targetYield: Quantity.parse('4', Unit.portion),
+        recipeIndex: {'dough': dough()},
+      );
 
-        expect(
-          result.warnings,
-          contains(
-            const ManualComponentWarning('manual-dough-pie', 'pie-dough'),
-          ),
-        );
-        expect(
-          result.warnings,
-          isNot(contains(isA<ArchivedDependencyWarning>())),
-        );
-      },
-    );
+      expect(
+        result.warnings,
+        contains(const ManualComponentWarning('manual-dough-pie', 'pie-dough')),
+      );
+      expect(
+        result.warnings,
+        isNot(contains(isA<ArchivedDependencyWarning>())),
+      );
+    });
 
-    test(
-      'de-duplicates an archived-dependency warning raised by two manual '
-      'lines naming the same sub-recipe',
-      () {
-        final result = calculator.calculate(
-          recipe: twiceManualDoughPie(),
-          targetYield: Quantity.parse('4', Unit.portion),
-          recipeIndex: {'dough': dough(isArchived: true)},
-        );
+    test('de-duplicates an archived-dependency warning raised by two manual '
+        'lines naming the same sub-recipe', () {
+      final result = calculator.calculate(
+        recipe: twiceManualDoughPie(),
+        targetYield: Quantity.parse('4', Unit.portion),
+        recipeIndex: {'dough': dough(isArchived: true)},
+      );
 
-        expect(
-          result.warnings.whereType<ArchivedDependencyWarning>(),
-          hasLength(1),
-        );
-        expect(
-          result.warnings.whereType<ManualComponentWarning>(),
-          hasLength(2),
-        );
-      },
-    );
+      expect(
+        result.warnings.whereType<ArchivedDependencyWarning>(),
+        hasLength(1),
+      );
+      expect(result.warnings.whereType<ManualComponentWarning>(), hasLength(2));
+    });
 
     test('rejects a cycle before calculating', () {
       final a = Recipe(

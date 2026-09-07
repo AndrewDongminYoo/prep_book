@@ -144,56 +144,44 @@ void main() {
       expect(buildRun().isFinalizable, isFalse);
     });
 
-    test(
-      'becomes finalizable once every blocking warning is acknowledged',
-      () {
-        final run = buildRun();
-        final acknowledged = run.acknowledge(
-          const ManualComponentWarning('soup', 'pepper'),
-        );
-        expect(acknowledged.isFinalizable, isTrue);
-        expect(run.isFinalizable, isFalse);
-      },
-    );
+    test('becomes finalizable once every blocking warning is acknowledged', () {
+      final run = buildRun();
+      final acknowledged = run.acknowledge(
+        const ManualComponentWarning('soup', 'pepper'),
+      );
+      expect(acknowledged.isFinalizable, isTrue);
+      expect(run.isFinalizable, isFalse);
+    });
 
-    test(
-      'stays unfinalizable until every blocking warning is acknowledged, '
-      'not merely one of them',
-      () {
-        final run = buildRunFor(
-          twiceManualSoup(),
-          Quantity.parse('20', Unit.portion),
-          id: 'run-4',
-        );
-        expect(
-          run.result.warnings.where((w) => w.isBlocking).length,
-          2,
-        );
+    test('stays unfinalizable until every blocking warning is acknowledged, '
+        'not merely one of them', () {
+      final run = buildRunFor(
+        twiceManualSoup(),
+        Quantity.parse('20', Unit.portion),
+        id: 'run-4',
+      );
+      expect(run.result.warnings.where((w) => w.isBlocking).length, 2);
 
-        final partiallyAcknowledged = run.acknowledge(
-          const ManualComponentWarning('soup', 'pepper'),
-        );
-        expect(partiallyAcknowledged.isFinalizable, isFalse);
+      final partiallyAcknowledged = run.acknowledge(
+        const ManualComponentWarning('soup', 'pepper'),
+      );
+      expect(partiallyAcknowledged.isFinalizable, isFalse);
 
-        final fullyAcknowledged = partiallyAcknowledged.acknowledge(
-          const ManualComponentWarning('soup', 'salt'),
-        );
-        expect(fullyAcknowledged.isFinalizable, isTrue);
-      },
-    );
+      final fullyAcknowledged = partiallyAcknowledged.acknowledge(
+        const ManualComponentWarning('soup', 'salt'),
+      );
+      expect(fullyAcknowledged.isFinalizable, isTrue);
+    });
 
-    test(
-      'is finalizable when the calculation raised no blocking warning',
-      () {
-        final run = buildRunFor(
-          plainStock(),
-          Quantity.parse('20', Unit.portion),
-          id: 'run-2',
-        );
-        expect(run.result.hasBlockingWarnings, isFalse);
-        expect(run.isFinalizable, isTrue);
-      },
-    );
+    test('is finalizable when the calculation raised no blocking warning', () {
+      final run = buildRunFor(
+        plainStock(),
+        Quantity.parse('20', Unit.portion),
+        id: 'run-2',
+      );
+      expect(run.result.hasBlockingWarnings, isFalse);
+      expect(run.isFinalizable, isTrue);
+    });
 
     test(
       'is finalizable while a non-blocking warning stands unacknowledged',
@@ -254,115 +242,101 @@ void main() {
       expect(run.overrides, isEmpty);
     });
 
-    test(
-      'keys an override by recipe and component so a same-named component '
-      'in another recipe never collides',
-      () {
-        final run = buildRun();
-        final overridden = run
-            .override(
-              recipeId: 'soup',
-              componentId: 'stock',
-              value: Quantity.parse('5', Unit.liter),
-            )
-            .override(
-              recipeId: 'broth',
-              componentId: 'stock',
-              value: Quantity.parse('9', Unit.liter),
-            );
+    test('keys an override by recipe and component so a same-named component '
+        'in another recipe never collides', () {
+      final run = buildRun();
+      final overridden = run
+          .override(
+            recipeId: 'soup',
+            componentId: 'stock',
+            value: Quantity.parse('5', Unit.liter),
+          )
+          .override(
+            recipeId: 'broth',
+            componentId: 'stock',
+            value: Quantity.parse('9', Unit.liter),
+          );
 
-        expect(
-          overridden.overrides[('soup', 'stock')],
-          Quantity.parse('5', Unit.liter),
-        );
-        expect(
-          overridden.overrides[('broth', 'stock')],
-          Quantity.parse('9', Unit.liter),
-        );
-      },
-    );
+      expect(
+        overridden.overrides[('soup', 'stock')],
+        Quantity.parse('5', Unit.liter),
+      );
+      expect(
+        overridden.overrides[('broth', 'stock')],
+        Quantity.parse('9', Unit.liter),
+      );
+    });
 
-    test(
-      'keeps acknowledgements and overrides independent of each other, '
-      'regardless of which is recorded first',
-      () {
-        const acknowledgement = ManualComponentWarning('soup', 'pepper');
-        final value = Quantity.parse('5', Unit.liter);
+    test('keeps acknowledgements and overrides independent of each other, '
+        'regardless of which is recorded first', () {
+      const acknowledgement = ManualComponentWarning('soup', 'pepper');
+      final value = Quantity.parse('5', Unit.liter);
 
-        final acknowledgeThenOverride = buildRun()
-            .acknowledge(acknowledgement)
-            .override(recipeId: 'soup', componentId: 'stock', value: value);
-        expect(acknowledgeThenOverride.overrides[('soup', 'stock')], value);
-        expect(acknowledgeThenOverride.isFinalizable, isTrue);
+      final acknowledgeThenOverride = buildRun()
+          .acknowledge(acknowledgement)
+          .override(recipeId: 'soup', componentId: 'stock', value: value);
+      expect(acknowledgeThenOverride.overrides[('soup', 'stock')], value);
+      expect(acknowledgeThenOverride.isFinalizable, isTrue);
 
-        final overrideThenAcknowledge = buildRun()
-            .override(recipeId: 'soup', componentId: 'stock', value: value)
-            .acknowledge(acknowledgement);
-        expect(overrideThenAcknowledge.overrides[('soup', 'stock')], value);
-        expect(overrideThenAcknowledge.isFinalizable, isTrue);
-      },
-    );
+      final overrideThenAcknowledge = buildRun()
+          .override(recipeId: 'soup', componentId: 'stock', value: value)
+          .acknowledge(acknowledgement);
+      expect(overrideThenAcknowledge.overrides[('soup', 'stock')], value);
+      expect(overrideThenAcknowledge.isFinalizable, isTrue);
+    });
 
-    test(
-      'copies the collections it is constructed with, rather than '
-      "aliasing the caller's map or set",
-      () {
-        // A wrong implementation that wraps the caller's own container in
-        // an unmodifiable view (instead of copying it first) would still
-        // pass the "exposes unmodifiable collections" test below — direct
-        // writes through `run.overrides` etc. would still throw — while
-        // leaking every mutation the caller makes to its original
-        // afterward. Mutating the caller's originals here, after
-        // construction, is what tells the two implementations apart.
-        final snapshot = <String, Recipe>{'broth': brothRecipe()};
-        final overridesMap = <OverrideKey, Quantity>{
-          ('soup', 'stock'): Quantity.parse('5', Unit.liter),
-        };
-        final acknowledged = <ProductionWarning>{
-          const ManualComponentWarning('soup', 'pepper'),
-        };
+    test('copies the collections it is constructed with, rather than '
+        "aliasing the caller's map or set", () {
+      // A wrong implementation that wraps the caller's own container in
+      // an unmodifiable view (instead of copying it first) would still
+      // pass the "exposes unmodifiable collections" test below — direct
+      // writes through `run.overrides` etc. would still throw — while
+      // leaking every mutation the caller makes to its original
+      // afterward. Mutating the caller's originals here, after
+      // construction, is what tells the two implementations apart.
+      final snapshot = <String, Recipe>{'broth': brothRecipe()};
+      final overridesMap = <OverrideKey, Quantity>{
+        ('soup', 'stock'): Quantity.parse('5', Unit.liter),
+      };
+      final acknowledged = <ProductionWarning>{
+        const ManualComponentWarning('soup', 'pepper'),
+      };
 
-        final run = ProductionRun(
-          id: 'run-5',
-          createdAt: DateTime.utc(2026, 9, 6, 9),
+      final run = ProductionRun(
+        id: 'run-5',
+        createdAt: DateTime.utc(2026, 9, 6, 9),
+        recipe: soup(),
+        dependencySnapshot: snapshot,
+        targetYield: Quantity.parse('20', Unit.portion),
+        result: const ProductionCalculator().calculate(
           recipe: soup(),
-          dependencySnapshot: snapshot,
           targetYield: Quantity.parse('20', Unit.portion),
-          result: const ProductionCalculator().calculate(
-            recipe: soup(),
-            targetYield: Quantity.parse('20', Unit.portion),
-          ),
-          overrides: overridesMap,
-          acknowledgedWarnings: acknowledged,
-        );
+        ),
+        overrides: overridesMap,
+        acknowledgedWarnings: acknowledged,
+      );
 
-        snapshot['broth'] = brothRecipe(isArchived: true);
-        snapshot['extra'] = soup();
-        overridesMap[('soup', 'stock')] = Quantity.parse('9', Unit.liter);
-        overridesMap[('broth', 'stock')] = Quantity.parse('1', Unit.liter);
-        acknowledged.clear();
+      snapshot['broth'] = brothRecipe(isArchived: true);
+      snapshot['extra'] = soup();
+      overridesMap[('soup', 'stock')] = Quantity.parse('9', Unit.liter);
+      overridesMap[('broth', 'stock')] = Quantity.parse('1', Unit.liter);
+      acknowledged.clear();
 
-        expect(run.dependencySnapshot['broth']!.isArchived, isFalse);
-        expect(run.dependencySnapshot.containsKey('extra'), isFalse);
-        expect(
-          run.overrides[('soup', 'stock')],
-          Quantity.parse('5', Unit.liter),
-        );
-        expect(run.overrides.containsKey(('broth', 'stock')), isFalse);
-        expect(
-          run.acknowledgedWarnings,
-          contains(const ManualComponentWarning('soup', 'pepper')),
-        );
-      },
-    );
+      expect(run.dependencySnapshot['broth']!.isArchived, isFalse);
+      expect(run.dependencySnapshot.containsKey('extra'), isFalse);
+      expect(run.overrides[('soup', 'stock')], Quantity.parse('5', Unit.liter));
+      expect(run.overrides.containsKey(('broth', 'stock')), isFalse);
+      expect(
+        run.acknowledgedWarnings,
+        contains(const ManualComponentWarning('soup', 'pepper')),
+      );
+    });
 
     test('exposes unmodifiable collections', () {
       final run = buildRun();
       expect(
-        () => run.overrides[('soup', 'stock')] = Quantity.parse(
-          '1',
-          Unit.liter,
-        ),
+        () =>
+            run.overrides[('soup', 'stock')] = Quantity.parse('1', Unit.liter),
         throwsUnsupportedError,
       );
       expect(
@@ -377,66 +351,63 @@ void main() {
       );
     });
 
-    test(
-      "a stored run's per-batch lists are unmodifiable, at the top level "
-      'and inside an expanded sub-recipe',
-      () {
-        final crust = Recipe(
-          id: 'crust',
-          revision: 1,
-          name: 'Crust',
-          baseYield: Quantity.parse('2', Unit.kilogram),
-          components: [
-            RecipeComponent(
-              id: 'crust-flour',
-              target: const IngredientRef('flour'),
-              baseQuantity: Quantity.parse('1', Unit.kilogram),
-              behavior: ScalingBehavior.proportional,
-              displayOrder: 0,
-            ),
-          ],
-          modifiedAt: DateTime.utc(2026, 9, 6),
-        );
-        final tart = Recipe(
-          id: 'tart',
-          revision: 1,
-          name: 'Tart',
-          baseYield: Quantity.parse('4', Unit.portion),
-          components: [
-            RecipeComponent(
-              id: 'tart-crust',
-              target: const SubRecipeRef('crust'),
-              baseQuantity: Quantity.parse('1', Unit.kilogram),
-              behavior: ScalingBehavior.proportional,
-              displayOrder: 0,
-            ),
-          ],
-          modifiedAt: DateTime.utc(2026, 9, 6),
-        );
-        final run = ProductionRun(
-          id: 'run-6',
-          createdAt: DateTime.utc(2026, 9, 6, 9),
-          recipe: tart,
-          dependencySnapshot: {'crust': crust},
-          targetYield: Quantity.parse('8', Unit.portion),
-          result: const ProductionCalculator().calculate(
-            recipe: tart,
-            targetYield: Quantity.parse('8', Unit.portion),
-            recipeIndex: {'crust': crust},
+    test("a stored run's per-batch lists are unmodifiable, at the top level "
+        'and inside an expanded sub-recipe', () {
+      final crust = Recipe(
+        id: 'crust',
+        revision: 1,
+        name: 'Crust',
+        baseYield: Quantity.parse('2', Unit.kilogram),
+        components: [
+          RecipeComponent(
+            id: 'crust-flour',
+            target: const IngredientRef('flour'),
+            baseQuantity: Quantity.parse('1', Unit.kilogram),
+            behavior: ScalingBehavior.proportional,
+            displayOrder: 0,
           ),
-        );
+        ],
+        modifiedAt: DateTime.utc(2026, 9, 6),
+      );
+      final tart = Recipe(
+        id: 'tart',
+        revision: 1,
+        name: 'Tart',
+        baseYield: Quantity.parse('4', Unit.portion),
+        components: [
+          RecipeComponent(
+            id: 'tart-crust',
+            target: const SubRecipeRef('crust'),
+            baseQuantity: Quantity.parse('1', Unit.kilogram),
+            behavior: ScalingBehavior.proportional,
+            displayOrder: 0,
+          ),
+        ],
+        modifiedAt: DateTime.utc(2026, 9, 6),
+      );
+      final run = ProductionRun(
+        id: 'run-6',
+        createdAt: DateTime.utc(2026, 9, 6, 9),
+        recipe: tart,
+        dependencySnapshot: {'crust': crust},
+        targetYield: Quantity.parse('8', Unit.portion),
+        result: const ProductionCalculator().calculate(
+          recipe: tart,
+          targetYield: Quantity.parse('8', Unit.portion),
+          recipeIndex: {'crust': crust},
+        ),
+      );
 
-        expect(
-          () => run.result.components.first.perBatch.clear(),
-          throwsUnsupportedError,
-        );
-        expect(
-          () => run.result.components.first.subRecipe!.components.first.perBatch
-              .clear(),
-          throwsUnsupportedError,
-        );
-      },
-    );
+      expect(
+        () => run.result.components.first.perBatch.clear(),
+        throwsUnsupportedError,
+      );
+      expect(
+        () => run.result.components.first.subRecipe!.components.first.perBatch
+            .clear(),
+        throwsUnsupportedError,
+      );
+    });
 
     test(
       "an unresolved manual component's per-batch list is unmodifiable too",

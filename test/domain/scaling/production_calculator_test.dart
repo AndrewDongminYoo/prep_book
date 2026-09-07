@@ -101,9 +101,10 @@ void main() {
     test('keeps a non-terminating ratio exact', () {
       final result = calculator.calculate(
         recipe: bread(),
-        targetYield: Quantity.parse('10', Unit.portion).scaleBy(
-          Rational(BigInt.one, BigInt.from(3)),
-        ),
+        targetYield: Quantity.parse(
+          '10',
+          Unit.portion,
+        ).scaleBy(Rational(BigInt.one, BigInt.from(3))),
       );
       expectBatchesSumToTotal(result);
       final flour = componentById(result, 'flour').total!.exact;
@@ -143,10 +144,7 @@ void main() {
       );
       expectBatchesSumToTotal(result);
       expect(componentById(result, 'salt').total, isNull);
-      expect(
-        result.warnings,
-        contains(isA<ManualComponentWarning>()),
-      );
+      expect(result.warnings, contains(isA<ManualComponentWarning>()));
       expect(result.hasBlockingWarnings, isTrue);
     });
 
@@ -223,179 +221,162 @@ void main() {
       expect(result.warnings, isEmpty);
     });
 
-    test(
-      'the displayed total is the sum of the displayed batches, '
-      'not a fresh rounding of the exact total',
-      () {
-        final recipe = Recipe(
-          id: 'buns',
-          revision: 1,
-          name: 'Buns',
-          baseYield: Quantity.parse('10', Unit.portion),
-          maxBatchYield: Quantity.parse('4', Unit.portion),
-          components: [
-            RecipeComponent(
-              id: 'eggs',
-              target: const IngredientRef('egg'),
-              baseQuantity: Quantity.parse('3', Unit.count('item')),
-              behavior: ScalingBehavior.proportional,
-              rounding: RoundingRule.upToIncrement(Decimal.one),
-              displayOrder: 0,
-            ),
-          ],
-          modifiedAt: DateTime.utc(2026, 9, 6),
-        );
-        final result = calculator.calculate(
-          recipe: recipe,
-          targetYield: Quantity.parse('10', Unit.portion),
-        );
-        expectBatchesSumToTotal(result);
+    test('the displayed total is the sum of the displayed batches, '
+        'not a fresh rounding of the exact total', () {
+      final recipe = Recipe(
+        id: 'buns',
+        revision: 1,
+        name: 'Buns',
+        baseYield: Quantity.parse('10', Unit.portion),
+        maxBatchYield: Quantity.parse('4', Unit.portion),
+        components: [
+          RecipeComponent(
+            id: 'eggs',
+            target: const IngredientRef('egg'),
+            baseQuantity: Quantity.parse('3', Unit.count('item')),
+            behavior: ScalingBehavior.proportional,
+            rounding: RoundingRule.upToIncrement(Decimal.one),
+            displayOrder: 0,
+          ),
+        ],
+        modifiedAt: DateTime.utc(2026, 9, 6),
+      );
+      final result = calculator.calculate(
+        recipe: recipe,
+        targetYield: Quantity.parse('10', Unit.portion),
+      );
+      expectBatchesSumToTotal(result);
 
-        final eggs = componentById(result, 'eggs');
-        expect(
-          eggs.perBatch.map((batch) => batch!.displayed.amount).toList(),
-          [Rational.fromInt(2), Rational.fromInt(2), Rational.fromInt(1)],
-        );
-        expect(eggs.total!.exact.amount, Rational.fromInt(3));
-        expect(eggs.total!.displayed.amount, Rational.fromInt(5));
-        expect(
-          result.warnings,
-          contains(const RoundingAdjustedWarning('buns', 'eggs')),
-        );
-      },
-    );
+      final eggs = componentById(result, 'eggs');
+      expect(eggs.perBatch.map((batch) => batch!.displayed.amount).toList(), [
+        Rational.fromInt(2),
+        Rational.fromInt(2),
+        Rational.fromInt(1),
+      ]);
+      expect(eggs.total!.exact.amount, Rational.fromInt(3));
+      expect(eggs.total!.displayed.amount, Rational.fromInt(5));
+      expect(
+        result.warnings,
+        contains(const RoundingAdjustedWarning('buns', 'eggs')),
+      );
+    });
 
-    test(
-      'the total and every per-batch value agree across all four '
-      'behaviors and a sub-recipe line',
-      () {
-        final recipe = Recipe(
-          id: 'bread-with-starter',
-          revision: 1,
-          name: 'Bread with starter',
-          baseYield: Quantity.parse('10', Unit.portion),
-          maxBatchYield: Quantity.parse('4', Unit.portion),
-          components: [
-            RecipeComponent(
-              id: 'flour',
-              target: const IngredientRef('flour'),
-              baseQuantity: Quantity.parse('1', Unit.kilogram),
-              behavior: ScalingBehavior.proportional,
-              displayOrder: 0,
-            ),
-            RecipeComponent(
-              id: 'yeast',
-              target: const IngredientRef('yeast'),
-              baseQuantity: Quantity.parse('7', Unit.gram),
-              behavior: ScalingBehavior.perBatch,
-              displayOrder: 1,
-            ),
-            RecipeComponent(
-              id: 'pan-grease',
-              target: const IngredientRef('butter'),
-              baseQuantity: Quantity.parse('20', Unit.gram),
-              behavior: ScalingBehavior.fixedOnce,
-              displayOrder: 2,
-            ),
-            RecipeComponent(
-              id: 'salt',
-              target: const IngredientRef('salt'),
-              baseQuantity: null,
-              behavior: ScalingBehavior.manual,
-              note: 'to taste',
-              displayOrder: 3,
-            ),
-            RecipeComponent(
-              id: 'dough',
-              target: const SubRecipeRef('starter-dough'),
-              baseQuantity: Quantity.parse('2', Unit.kilogram),
-              behavior: ScalingBehavior.proportional,
-              displayOrder: 4,
-            ),
-          ],
-          modifiedAt: DateTime.utc(2026, 9, 6),
-        );
+    test('the total and every per-batch value agree across all four '
+        'behaviors and a sub-recipe line', () {
+      final recipe = Recipe(
+        id: 'bread-with-starter',
+        revision: 1,
+        name: 'Bread with starter',
+        baseYield: Quantity.parse('10', Unit.portion),
+        maxBatchYield: Quantity.parse('4', Unit.portion),
+        components: [
+          RecipeComponent(
+            id: 'flour',
+            target: const IngredientRef('flour'),
+            baseQuantity: Quantity.parse('1', Unit.kilogram),
+            behavior: ScalingBehavior.proportional,
+            displayOrder: 0,
+          ),
+          RecipeComponent(
+            id: 'yeast',
+            target: const IngredientRef('yeast'),
+            baseQuantity: Quantity.parse('7', Unit.gram),
+            behavior: ScalingBehavior.perBatch,
+            displayOrder: 1,
+          ),
+          RecipeComponent(
+            id: 'pan-grease',
+            target: const IngredientRef('butter'),
+            baseQuantity: Quantity.parse('20', Unit.gram),
+            behavior: ScalingBehavior.fixedOnce,
+            displayOrder: 2,
+          ),
+          RecipeComponent(
+            id: 'salt',
+            target: const IngredientRef('salt'),
+            baseQuantity: null,
+            behavior: ScalingBehavior.manual,
+            note: 'to taste',
+            displayOrder: 3,
+          ),
+          RecipeComponent(
+            id: 'dough',
+            target: const SubRecipeRef('starter-dough'),
+            baseQuantity: Quantity.parse('2', Unit.kilogram),
+            behavior: ScalingBehavior.proportional,
+            displayOrder: 4,
+          ),
+        ],
+        modifiedAt: DateTime.utc(2026, 9, 6),
+      );
 
-        final starterDough = Recipe(
-          id: 'starter-dough',
-          revision: 1,
-          name: 'Starter dough',
-          baseYield: Quantity.parse('2', Unit.kilogram),
-          components: [
-            RecipeComponent(
-              id: 'starter-flour',
-              target: const IngredientRef('flour'),
-              baseQuantity: Quantity.parse('1.5', Unit.kilogram),
-              behavior: ScalingBehavior.proportional,
-              displayOrder: 0,
-            ),
-          ],
-          modifiedAt: DateTime.utc(2026, 9, 6),
-        );
+      final starterDough = Recipe(
+        id: 'starter-dough',
+        revision: 1,
+        name: 'Starter dough',
+        baseYield: Quantity.parse('2', Unit.kilogram),
+        components: [
+          RecipeComponent(
+            id: 'starter-flour',
+            target: const IngredientRef('flour'),
+            baseQuantity: Quantity.parse('1.5', Unit.kilogram),
+            behavior: ScalingBehavior.proportional,
+            displayOrder: 0,
+          ),
+        ],
+        modifiedAt: DateTime.utc(2026, 9, 6),
+      );
 
-        final result = calculator.calculate(
-          recipe: recipe,
-          targetYield: Quantity.parse('10', Unit.portion),
-          recipeIndex: {'starter-dough': starterDough},
-        );
-        expectBatchesSumToTotal(result);
+      final result = calculator.calculate(
+        recipe: recipe,
+        targetYield: Quantity.parse('10', Unit.portion),
+        recipeIndex: {'starter-dough': starterDough},
+      );
+      expectBatchesSumToTotal(result);
 
-        final flour = componentById(result, 'flour');
-        expect(flour.total!.exact, Quantity.parse('1', Unit.kilogram));
-        expect(
-          flour.perBatch.map((batch) => batch!.exact).toList(),
-          [
-            Quantity.parse('0.4', Unit.kilogram),
-            Quantity.parse('0.4', Unit.kilogram),
-            Quantity.parse('0.2', Unit.kilogram),
-          ],
-        );
+      final flour = componentById(result, 'flour');
+      expect(flour.total!.exact, Quantity.parse('1', Unit.kilogram));
+      expect(flour.perBatch.map((batch) => batch!.exact).toList(), [
+        Quantity.parse('0.4', Unit.kilogram),
+        Quantity.parse('0.4', Unit.kilogram),
+        Quantity.parse('0.2', Unit.kilogram),
+      ]);
 
-        final yeast = componentById(result, 'yeast');
-        expect(yeast.total!.exact, Quantity.parse('21', Unit.gram));
-        expect(
-          yeast.perBatch.map((batch) => batch!.exact).toList(),
-          [
-            Quantity.parse('7', Unit.gram),
-            Quantity.parse('7', Unit.gram),
-            Quantity.parse('7', Unit.gram),
-          ],
-        );
+      final yeast = componentById(result, 'yeast');
+      expect(yeast.total!.exact, Quantity.parse('21', Unit.gram));
+      expect(yeast.perBatch.map((batch) => batch!.exact).toList(), [
+        Quantity.parse('7', Unit.gram),
+        Quantity.parse('7', Unit.gram),
+        Quantity.parse('7', Unit.gram),
+      ]);
 
-        final panGrease = componentById(result, 'pan-grease');
-        expect(panGrease.total!.exact, Quantity.parse('20', Unit.gram));
-        expect(
-          panGrease.perBatch.map((batch) => batch!.exact).toList(),
-          [
-            Quantity.parse('20', Unit.gram),
-            Quantity.parse('0', Unit.gram),
-            Quantity.parse('0', Unit.gram),
-          ],
-        );
+      final panGrease = componentById(result, 'pan-grease');
+      expect(panGrease.total!.exact, Quantity.parse('20', Unit.gram));
+      expect(panGrease.perBatch.map((batch) => batch!.exact).toList(), [
+        Quantity.parse('20', Unit.gram),
+        Quantity.parse('0', Unit.gram),
+        Quantity.parse('0', Unit.gram),
+      ]);
 
-        final salt = componentById(result, 'salt');
-        expect(salt.total, isNull);
-        expect(salt.perBatch, [isNull, isNull, isNull]);
+      final salt = componentById(result, 'salt');
+      expect(salt.total, isNull);
+      expect(salt.perBatch, [isNull, isNull, isNull]);
 
-        final dough = componentById(result, 'dough');
-        final nestedStarter = dough.subRecipe;
-        expect(nestedStarter, isNotNull);
-        expect(nestedStarter!.scaleRatio, Rational.one);
-        expect(
-          nestedStarter.components.single.total!.exact,
-          Quantity.parse('1.5', Unit.kilogram),
-        );
-        expect(dough.total!.exact, Quantity.parse('2', Unit.kilogram));
-        expect(
-          dough.perBatch.map((batch) => batch!.exact).toList(),
-          [
-            Quantity.parse('0.8', Unit.kilogram),
-            Quantity.parse('0.8', Unit.kilogram),
-            Quantity.parse('0.4', Unit.kilogram),
-          ],
-        );
-      },
-    );
+      final dough = componentById(result, 'dough');
+      final nestedStarter = dough.subRecipe;
+      expect(nestedStarter, isNotNull);
+      expect(nestedStarter!.scaleRatio, Rational.one);
+      expect(
+        nestedStarter.components.single.total!.exact,
+        Quantity.parse('1.5', Unit.kilogram),
+      );
+      expect(dough.total!.exact, Quantity.parse('2', Unit.kilogram));
+      expect(dough.perBatch.map((batch) => batch!.exact).toList(), [
+        Quantity.parse('0.8', Unit.kilogram),
+        Quantity.parse('0.8', Unit.kilogram),
+        Quantity.parse('0.4', Unit.kilogram),
+      ]);
+    });
 
     test('rejects a target yield in another dimension', () {
       expect(

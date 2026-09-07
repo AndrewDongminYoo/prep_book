@@ -14,15 +14,12 @@ void main() {
       );
     });
 
-    test(
-      'is not equal to a same-named component in a different recipe',
-      () {
-        expect(
-          const ManualComponentWarning('bread', 'salt'),
-          isNot(const ManualComponentWarning('dough', 'salt')),
-        );
-      },
-    );
+    test('is not equal to a same-named component in a different recipe', () {
+      expect(
+        const ManualComponentWarning('bread', 'salt'),
+        isNot(const ManualComponentWarning('dough', 'salt')),
+      );
+    });
 
     test('equal warnings share a hash code', () {
       expect(
