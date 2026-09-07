@@ -88,6 +88,16 @@ final class SqfliteRecipeRepository implements RecipeRepository {
     return _recipeFromRow(rows.single);
   }
 
+  /// Writes [recipe] and its components as a new revision, in one
+  /// transaction.
+  ///
+  /// This column set is mirrored by `result_codec.dart`'s `_recipeToJson`,
+  /// which encodes the same `Recipe` fields into a run snapshot. The two
+  /// are deliberately separate — a change to this row shape must not be
+  /// able to reach a payload already stored — so a field added to `Recipe`
+  /// has to be added in both places. See `_recipeComponentToJson` there for
+  /// the full reasoning; naming each other is the agreed mitigation until a
+  /// shared encoder earns its own change.
   @override
   Future<void> saveRevision(Recipe recipe) => _db.transaction((txn) async {
     await txn.insert('recipes', <String, Object?>{
@@ -208,6 +218,13 @@ final class SqfliteRecipeRepository implements RecipeRepository {
     return rows.map(_componentFromRow).toList();
   }
 
+  /// Encodes [component] as a `recipe_components` row belonging to
+  /// [recipe]'s revision.
+  ///
+  /// Mirrored field for field by `result_codec.dart`'s
+  /// `_recipeComponentToJson`, which writes the same component into a run
+  /// snapshot instead. Kept separate on purpose; that function's own
+  /// comment carries the reasoning.
   Map<String, Object?> _componentToRow(
     Recipe recipe,
     RecipeComponent component,

@@ -262,7 +262,16 @@ ComponentTarget _componentTargetFromJson(Map<String, Object?> json) {
 }
 
 /// Encodes [component], mirroring `SqfliteRecipeRepository._componentToRow`
-/// field for field. Duplicated rather than shared — see the task report.
+/// field for field.
+///
+/// The two are deliberately separate, and a field added to
+/// `RecipeComponent` has to be added to both. Sharing them was ruled
+/// deferrable rather than wrong: this one writes a value frozen inside a
+/// run snapshot while the other writes the columns of a `recipe_components`
+/// row that later revisions keep rewriting, so a change to the row shape
+/// must not be able to reach a payload already stored. This comment is the
+/// mitigation for the duplication until a shared encoder earns its own
+/// change.
 Map<String, Object?> _recipeComponentToJson(RecipeComponent component) =>
     <String, Object?>{
       'id': component.id,
@@ -303,9 +312,13 @@ RecipeComponent _recipeComponentFromJson(Map<String, Object?> json) {
 
 // --- Recipe ------------------------------------------------------------
 
-/// Encodes [recipe], mirroring `SqfliteRecipeRepository._recipeFromRow`'s
-/// column set as JSON fields. Duplicated rather than shared — see the task
-/// report.
+/// Encodes [recipe], mirroring the column set `SqfliteRecipeRepository`
+/// writes in `saveRevision` and reads back in `_recipeFromRow`.
+///
+/// Deliberately separate from that mapping, for the reason given on
+/// [_recipeComponentToJson]: a field added to `Recipe` has to be added
+/// here and there, and the pairing is stated in both places so neither can
+/// be changed alone without the other being visible.
 Map<String, Object?> _recipeToJson(Recipe recipe) => <String, Object?>{
   'id': recipe.id,
   'revision': recipe.revision,
