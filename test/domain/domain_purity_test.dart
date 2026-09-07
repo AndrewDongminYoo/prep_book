@@ -1,5 +1,9 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// `package:` prefixes a domain file may import or export. Everything else —
@@ -22,25 +26,6 @@ final _directiveStatement = RegExp(r'\b(?:import|export)\b[^;]*;');
 /// Matches one quoted URI, either quote style.
 final _quotedUri = RegExp("'([^']*)'|\"([^\"]*)\"");
 
-final _lineComment = RegExp(r'//[^\n]*');
-
-// Deliberately excludes newline from the string body: a triple-quoted
-// string then survives stripping only partially, which can under-strip
-// (false positive, a loud failure to investigate) but can never
-// over-strip past a line comment's stray apostrophe and swallow real code
-// (false negative, a silent pass). Do not widen this to span newlines.
-final _stringLiteral = RegExp(
-  r'''r?'(?:[^'\\\n]|\\.)*'|r?"(?:[^"\\\n]|\\.)*"''',
-);
-// Catches both the decimal-point form (`1.5`, and `1.5e10` with an
-// exponent) and the exponent-only form (`1e10`) — Dart infers a `double`
-// for either shape. A plain integer literal (`1000`) matches neither
-// alternative and must keep passing.
-final _floatLiteral = RegExp(
-  r'\b\d+\.\d+(?:[eE][+-]?\d+)?\b|\b\d+[eE][+-]?\d+\b',
-);
-final _doubleKeyword = RegExp(r'\bdouble\b');
-
 /// Plain substrings that must never appear in a domain file, checked
 /// against the raw, unstripped source as a second, independent gate. The
 /// allowlist above is the primary check; this denylist is deliberately
@@ -59,12 +44,173 @@ const _bannedSubstrings = <String>[
   'package:http',
 ];
 
-/// Blanks out string contents and line comments so a legitimate string
-/// (e.g. `Decimal.parse('0.001')`) or a dartdoc comment cannot trip the
-/// numeric scans below.
-String _stripCommentsAndStrings(String source) {
-  final withoutStrings = source.replaceAll(_stringLiteral, "''");
-  return withoutStrings.replaceAll(_lineComment, '');
+/// Reports every prohibited floating-point construct in [source], one
+/// description per finding, or an empty list when the source is clean.
+///
+/// Walks the parsed syntax tree rather than matching patterns against text.
+/// Six of this guard's eleven historical bypasses were text-handling failures
+/// — an apostrophe in prose, a semicolon in a comment, a literal shape the
+/// pattern did not anticipate, an expression hidden inside a string
+/// interpolation — and the tree removes that whole class rather than one
+/// alternation at a time. Comments are absent from the tree, so they cannot
+/// produce a finding; the body of a string is likewise absent, while an
+/// interpolated expression is a real child node and is visited like any other
+/// code.
+///
+/// Takes source text rather than a file so that every bypass, past and future,
+/// can be pinned by a test that plants the construct directly. A reading of
+/// this guard has never caught one of its own holes; only planting has.
+List<String> findNumericViolations(String source) {
+  final parsed = parseString(content: source, throwIfDiagnostics: false);
+  if (parsed.errors.isNotEmpty) {
+    // Fail closed. Source that does not parse has not been checked, and
+    // reporting it clean would be the silent pass this guard exists to stop.
+    return ['does not parse, so it was never checked: ${parsed.errors.first}'];
+  }
+
+  final visitor = _NumericVisitor();
+  parsed.unit.visitChildren(visitor);
+  return visitor.violations;
+}
+
+/// Unwraps redundant parentheses so `(1) / (3)` is recognised as the integer
+/// division it is.
+Expression _unparenthesized(Expression expression) {
+  var current = expression;
+  while (current is ParenthesizedExpression) {
+    current = current.expression;
+  }
+  return current;
+}
+
+/// Type names a cast can settle a receiver as numeric with. A nullable cast
+/// settles nothing, because `/` cannot be applied to it without a null check.
+const _numericTypeNames = <String>{'int', 'double', 'num'};
+
+/// Prefix operators that keep a number a number. Dart defines no unary plus,
+/// and `!` takes a boolean, so these two are the whole set.
+final _numericPrefixOperators = <TokenType>{TokenType.MINUS, TokenType.TILDE};
+
+/// Binary operators that leave a numeric receiver numeric, whatever the right
+/// operand is. Each is declared on `num` or `int` to return a number, so the
+/// right operand never needs inspecting.
+///
+/// `/` is absent deliberately, and not because it breaks the rule: it is the
+/// operator being looked for, so its own result is already reported where it
+/// appears and nesting it would only duplicate the finding.
+final _numericBinaryOperators = <TokenType>{
+  TokenType.PLUS,
+  TokenType.MINUS,
+  TokenType.STAR,
+  TokenType.PERCENT,
+  TokenType.TILDE_SLASH,
+  TokenType.AMPERSAND,
+  TokenType.BAR,
+  TokenType.CARET,
+  TokenType.LT_LT,
+  TokenType.GT_GT,
+  TokenType.GT_GT_GT,
+};
+
+/// Whether the parser alone settles [expression] as a number.
+///
+/// `num./` is declared to return a `double` whichever runtime type it holds,
+/// so settling the receiver as *numeric* is the whole question — settling it
+/// as an integer specifically is more than the rule needs, and asking for it
+/// was what made earlier versions of this predicate miss `(v as num) / 3` and
+/// `(1 + other) / 3`.
+///
+/// A numeric literal qualifies. So does a cast that names `int`, `double` or
+/// `num`, because the cast writes the type into the source and needs no
+/// resolution; a nullable cast does not, since `/` could not be applied to it
+/// without a null check. A conditional qualifies when both arms do. Any
+/// numeric operator applied to a qualifying receiver qualifies, and the right
+/// operand never matters, because none of those operators can turn a number
+/// into something that is not one.
+///
+/// An identifier, a method call or a getter does not qualify, however
+/// obviously numeric it looks. `1.abs()` is an `int` at runtime, but reading a
+/// return type is precisely the work a parsed tree cannot do, and guessing
+/// would report the domain's own `Rational` arithmetic, which divides with
+/// this same operator at six call sites. That is the whole of what sits
+/// outside this function, and it sits outside because the parser genuinely
+/// cannot reach it rather than because it has not been implemented. Those
+/// cases are pinned as accepted by tests; closing them needs resolved types,
+/// which is tracked separately.
+bool _isSyntacticNum(Expression expression) {
+  final node = _unparenthesized(expression);
+  if (node is IntegerLiteral || node is DoubleLiteral) return true;
+  if (node is AsExpression) {
+    final type = node.type;
+    return type is NamedType &&
+        _numericTypeNames.contains(type.name.lexeme) &&
+        type.question == null;
+  }
+  if (node is ConditionalExpression) {
+    return _isSyntacticNum(node.thenExpression) &&
+        _isSyntacticNum(node.elseExpression);
+  }
+  if (node is PrefixExpression &&
+      _numericPrefixOperators.contains(node.operator.type)) {
+    return _isSyntacticNum(node.operand);
+  }
+  if (node is BinaryExpression &&
+      _numericBinaryOperators.contains(node.operator.type)) {
+    return _isSyntacticNum(node.leftOperand);
+  }
+  return false;
+}
+
+class _NumericVisitor extends RecursiveAstVisitor<void> {
+  final violations = <String>[];
+
+  @override
+  void visitDoubleLiteral(DoubleLiteral node) {
+    // Every literal Dart infers as binary floating point arrives here,
+    // whatever its written shape: 1.5, .5, 1e10, 1.5e-3, 1_000.5.
+    violations.add('floating-point literal: $node');
+    super.visitDoubleLiteral(node);
+  }
+
+  @override
+  void visitNamedType(NamedType node) {
+    if (node.name.lexeme == 'double') {
+      violations.add('binary floating-point type: $node');
+    }
+    super.visitNamedType(node);
+  }
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    // Catches the type used as a value rather than as an annotation, such as
+    // a static call on it. A type annotation arrives as a NamedType instead,
+    // so the two overrides do not double-report the same occurrence.
+    if (node.name == 'double') {
+      violations.add('binary floating-point type: $node');
+    }
+    super.visitSimpleIdentifier(node);
+  }
+
+  @override
+  void visitBinaryExpression(BinaryExpression node) {
+    // In Dart `/` always yields a double, including between two integers;
+    // `~/` is the truncating one. The left operand selects the operator, so a
+    // receiver the parser settles as numeric means `num./` and therefore a
+    // double, whatever the right operand turns out to be. That is safe against
+    // the domain's own divisions without needing types: a number cannot be the
+    // left operand of a Rational division at all, because Rational is not a
+    // `num` and the analyzer rejects it outright.
+    //
+    // The converse does not hold. A literal on the right says nothing about
+    // the left operand's type, and the domain divides Rationals at six call
+    // sites, so requiring a literal there would report every one of them. Both
+    // directions are pinned by tests.
+    if (node.operator.type == TokenType.SLASH &&
+        _isSyntacticNum(node.leftOperand)) {
+      violations.add('division of a number yields a double: $node');
+    }
+    super.visitBinaryExpression(node);
+  }
 }
 
 /// A `package:` URI must start with an allowed prefix. A relative URI may
@@ -86,6 +232,178 @@ List<File> _dartFilesUnder(String path) {
 }
 
 void main() {
+  // Every bypass this guard has had is pinned here as a planted construct.
+  // A reading of the patterns has never caught one; only planting has.
+  group('findNumericViolations detects', () {
+    test('a plain decimal literal', () {
+      expect(findNumericViolations('final a = 1.5;'), isNotEmpty);
+    });
+
+    test('an exponent-only literal', () {
+      expect(findNumericViolations('final a = 1e10;'), isNotEmpty);
+    });
+
+    test('a leading-dot literal, which Dart accepts as a double', () {
+      expect(findNumericViolations('final a = .5;'), isNotEmpty);
+    });
+
+    test('a float literal inside a string interpolation', () {
+      expect(
+        findNumericViolations(r"String f(int x) => 'value ${1.5 * x}';"),
+        isNotEmpty,
+      );
+    });
+
+    test('an integer divided by an integer, which yields a double', () {
+      expect(findNumericViolations('final a = 1 / 3;'), isNotEmpty);
+    });
+
+    test('an integer division wrapped in parentheses', () {
+      expect(findNumericViolations('final a = (1) / (3);'), isNotEmpty);
+    });
+
+    test('a division whose left operand alone is an integer literal', () {
+      expect(findNumericViolations('final a = 1 / count;'), isNotEmpty);
+    });
+
+    test('a division by a negated integer receiver', () {
+      expect(findNumericViolations('final a = -1 / 3;'), isNotEmpty);
+    });
+
+    test('a division by a bitwise-complemented integer receiver', () {
+      expect(findNumericViolations('final a = ~1 / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is integer arithmetic', () {
+      expect(findNumericViolations('final a = (1 + 2) / 3;'), isNotEmpty);
+    });
+
+    test('a division by a negated integer receiver over a variable', () {
+      expect(findNumericViolations('final a = -1 / count;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is a truncating division', () {
+      // `int.~/` returns an int for any operand it accepts, so the right
+      // operand's type does not matter here.
+      expect(findNumericViolations('final a = (7 ~/ count) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is a bitwise expression', () {
+      // A bitwise operator on an int refuses a non-int right operand at
+      // compile time, so anything that compiles yields an int.
+      expect(findNumericViolations('final a = (7 & mask) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is a shifted integer', () {
+      expect(findNumericViolations('final a = (7 >>> bits) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is explicitly cast to an integer', () {
+      // The cast names the type in the source, so no resolution is needed.
+      expect(findNumericViolations('final a = (v as int) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is a conditional of integers', () {
+      expect(findNumericViolations('final a = (f ? 1 : 2) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is cast to num', () {
+      // `num./` is declared to return a double whichever runtime type it
+      // holds, so a num receiver settles the result without settling itself.
+      expect(findNumericViolations('final a = (v as num) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver is cast to double', () {
+      expect(findNumericViolations('final a = (v as double) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver adds an unknown operand', () {
+      // `1 + other` is a num whatever `other` is, and a num receiver is
+      // enough. The right operand never needed inspecting.
+      expect(findNumericViolations('final a = (1 + other) / 3;'), isNotEmpty);
+    });
+
+    test('a division whose receiver takes a modulo of an unknown operand', () {
+      expect(findNumericViolations('final a = (1 % other) / 3;'), isNotEmpty);
+    });
+
+    test('an integer division inside a string interpolation', () {
+      expect(
+        findNumericViolations(r"String f() => 'x ${1 / 3}';"),
+        isNotEmpty,
+      );
+    });
+
+    test('the binary floating-point type in a signature', () {
+      expect(findNumericViolations('double f() => 0;'), isNotEmpty);
+    });
+
+    test('the binary floating-point type as a static receiver', () {
+      expect(findNumericViolations("final a = double.parse('1');"), isNotEmpty);
+    });
+  });
+
+  group('findNumericViolations accepts', () {
+    test('an integer literal', () {
+      expect(findNumericViolations('final a = 1000;'), isEmpty);
+    });
+
+    test('digits inside a string, so Decimal.parse stays usable', () {
+      expect(findNumericViolations("final a = P.parse('0.001');"), isEmpty);
+    });
+
+    test('a decimal in a line comment', () {
+      expect(findNumericViolations('// 2.5 in prose\nfinal a = 1;'), isEmpty);
+    });
+
+    test('a decimal in a block comment', () {
+      expect(findNumericViolations('/* 2.5 */\nfinal a = 1;'), isEmpty);
+    });
+
+    test('a decimal in a doc comment', () {
+      expect(findNumericViolations('/// 2.5 in prose\nfinal a = 1;'), isEmpty);
+    });
+
+    test('an exact division between non-literal operands', () {
+      expect(findNumericViolations('final a = x.amount / y.amount;'), isEmpty);
+    });
+
+    // The known limits, pinned rather than left to be rediscovered. This guard
+    // reads a parsed tree and has no types, so it reports only receivers the
+    // parser alone settles as integers. Everything below yields a double at
+    // runtime and is deliberately not reported; closing these needs resolved
+    // types, which is a separate decision.
+    test('a division whose right operand alone is an integer literal', () {
+      // A literal on the right says nothing about the left operand's type,
+      // and the left is what selects the operator.
+      expect(findNumericViolations('final a = x.amount / 3;'), isEmpty);
+    });
+
+    test('a division whose receiver is a method call on an integer', () {
+      // `1.abs()` is an int at runtime, but resolving a return type is
+      // exactly the work a parsed tree cannot do.
+      expect(findNumericViolations('final a = 1.abs() / 3;'), isEmpty);
+    });
+
+    test('a method call on an integer literal, which is not a double', () {
+      expect(findNumericViolations('final a = 1.abs();'), isEmpty);
+    });
+
+    test('a division whose receiver is cast to a nullable number', () {
+      // `int?` is not an integer receiver, and `/` cannot be applied to it
+      // without a null check anyway.
+      expect(findNumericViolations('final a = (v as int?) / 3;'), isEmpty);
+    });
+
+    test('a division whose receiver is a conditional with one unknown arm', () {
+      expect(findNumericViolations('final a = (f ? 1 : other) / 3;'), isEmpty);
+    });
+
+    test('a truncating integer division', () {
+      expect(findNumericViolations('final a = 7 ~/ 2;'), isEmpty);
+    });
+  });
+
   test(
     'every domain import or export resolves inside the domain boundary',
     () {
@@ -123,10 +441,10 @@ void main() {
 
       final offenders = <String>[];
       for (final file in files) {
-        final stripped = _stripCommentsAndStrings(file.readAsStringSync());
-        if (_doubleKeyword.hasMatch(stripped) ||
-            _floatLiteral.hasMatch(stripped)) {
-          offenders.add(file.path);
+        for (final violation in findNumericViolations(
+          file.readAsStringSync(),
+        )) {
+          offenders.add('${file.path}: $violation');
         }
       }
 
