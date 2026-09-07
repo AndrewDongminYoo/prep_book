@@ -6,7 +6,6 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// `package:` prefixes a domain file may import or export. Everything else —
@@ -107,13 +106,18 @@ class _NumericVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
-/// Divisions under [directories] whose left operand statically resolves to a
-/// number, which is every division Dart evaluates as a `double`.
+/// Divisions under [directories] whose resolved result is a `double`, which is
+/// every division Dart evaluates as binary floating point.
 ///
-/// Resolves the sources rather than parsing them, so `Rational` is excluded by
-/// its own type instead of by a syntactic proxy. That proxy is what the parsed
-/// version could never get right: it took six review rounds and still could not
-/// see through an identifier, a method's return type or a getter.
+/// Resolves the sources rather than parsing them, and reads the result type
+/// rather than the receiver's. `Rational`'s own division returns a `Rational`,
+/// so exact arithmetic is excluded by the very test that reports numeric
+/// division, with no special case naming it.
+///
+/// That is what the parsed version could never do. It spent six review rounds
+/// approximating "is this receiver a number" and still could not see an
+/// identifier, a method's return type, a getter, or a type parameter bounded
+/// by `num`.
 ///
 /// Fails closed: a file that does not resolve is itself reported, and so is any
 /// expected file the resolver never reached. "Nothing was checked" must never
@@ -193,9 +197,6 @@ String _dartSdkPath() {
   return sdk;
 }
 
-bool _isNumericType(DartType type) =>
-    type.isDartCoreNum || type.isDartCoreInt || type.isDartCoreDouble;
-
 class _DivisionVisitor extends RecursiveAstVisitor<void> {
   _DivisionVisitor(this.path);
 
@@ -204,15 +205,19 @@ class _DivisionVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitBinaryExpression(BinaryExpression node) {
-    // `num./` is declared to return a double, so a numeric left operand
-    // settles it. The type comes from resolution, so an identifier, a method's
-    // return type and a getter are all read exactly, and `Rational` is
-    // excluded because it is not a `num` rather than because it looks unlike
-    // one.
+    // Read the result type, not the receiver's. `num./` is declared to return
+    // a `double`, so the resolved result answers the question directly, and
+    // `Rational.\/` — which returns a `Rational` — is excluded by the same
+    // test rather than by a special case naming it.
+    //
+    // Asking about the receiver instead means enumerating which types count,
+    // and that enumeration is never finished: a receiver typed by a parameter
+    // bounded by `num` is none of `num`, `int` or `double`, yet member lookup
+    // goes through the bound and the division still produces a double.
     if (node.operator.type == TokenType.SLASH) {
-      final type = node.leftOperand.staticType;
-      if (type != null && _isNumericType(type)) {
-        violations.add('$path: division of a number yields a double: $node');
+      final result = node.staticType;
+      if (result != null && result.isDartCoreDouble) {
+        violations.add('$path: division yields a double: $node');
       }
     }
     super.visitBinaryExpression(node);
@@ -260,6 +265,8 @@ final byGetter = batches / 3;
 final byNullAssertion = (counter() as int?)! / 3;
 final byNullCoalescing = ((counter() as int?) ?? 0) / 3;
 
+num byTypeParameter<T extends num>(T value) => value / 2;
+
 Rational exact(Rational a, Rational b) => a / b;
 ''');
       violations = await findDivisionViolations([probeDirectory]);
@@ -291,6 +298,12 @@ Rational exact(Rational a, Rational b) => a / b;
 
     test('a null-coalescing receiver', () {
       expect(violations, contains(contains('?? 0) / 3')));
+    });
+
+    test('a receiver whose type is a parameter bounded by num', () {
+      // `T extends num` is not `num`, `int` or `double`, but member lookup
+      // goes through the bound, so `/` still produces a double.
+      expect(violations, contains(contains('value / 2')));
     });
 
     test('and leaves an exact Rational division alone', () {
