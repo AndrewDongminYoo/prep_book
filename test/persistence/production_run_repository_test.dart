@@ -498,6 +498,36 @@ void main() {
     },
   );
 
+  // `created_at` is what `listSummaries` orders on, and lexicographic order
+  // is chronological only while every writer emits one form: a local
+  // `DateTime` serializes without a `Z` and a UTC one with, and
+  // '…T21:00:00.000Z' sorts after '…T21:00:00.000'. Every other fixture in
+  // this suite is `DateTime.utc`, so the suite exercised only the suffixed
+  // form while the application will pass `DateTime.now()`. Normalizing on
+  // write is the last moment the offset is known.
+  test('a local createdAt is stored normalized to UTC', () async {
+    final local = DateTime(2026, 9, 7, 21, 30);
+    expect(local.isUtc, isFalse);
+
+    await repository.save(buildRun(id: 'run-1', createdAt: local));
+
+    final stored =
+        (await db.query(
+              'production_runs',
+              columns: ['created_at'],
+            )).single['created_at']!
+            as String;
+    expect(stored, endsWith('Z'));
+
+    final loaded = await repository.findById('run-1');
+    expect(loaded!.createdAt.isUtc, isTrue);
+    expect(loaded.createdAt.isAtSameMomentAs(local), isTrue);
+
+    final summary = (await repository.listSummaries()).single;
+    expect(summary.createdAt.isUtc, isTrue);
+    expect(summary.createdAt.isAtSameMomentAs(local), isTrue);
+  });
+
   // The message must name the run, not only the kind and component that
   // were not recognised: both of those repeat across every run in the
   // table, so on their own they identify no row to repair. `findById` is

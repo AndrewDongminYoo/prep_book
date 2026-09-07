@@ -12,12 +12,13 @@ Recipe buildRecipe({
   required int revision,
   String name = 'Test recipe',
   List<String> componentIds = const [],
+  DateTime? modifiedAt,
 }) => Recipe(
   id: id,
   revision: revision,
   name: name,
   baseYield: Quantity.parse('1000', Unit.gram),
-  modifiedAt: DateTime.utc(2026, 9, 7),
+  modifiedAt: modifiedAt ?? DateTime.utc(2026, 9, 7),
   components: [
     for (var i = 0; i < componentIds.length; i++)
       RecipeComponent(
@@ -236,6 +237,36 @@ void main() {
       expect(starter.note, isNull);
     },
   );
+
+  // Every other fixture in this suite builds its `modifiedAt` with
+  // `DateTime.utc`, so the suite exercised only the form that already
+  // serializes with a `Z`. The application will hand this layer
+  // `DateTime.now()`, which is local and serializes without one — and a
+  // stored timestamp that sometimes carries the suffix and sometimes does
+  // not cannot be compared as text, which is how `production_runs` orders
+  // its history. Normalizing on write is the only moment an offset is
+  // still known; a naive value already in the file cannot be assigned one
+  // afterwards.
+  test('a local modifiedAt is stored normalized to UTC', () async {
+    final local = DateTime(2026, 9, 7, 21, 30);
+    expect(local.isUtc, isFalse);
+
+    await repository.saveRevision(
+      buildRecipe(id: 'r', revision: 1, modifiedAt: local),
+    );
+
+    final stored =
+        (await db.query(
+              'recipes',
+              columns: ['modified_at'],
+            )).single['modified_at']!
+            as String;
+    expect(stored, endsWith('Z'));
+
+    final found = await repository.findRevision('r', 1);
+    expect(found!.modifiedAt.isUtc, isTrue);
+    expect(found.modifiedAt.isAtSameMomentAs(local), isTrue);
+  });
 
   test('an unrecognised component target kind is a corrupt row', () async {
     await repository.saveRevision(

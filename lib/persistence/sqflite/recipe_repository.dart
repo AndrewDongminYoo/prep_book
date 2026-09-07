@@ -80,7 +80,14 @@ final class SqfliteRecipeRepository implements RecipeRepository {
         'max_batch_unit': null,
       },
       'preparation_notes': jsonEncode(recipe.preparationNotes),
-      'modified_at': recipe.modifiedAt.toIso8601String(),
+      // Normalized before serializing, so this column holds one form for
+      // every writer. `toIso8601String` emits a trailing `Z` only for a UTC
+      // instant, and a caller supplies whatever `DateTime` it holds —
+      // `DateTime.now()` is local. Mixing the two forms in one column makes
+      // it uncomparable as text, and a naive value already written cannot
+      // be assigned an offset afterwards. `_recipeFromRow` reads it back
+      // unchanged and relies on every stored value being UTC.
+      'modified_at': recipe.modifiedAt.toUtc().toIso8601String(),
       'is_archived': recipe.isArchived ? 1 : 0,
     });
 

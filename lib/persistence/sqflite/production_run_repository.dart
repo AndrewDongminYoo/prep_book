@@ -146,7 +146,14 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
       'recipe_id': run.recipe.id,
       'recipe_revision': run.recipe.revision,
       ...quantityToColumns(run.targetYield, 'target'),
-      'created_at': run.createdAt.toIso8601String(),
+      // Normalized before serializing, because [listSummaries] orders on
+      // this column as text. `toIso8601String` emits a trailing `Z` only
+      // for a UTC instant, so a mix of local and UTC writers would sort
+      // '…T21:00:00.000Z' after '…T21:00:00.000' and put the history out of
+      // order — and a naive value already written cannot be assigned an
+      // offset afterwards. [_summaryFromRow] and [findById] read it back
+      // unchanged and rely on every stored value being UTC.
+      'created_at': run.createdAt.toUtc().toIso8601String(),
       'result_json': encodeRunPayload(run),
     });
 
