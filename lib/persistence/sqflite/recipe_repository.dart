@@ -6,13 +6,47 @@ import 'package:prep_book/persistence/repositories.dart';
 import 'package:prep_book/persistence/sqflite/quantity_columns.dart';
 import 'package:sqflite/sqflite.dart';
 
-/// Selects every `recipes` row whose revision is the highest stored for its
-/// id.
-const _latestRevisionsSql = '''
-SELECT recipes.* FROM recipes
+/// Reduces `recipes` to one row per id: the highest revision stored for it.
+///
+/// Shared by the two queries below rather than written twice, so what
+/// "latest" means cannot drift between listing every recipe and listing the
+/// subset that uses one ingredient. A subset computed against a different
+/// notion of latest than the whole would be a bug, not a degree of freedom.
+const _latestRevisionsFrom = '''
+FROM recipes
 INNER JOIN (
   SELECT id, MAX(revision) AS revision FROM recipes GROUP BY id
-) latest ON recipes.id = latest.id AND recipes.revision = latest.revision
+) latest ON recipes.id = latest.id AND recipes.revision = latest.revision''';
+
+/// Selects every `recipes` row whose revision is the highest stored for its
+/// id.
+const _latestRevisionsSql =
+    '''
+SELECT recipes.* $_latestRevisionsFrom
+ORDER BY recipes.id
+''';
+
+/// [_latestRevisionsSql] restricted to the recipes whose latest revision
+/// references one ingredient, bound to the single `?` parameter.
+///
+/// `target_kind = 'ingredient'` is load-bearing rather than defensive:
+/// `recipe_components.target_id` carries no foreign key and the same column
+/// holds sub-recipe ids, so a recipe whose id happens to equal an ingredient
+/// id would otherwise be reported as a user of that ingredient.
+///
+/// `EXISTS` rather than a join to `recipe_components`, because a recipe that
+/// names the ingredient in two of its components is one recipe; a join would
+/// return it once per matching component.
+const _latestRevisionsUsingIngredientSql =
+    '''
+SELECT recipes.* $_latestRevisionsFrom
+WHERE EXISTS (
+  SELECT 1 FROM recipe_components
+  WHERE recipe_components.recipe_id = recipes.id
+    AND recipe_components.recipe_revision = recipes.revision
+    AND recipe_components.target_kind = 'ingredient'
+    AND recipe_components.target_id = ?
+)
 ORDER BY recipes.id
 ''';
 
@@ -132,6 +166,20 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       );
     }
   });
+
+  @override
+  Future<List<Recipe>> listLatestRevisionsUsingIngredient(
+    String ingredientId,
+  ) async {
+    final rows = await _db.rawQuery(_latestRevisionsUsingIngredientSql, [
+      ingredientId,
+    ]);
+    final recipes = <Recipe>[];
+    for (final row in rows) {
+      recipes.add(await _recipeFromRow(row));
+    }
+    return recipes;
+  }
 
   @override
   Future<void> setArchived(String id, {required bool isArchived}) => _db.update(

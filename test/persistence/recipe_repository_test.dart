@@ -7,11 +7,18 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Builds a valid `Recipe` through the domain's real factory, so its own
 /// validation runs on every fixture this file constructs.
+///
+/// Each id in [componentIds] becomes a component targeting the ingredient of
+/// the same name; each id in [subRecipeIds] becomes one targeting the
+/// *recipe* of that name, under a `sub-` prefixed component id so the two
+/// lists can name the same target without colliding on the component id
+/// `Recipe`'s factory requires to be unique.
 Recipe buildRecipe({
   required String id,
   required int revision,
   String name = 'Test recipe',
   List<String> componentIds = const [],
+  List<String> subRecipeIds = const [],
   DateTime? modifiedAt,
 }) => Recipe(
   id: id,
@@ -27,6 +34,14 @@ Recipe buildRecipe({
         baseQuantity: Quantity.parse('100', Unit.gram),
         behavior: ScalingBehavior.proportional,
         displayOrder: i,
+      ),
+    for (var i = 0; i < subRecipeIds.length; i++)
+      RecipeComponent(
+        id: 'sub-${subRecipeIds[i]}',
+        target: SubRecipeRef(subRecipeIds[i]),
+        baseQuantity: Quantity.parse('100', Unit.gram),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: componentIds.length + i,
       ),
   ],
 );
@@ -266,6 +281,145 @@ void main() {
     final found = await repository.findRevision('r', 1);
     expect(found!.modifiedAt.isUtc, isTrue);
     expect(found.modifiedAt.isAtSameMomentAs(local), isTrue);
+  });
+
+  // --- the in-use query that precedes an ingredient deletion --------------
+  //
+  // `listLatestRevisionsUsingIngredient` exists so the application layer can
+  // warn before calling `IngredientRepository.delete`, naming the recipes
+  // that would be left referencing a row that is about to disappear. It
+  // never blocks the deletion, so nothing here asserts a refusal.
+
+  test('an ingredient no recipe uses reports no recipes', () async {
+    await repository.saveRevision(
+      buildRecipe(id: 'r', revision: 1, componentIds: ['rye']),
+    );
+
+    expect(
+      await repository.listLatestRevisionsUsingIngredient('flour'),
+      isEmpty,
+    );
+  });
+
+  // `recipe_components.target_id` carries no foreign key and holds both
+  // ingredient ids and recipe ids, so the query has to filter on
+  // `target_kind` as well. This plants exactly that collision: a recipe whose
+  // sub-recipe reference names `flour`, the same string as the ingredient
+  // under test. Both fixtures go through `saveRevision` rather than a
+  // hand-written row, so the planted `target_kind` is the value the writer
+  // actually produces.
+  test(
+    'a sub-recipe whose id collides with the ingredient is not a use',
+    () async {
+      await repository.saveRevision(
+        buildRecipe(id: 'real-user', revision: 1, componentIds: ['flour']),
+      );
+      await repository.saveRevision(
+        buildRecipe(id: 'impostor', revision: 1, subRecipeIds: ['flour']),
+      );
+
+      final using = await repository.listLatestRevisionsUsingIngredient(
+        'flour',
+      );
+      expect(using.map((r) => r.id), ['real-user']);
+      // A whole `Recipe`, components included — the same shape
+      // `listLatestRevisions` returns, so a caller can name the component.
+      expect(using.single.components, hasLength(1));
+    },
+  );
+
+  // "Used in 3 recipes" counting three revisions of one recipe answers a
+  // question nobody asked, so only the latest revision of each recipe is
+  // examined. This is the direction where an older revision still holds the
+  // reference the current one dropped.
+  test(
+    'a recipe whose latest revision dropped the ingredient is not a use',
+    () async {
+      await repository.saveRevision(
+        buildRecipe(id: 'r', revision: 1, componentIds: ['flour']),
+      );
+      await repository.saveRevision(
+        buildRecipe(id: 'r', revision: 2, componentIds: ['rye']),
+      );
+
+      expect(
+        await repository.listLatestRevisionsUsingIngredient('flour'),
+        isEmpty,
+      );
+    },
+  );
+
+  // The reverse: the ingredient was added in the current revision, so the
+  // recipe is a use even though its first revision never mentioned it. A
+  // query that scanned every revision would answer this one correctly by
+  // accident, which is why the test above exists beside it.
+  test(
+    'a recipe whose latest revision added the ingredient is a use',
+    () async {
+      await repository.saveRevision(
+        buildRecipe(id: 'r', revision: 1, componentIds: ['rye']),
+      );
+      await repository.saveRevision(
+        buildRecipe(id: 'r', revision: 2, componentIds: ['rye', 'flour']),
+      );
+
+      final using = await repository.listLatestRevisionsUsingIngredient(
+        'flour',
+      );
+      expect(using.map((r) => r.id), ['r']);
+      expect(using.single.revision, 2);
+    },
+  );
+
+  // The ruling this pins: an archived recipe is still a use. It can be
+  // restored, and deleting the ingredient now would leave the dangling
+  // reference to surface then. A later `AND is_archived = 0` in the query
+  // fails here rather than passing a coverage gate.
+  test('an archived recipe still counts as a use', () async {
+    await repository.saveRevision(
+      buildRecipe(id: 'r', revision: 1, componentIds: ['flour']),
+    );
+    await repository.setArchived('r', isArchived: true);
+
+    final using = await repository.listLatestRevisionsUsingIngredient('flour');
+    expect(using.single.id, 'r');
+    expect(using.single.isArchived, isTrue);
+  });
+
+  // One recipe is one answer however many of its components name the
+  // ingredient. `EXISTS` gives that; a join to `recipe_components` would
+  // return the recipe once per matching component.
+  test('a recipe using the ingredient twice is reported once', () async {
+    await repository.saveRevision(
+      Recipe(
+        id: 'r',
+        revision: 1,
+        name: 'Twice',
+        baseYield: Quantity.parse('1000', Unit.gram),
+        modifiedAt: DateTime.utc(2026, 9, 7),
+        components: [
+          RecipeComponent(
+            id: 'flour-a',
+            target: const IngredientRef('flour'),
+            baseQuantity: Quantity.parse('100', Unit.gram),
+            behavior: ScalingBehavior.proportional,
+            displayOrder: 0,
+          ),
+          RecipeComponent(
+            id: 'flour-b',
+            target: const IngredientRef('flour'),
+            baseQuantity: Quantity.parse('200', Unit.gram),
+            behavior: ScalingBehavior.proportional,
+            displayOrder: 1,
+          ),
+        ],
+      ),
+    );
+
+    expect(
+      await repository.listLatestRevisionsUsingIngredient('flour'),
+      hasLength(1),
+    );
   });
 
   test('an unrecognised component target kind is a corrupt row', () async {
