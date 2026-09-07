@@ -36,7 +36,12 @@ abstract interface class RecipeRepository {
   Future<void> setArchived(String id, {required bool isArchived});
 
   /// The highest revision of every recipe that references the ingredient
-  /// [ingredientId], archived ones included.
+  /// [ingredientId] directly, archived ones included.
+  ///
+  /// Directly means one of the recipe's own components names the ingredient.
+  /// A recipe that reaches it only through a sub-recipe is not listed: the
+  /// recipe holding the component is where the operator would edit or remove
+  /// it, and that recipe is listed here in its own right.
   ///
   /// Answers "is this ingredient in use?" and nothing else. It is a read
   /// rather than a result of [IngredientRepository.delete] because the

@@ -134,7 +134,7 @@ The interfaces live in this unit, per the design document's own description of i
 They are expressed in domain types only: a caller passes and receives `Recipe`, `Ingredient` and `ProductionRun`, never a row or a map.
 
 - `IngredientRepository` — list, get by id, upsert, delete.
-- `RecipeRepository` — list current revisions, get a specific `(id, revision)`, get the latest revision, save a new revision, archive.
+- `RecipeRepository` — list current revisions, get a specific `(id, revision)`, get the latest revision, save a new revision, archive, list the current revisions that reference a given ingredient directly.
 - `ProductionRunRepository` — list run summaries newest first, get a full run by id, save a computed run, record an acknowledgement, record an override.
 
 "List run summaries" returns metadata rather than whole runs, so that a history screen does not deserialize every `result_json` it displays.
