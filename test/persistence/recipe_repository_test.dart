@@ -19,13 +19,13 @@ Recipe buildRecipe({
   baseYield: Quantity.parse('1000', Unit.gram),
   modifiedAt: DateTime.utc(2026, 9, 7),
   components: [
-    for (final componentId in componentIds)
+    for (var i = 0; i < componentIds.length; i++)
       RecipeComponent(
-        id: componentId,
-        target: IngredientRef(componentId),
+        id: componentIds[i],
+        target: IngredientRef(componentIds[i]),
         baseQuantity: Quantity.parse('100', Unit.gram),
         behavior: ScalingBehavior.proportional,
-        displayOrder: componentIds.indexOf(componentId),
+        displayOrder: i,
       ),
   ],
 );
