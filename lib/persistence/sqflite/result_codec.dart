@@ -268,6 +268,10 @@ BatchPlan _batchPlanFromJson(Map<String, Object?> json) {
 
 // --- RecipeComponent and its target ---------------------------------------
 
+/// Encodes [target] with the same two `kind` strings
+/// `SqfliteRecipeRepository._componentToRow` writes into `target_kind`,
+/// which that method's comment explains and which the two must keep
+/// identical.
 Map<String, Object?> _componentTargetToJson(ComponentTarget target) =>
     switch (target) {
       IngredientRef(:final ingredientId) => <String, Object?>{
@@ -275,7 +279,7 @@ Map<String, Object?> _componentTargetToJson(ComponentTarget target) =>
         'id': ingredientId,
       },
       SubRecipeRef(:final recipeId) => <String, Object?>{
-        'kind': 'recipe',
+        'kind': 'sub_recipe',
         'id': recipeId,
       },
     };
@@ -285,7 +289,7 @@ ComponentTarget _componentTargetFromJson(Map<String, Object?> json) {
   final id = json['id']! as String;
   return switch (kind) {
     'ingredient' => IngredientRef(id),
-    'recipe' => SubRecipeRef(id),
+    'sub_recipe' => SubRecipeRef(id),
     _ => throw CorruptDatabaseError('unknown component target kind: $kind'),
   };
 }

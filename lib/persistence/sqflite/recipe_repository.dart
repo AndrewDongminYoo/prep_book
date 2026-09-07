@@ -272,14 +272,22 @@ final class SqfliteRecipeRepository implements RecipeRepository {
   /// Mirrored field for field by `result_codec.dart`'s
   /// `_recipeComponentToJson`, which writes the same component into a run
   /// snapshot instead. Kept separate on purpose; that function's own
-  /// comment carries the reasoning.
+  /// comment carries the reasoning. The two `target_kind` values are part of
+  /// that mirroring and must stay identical in both places.
+  ///
+  /// A sub-recipe's kind is `sub_recipe`, the value the specification names,
+  /// rather than `recipe`: this row already has a `recipe_id` column naming
+  /// the recipe that *owns* the component, so `target_kind = 'recipe'` read
+  /// as if it pointed at that one. The distinction is invisible in a query
+  /// that gets it wrong — a filter on `sub_recipe` written from the
+  /// specification would have matched no row and reported nothing, silently.
   Map<String, Object?> _componentToRow(
     Recipe recipe,
     RecipeComponent component,
   ) {
     final (targetKind, targetId) = switch (component.target) {
       IngredientRef(:final ingredientId) => ('ingredient', ingredientId),
-      SubRecipeRef(:final recipeId) => ('recipe', recipeId),
+      SubRecipeRef(:final recipeId) => ('sub_recipe', recipeId),
     };
     return <String, Object?>{
       'recipe_id': recipe.id,
@@ -311,7 +319,7 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       final targetId = row['target_id']! as String;
       final target = switch (targetKind) {
         'ingredient' => IngredientRef(targetId),
-        'recipe' => SubRecipeRef(targetId),
+        'sub_recipe' => SubRecipeRef(targetId),
         _ => throw CorruptDatabaseError(
           'unknown component target kind: $targetKind',
         ),
