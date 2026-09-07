@@ -106,6 +106,37 @@ void main() {
     expect(await columnsOfIngredients(db), contains('shelf'));
   });
 
+  // The create path, at a version it cannot be driven to through
+  // [openPrepBookDatabase], which hardcodes `version: currentSchemaVersion`.
+  //
+  // sqflite calls `onCreate` — not `onUpgrade` — for a brand-new database,
+  // then stamps it at the version the open asked for. `upgradeRan` asserts
+  // that directly rather than taking it on trust: a create path that stopped
+  // at the version 1 statements would leave this database holding only the
+  // version 1 tables while `getVersion` reports 2, and every later open
+  // would find it current. The fake upgrade adds a column, so the assertion
+  // is on something version 1 alone cannot produce.
+  test('a create above version 1 applies the upgrades too', () async {
+    var upgradeRan = false;
+    final db = await databaseFactoryFfi.openDatabase(
+      inMemoryDatabasePath,
+      options: OpenDatabaseOptions(
+        version: 2,
+        onCreate: (db, version) =>
+            createPrepBookSchema(db, version, upgrades: _fakeUpgradeToTwo),
+        onUpgrade: (db, from, to) {
+          upgradeRan = true;
+          return applySchemaUpgrades(db, from, to, upgrades: _fakeUpgradeToTwo);
+        },
+      ),
+    );
+    addTearDown(db.close);
+
+    expect(upgradeRan, isFalse);
+    expect(await db.getVersion(), 2);
+    expect(await columnsOfIngredients(db), contains('storage_location'));
+  });
+
   test('an upgrade path that spans no versions changes nothing', () async {
     final db = await openAtVersionOne();
     final before = await columnsOfIngredients(db);

@@ -40,6 +40,42 @@ Future<void> applySchemaUpgrades(
   }
 }
 
+/// Creates the version 1 schema in [db] and then brings it up to [version].
+///
+/// This is what [openPrepBookDatabase] hands sqflite as its `onCreate`
+/// handler, and it is a named function rather than a closure for the same
+/// reason [applySchemaUpgrades] is: so a test can drive it directly.
+///
+/// The [applySchemaUpgrades] call is what makes the create path correct at
+/// any version above 1. sqflite calls `onCreate` — not `onUpgrade` — for a
+/// brand-new database, and then stamps it at the version the open requested.
+/// A create that ran only [schemaV1Statements] would therefore leave a fresh
+/// installation holding the version 1 tables while recorded as being at the
+/// current version, and every later open would consider it up to date. The
+/// gap surfaces at runtime as a missing table or column rather than at open,
+/// which is the failure with no signal attached to it.
+///
+/// At version 1 the call does nothing, because [applySchemaUpgrades]'s loop
+/// starts at `from + 1`.
+///
+/// [upgrades] defaults to the real [schemaUpgrades], and exists for the same
+/// reason [applySchemaUpgrades]'s does. [openPrepBookDatabase] hardcodes
+/// `version: currentSchemaVersion`, so nothing can force a create above
+/// version 1 through it, and the call below would ship unexercised until the
+/// first genuine upgrade — the untested seam the harness exists to prevent.
+/// A test substitutes a map of its own and asserts that what a fake version
+/// 2 adds is really present in the newly created database.
+Future<void> createPrepBookSchema(
+  DatabaseExecutor db,
+  int version, {
+  Map<int, List<String>> upgrades = schemaUpgrades,
+}) async {
+  for (final statement in schemaV1Statements) {
+    await db.execute(statement);
+  }
+  await applySchemaUpgrades(db, 1, version, upgrades: upgrades);
+}
+
 /// Opens the database at [path], creating or upgrading it as needed.
 ///
 /// Takes a path rather than resolving one so that a candidate database can be
@@ -58,11 +94,7 @@ Future<Database> openPrepBookDatabase({
     options: OpenDatabaseOptions(
       version: currentSchemaVersion,
       onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
-      onCreate: (db, version) async {
-        for (final statement in schemaV1Statements) {
-          await db.execute(statement);
-        }
-      },
+      onCreate: createPrepBookSchema,
       onUpgrade: applySchemaUpgrades,
     ),
   );
