@@ -18,9 +18,42 @@ void main() {
     expect(quantityFromColumns(columns, 'base'), third);
   });
 
-  test('an unknown unit symbol is a corrupt database, not a new unit', () {
+  test('a count unit outside the fixed table round-trips', () {
+    final quantity = Quantity.parse('3', Unit.count('item'));
+
+    final columns = quantityToColumns(quantity, 'base');
+    expect(columns['base_unit'], 'count:item');
+
+    expect(quantityFromColumns(columns, 'base'), quantity);
+  });
+
+  test('a named-yield unit outside the fixed table round-trips', () {
+    final quantity = Quantity.parse('2', Unit.namedYield('tray'));
+
+    final columns = quantityToColumns(quantity, 'base');
+    expect(columns['base_unit'], 'yield:tray');
+
+    expect(quantityFromColumns(columns, 'base'), quantity);
+  });
+
+  test('unitToStorage and unitFromStorage agree for every fixed unit', () {
+    for (final unit in [
+      Unit.milligram,
+      Unit.gram,
+      Unit.kilogram,
+      Unit.milliliter,
+      Unit.liter,
+      Unit.teaspoon,
+      Unit.tablespoon,
+      Unit.portion,
+    ]) {
+      expect(unitFromStorage(unitToStorage(unit)), unit);
+    }
+  });
+
+  test('an unknown bare unit symbol is a corrupt database, not a new unit', () {
     expect(
-      () => unitBySymbol('parsec'),
+      () => unitFromStorage('parsec'),
       throwsA(
         isA<CorruptDatabaseError>().having(
           (error) => error.toString(),
@@ -28,6 +61,13 @@ void main() {
           'CorruptDatabaseError: unknown unit symbol: parsec',
         ),
       ),
+    );
+  });
+
+  test('a prefixed unit with an empty payload is a corrupt database', () {
+    expect(
+      () => unitFromStorage('count:'),
+      throwsA(isA<CorruptDatabaseError>()),
     );
   });
 
