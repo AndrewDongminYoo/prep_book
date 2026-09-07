@@ -62,14 +62,15 @@ String encodeRunPayload(ProductionRun run) => jsonEncode(<String, Object?>{
 /// `production_runs` row, so that label is always the right one — this is
 /// not one row's failure being relabelled as another's.
 ///
-/// Two messages are not labelled, both by construction. `result_json` that
-/// does not parse at all is raised before the labelling block starts, and
-/// already names the row itself. The two messages the `on TypeError` and
-/// `on FormatException` clauses build are raised from inside a catch clause,
-/// which leaves the whole try statement rather than reaching the sibling
-/// clause beside it. An unrecognized warning kind is labelled at its own
-/// level rather than here, so the label is added only when the message does
-/// not already carry it.
+/// Two messages the clause cannot reach are left naming a position and no
+/// row: the ones the `on TypeError` and `on FormatException` clauses build.
+/// Both are raised from inside a catch clause, which leaves the whole try
+/// statement rather than reaching the sibling clause beside it.
+///
+/// Two more already name the row at their own level and must not be made to
+/// name it twice: `result_json` that does not parse at all, raised before
+/// the labelling block starts, and an unrecognized warning kind, which the
+/// clause leaves alone because the label is already in the message.
 RunPayload decodeRunPayload(String json, {required String rowLabel}) {
   final Object? decoded;
   try {
