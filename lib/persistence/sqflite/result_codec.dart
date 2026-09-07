@@ -62,15 +62,17 @@ String encodeRunPayload(ProductionRun run) => jsonEncode(<String, Object?>{
 /// `production_runs` row, so that label is always the right one — this is
 /// not one row's failure being relabelled as another's.
 ///
-/// Two messages the clause cannot reach are left naming a position and no
-/// row: the ones the `on TypeError` and `on FormatException` clauses build.
-/// Both are raised from inside a catch clause, which leaves the whole try
-/// statement rather than reaching the sibling clause beside it.
-///
-/// Two more already name the row at their own level and must not be made to
-/// name it twice: `result_json` that does not parse at all, raised before
-/// the labelling block starts, and an unrecognized warning kind, which the
-/// clause leaves alone because the label is already in the message.
+/// Every message this function can raise names the row, which is what
+/// [CorruptDatabaseError]'s own "always names the row" contract requires
+/// without qualification. Four of them do not get there through the clause:
+/// `result_json` that does not parse at all is raised before the labelling
+/// block starts, an unrecognized warning kind is named at its own level, and
+/// the two messages the `on TypeError` and `on FormatException` clauses
+/// build interpolate [rowLabel] themselves — a throw from inside a catch
+/// clause leaves the whole try statement rather than reaching the sibling
+/// clause beside it, so the clause could never have labelled those two. The
+/// clause skips any message that already carries the label, so none of the
+/// four is named twice.
 RunPayload decodeRunPayload(String json, {required String rowLabel}) {
   final Object? decoded;
   try {
@@ -100,7 +102,9 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
     // from decoded JSON is a corrupt row, not a programmer bug.
     // ignore: avoid_catching_errors
   } on TypeError catch (error) {
-    throw CorruptDatabaseError('run payload has an unexpected shape: $error');
+    throw CorruptDatabaseError(
+      'run payload of $rowLabel has an unexpected shape: $error',
+    );
   } on FormatException catch (error) {
     // Reached by `Decimal.parse` on a component's rounding increment and by
     // `DateTime.parse` on a recipe's `modifiedAt` — the two payload values
@@ -109,13 +113,15 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
     // arrive here: it is raised and handled in the separate block above,
     // which completes before this one starts.
     throw CorruptDatabaseError(
-      'run payload holds an unparseable value: $error',
+      'run payload of $rowLabel holds an unparseable value: $error',
     );
   } on CorruptDatabaseError catch (error) {
     // The labelling clause described in this function's doc comment. It sees
     // only what the try body raised: the two clauses above throw from inside
     // a catch clause, which leaves the try statement instead of reaching a
-    // sibling — `result_codec_test.dart` pins that with `startsWith`.
+    // sibling, so they carry the row in their own text rather than through
+    // here — `result_codec_test.dart` pins that with `startsWith` on the
+    // label-plus-message form, which a re-labelled message would fail.
     //
     // The row is added only when the message does not already carry it, so a
     // failure that names the row at its own level (an unrecognized warning

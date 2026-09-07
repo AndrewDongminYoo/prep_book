@@ -53,9 +53,10 @@ ProductionRun buildRun({String id = 'run-1'}) {
   );
 }
 
-/// The label the repositories would thread into [decodeRunPayload]. The two
-/// payload tests in this file call the codec directly on a payload that
-/// belongs to no stored row, so the label only has to be present.
+/// The label the repositories would thread into [decodeRunPayload]. The
+/// payload tests that call the codec directly work on a payload belonging to
+/// no stored row, so the label only has to be present — the tests that prove
+/// a real row's id reaches the message go through the repository instead.
 const _payloadRowLabel = 'production_runs row run-1';
 
 /// Matches a [CorruptDatabaseError] whose message names [row] *and* contains
@@ -99,26 +100,6 @@ Matcher corruptRowNamedOnce(String row, String detail) =>
           'occurrences of the row label',
           1,
         );
-
-/// Matches a [CorruptDatabaseError] raised inside a run payload whose
-/// message names a position within that payload rather than a row.
-///
-/// Only two messages are left in that shape, and both are constructed by
-/// [decodeRunPayload]'s own `on TypeError` and `on FormatException` clauses.
-/// A throw from inside a catch clause leaves the whole try statement instead
-/// of reaching a sibling clause, so the `on CorruptDatabaseError` clause
-/// beside them — which labels every failure raised in the try *body* with
-/// its row — cannot see either. `result_codec_test.dart` pins that with
-/// `startsWith`, which a prefixed message would fail.
-///
-/// It is not an escape hatch from [corruptRowNaming]'s row argument — a
-/// failure that reads a stored *column* must use that matcher.
-Matcher corruptPayloadDetail(String detail) =>
-    isA<CorruptDatabaseError>().having(
-      (error) => error.message,
-      'message',
-      contains(detail),
-    );
 
 void main() {
   setUpAll(sqfliteFfiInit);
@@ -789,7 +770,9 @@ void main() {
 
     expect(
       () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
-      throwsA(corruptPayloadDetail('run payload holds an unparseable value')),
+      throwsA(
+        corruptRowNaming(_payloadRowLabel, 'holds an unparseable value'),
+      ),
     );
   });
 
@@ -800,7 +783,9 @@ void main() {
 
     expect(
       () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
-      throwsA(corruptPayloadDetail('run payload holds an unparseable value')),
+      throwsA(
+        corruptRowNaming(_payloadRowLabel, 'holds an unparseable value'),
+      ),
     );
   });
 

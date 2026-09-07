@@ -476,33 +476,40 @@ void main() {
     );
   });
 
-  // --- what the row label does and does not reach -------------------------
+  // --- how each message reaches the row label -----------------------------
   //
-  // `decodeRunPayload` labels every `CorruptDatabaseError` raised in its try
-  // *body* with the row, so a failure raised deep in the payload — where
-  // nothing knows which stored run it came from — still names one. The two
-  // messages its own `on TypeError` and `on FormatException` clauses build
-  // are not labelled: a throw from inside a catch clause leaves the whole try
-  // statement rather than reaching the sibling clause beside it.
+  // Every message `decodeRunPayload` can raise names the row, but they get
+  // there two different ways, and the difference is a real structural
+  // property rather than a formatting detail.
   //
-  // Both tests assert with `startsWith`, not `contains`. The label is a
-  // prefix, so a `contains` assertion would pass whether or not the clause
-  // had fired and would discriminate nothing.
+  // A failure raised in the try *body* is labelled by the sibling
+  // `on CorruptDatabaseError` clause, which prefixes the row: `<row>: <what
+  // went wrong>`. The two messages the `on TypeError` and `on
+  // FormatException` clauses build cannot be labelled that way at all — a
+  // throw from inside a catch clause leaves the whole try statement rather
+  // than reaching a sibling — so those interpolate the label themselves,
+  // reading `run payload of <row> …`.
+  //
+  // The two tests below assert that second form with `startsWith`. Nesting
+  // the clause instead of leaving it a sibling would prefix these messages a
+  // second time and push `run payload of` off the front, so `startsWith`
+  // still discriminates sibling from nested. `contains` would not: it passes
+  // under either structure.
 
-  test('a shape failure is not labelled with the row', () {
+  test('a shape failure names the row in its own message', () {
     expect(
       () => decodeRunPayload('{"warnings":[]}', rowLabel: _rowLabel),
       throwsA(
         isA<CorruptDatabaseError>().having(
           (error) => error.message,
           'message',
-          startsWith('run payload has an unexpected shape'),
+          startsWith('run payload of $_rowLabel has an unexpected shape'),
         ),
       ),
     );
   });
 
-  test('an unparseable payload value is not labelled with the row', () {
+  test('an unparseable payload value names the row in its own message', () {
     final encoded =
         jsonDecode(encodeRunPayload(buildRunScaledByOneThird()))
             as Map<String, Object?>;
@@ -514,7 +521,7 @@ void main() {
         isA<CorruptDatabaseError>().having(
           (error) => error.message,
           'message',
-          startsWith('run payload holds an unparseable value'),
+          startsWith('run payload of $_rowLabel holds an unparseable value'),
         ),
       ),
     );
