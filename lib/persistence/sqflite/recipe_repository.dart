@@ -4,6 +4,7 @@ import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/errors.dart';
 import 'package:prep_book/persistence/repositories.dart';
 import 'package:prep_book/persistence/sqflite/quantity_columns.dart';
+import 'package:prep_book/persistence/sqflite/timestamps.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// Reduces `recipes` to one row per id: the highest revision stored for it.
@@ -149,13 +150,16 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       },
       'preparation_notes': jsonEncode(recipe.preparationNotes),
       // Normalized before serializing, so this column holds one form for
-      // every writer. `toIso8601String` emits a trailing `Z` only for a UTC
-      // instant, and a caller supplies whatever `DateTime` it holds —
-      // `DateTime.now()` is local. Mixing the two forms in one column makes
-      // it uncomparable as text, and a naive value already written cannot
-      // be assigned an offset afterwards. `_recipeFromRow` reads it back
-      // unchanged and relies on every stored value being UTC.
-      'modified_at': recipe.modifiedAt.toUtc().toIso8601String(),
+      // every writer: [timestampToStorage] moves the value to UTC and
+      // always writes the microsecond triplet. A bare `toIso8601String`
+      // leaves the first to whatever `DateTime` the caller happened to hold
+      // and the second to whether that instant landed on a whole
+      // millisecond. `_recipeFromRow` reads the column back unchanged and
+      // relies on every stored value being in that one form. Nothing orders
+      // on this column today, but it stores the same value the run payload
+      // and `production_runs.created_at` do, and one writer for the three
+      // is what keeps them from drifting; see [timestampToStorage].
+      'modified_at': timestampToStorage(recipe.modifiedAt),
       'is_archived': recipe.isArchived ? 1 : 0,
     });
 

@@ -3,6 +3,7 @@ import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/database.dart';
 import 'package:prep_book/persistence/errors.dart';
 import 'package:prep_book/persistence/sqflite/recipe_repository.dart';
+import 'package:prep_book/persistence/sqflite/timestamps.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Builds a valid `Recipe` through the domain's real factory, so its own
@@ -277,6 +278,11 @@ void main() {
             )).single['modified_at']!
             as String;
     expect(stored, endsWith('Z'));
+    // Not only UTC, but the exact text the one shared writer produces, so
+    // this column cannot drift away from `production_runs.created_at` and
+    // the run payload by going back to a bare `toIso8601String` — which
+    // would drop the microsecond triplet and still end with a `Z`.
+    expect(stored, timestampToStorage(local));
 
     final found = await repository.findRevision('r', 1);
     expect(found!.modifiedAt.isUtc, isTrue);

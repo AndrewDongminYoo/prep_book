@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/errors.dart';
 import 'package:prep_book/persistence/sqflite/result_codec.dart';
+import 'package:prep_book/persistence/sqflite/timestamps.dart';
 
 /// Stands in for the row label a repository threads into the codec. These
 /// tests drive [decodeRunPayload] with hand-built payloads that belong to no
@@ -431,6 +432,14 @@ void main() {
     expect(
       (encoded['recipe']! as Map<String, Object?>)['modifiedAt'],
       endsWith('Z'),
+    );
+    // Not only UTC, but the exact text the one shared writer produces, so
+    // this payload field cannot drift away from the two columns that store
+    // the same value by going back to a bare `toIso8601String` — which
+    // would drop the microsecond triplet and still end with a `Z`.
+    expect(
+      (encoded['recipe']! as Map<String, Object?>)['modifiedAt'],
+      timestampToStorage(local),
     );
     // The dependency snapshot goes through the same encoder, and a run's
     // dependencies carry timestamps of their own.

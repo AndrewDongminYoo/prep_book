@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/errors.dart';
 import 'package:prep_book/persistence/sqflite/quantity_columns.dart';
+import 'package:prep_book/persistence/sqflite/timestamps.dart';
 
 /// The immutable part of a stored production run: the recipe revision it was
 /// computed from, every recipe it depended on, and the calculated result.
@@ -353,11 +354,12 @@ RecipeComponent _recipeComponentFromJson(Map<String, Object?> json) {
 /// here and there, and the pairing is stated in both places so neither can
 /// be changed alone without the other being visible.
 ///
-/// `modifiedAt` is normalized to UTC before serializing, the same way the
-/// `recipes.modified_at` and `production_runs.created_at` columns are. A
-/// caller supplies whatever `DateTime` it holds and `DateTime.now()` is
-/// local, so leaving it alone would store a wall clock that re-anchors when
-/// read in another zone — and would make the same recipe read back through
+/// `modifiedAt` goes through [timestampToStorage], the one writer the
+/// `recipes.modified_at` and `production_runs.created_at` columns also use,
+/// so the three stored forms cannot drift apart. A caller supplies whatever
+/// `DateTime` it holds and `DateTime.now()` is local, so leaving it alone
+/// would store a wall clock that re-anchors when read in another zone — and
+/// would make the same recipe read back through
 /// `SqfliteRecipeRepository.findRevision` and through a run payload compare
 /// unequal, since `DateTime`'s `==` includes the `isUtc` flag, while both
 /// denote the same instant.
@@ -372,7 +374,7 @@ Map<String, Object?> _recipeToJson(Recipe recipe) => <String, Object?>{
       : _quantityToJson(recipe.maxBatchYield!),
   'components': [for (final c in recipe.components) _recipeComponentToJson(c)],
   'preparationNotes': recipe.preparationNotes,
-  'modifiedAt': recipe.modifiedAt.toUtc().toIso8601String(),
+  'modifiedAt': timestampToStorage(recipe.modifiedAt),
   'isArchived': recipe.isArchived,
 };
 

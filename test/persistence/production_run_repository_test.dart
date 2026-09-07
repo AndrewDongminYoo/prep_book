@@ -279,6 +279,34 @@ void main() {
     expect(second.map((s) => s.id), first.map((s) => s.id));
   });
 
+  // `listSummaries` orders on `created_at` as text, so the newest-first
+  // contract holds only while the stored form is fixed-width.
+  // `toIso8601String` omits the microsecond triplet exactly when
+  // `microsecond` is zero, so a whole-millisecond instant serializes three
+  // characters shorter, and the shorter string sorts after the longer one
+  // because `Z` is greater than any digit. Two runs one microsecond apart
+  // then come back oldest first, and `id ASC` never runs because the two
+  // strings are not equal.
+  //
+  // Both fallbacks are ruled out by construction: the older run is inserted
+  // first, so scan order would also put it first, and it is `run-a`, so
+  // `id ASC` alone would too. Only a working `created_at DESC` puts `run-b`
+  // in front.
+  test('a run one microsecond newer comes back first', () async {
+    final wholeMillisecond = DateTime.utc(2026, 9, 7, 12, 0, 0, 1);
+    final oneMicrosecondLater = DateTime.utc(2026, 9, 7, 12, 0, 0, 1, 1);
+    expect(oneMicrosecondLater.isAfter(wholeMillisecond), isTrue);
+
+    await repository.save(buildRun(id: 'run-a', createdAt: wholeMillisecond));
+    await repository.save(
+      buildRun(id: 'run-b', createdAt: oneMicrosecondLater),
+    );
+
+    final summaries = await repository.listSummaries();
+
+    expect(summaries.map((s) => s.id), ['run-b', 'run-a']);
+  });
+
   // Proves `listSummaries` never reaches `result_json`: `decodeRunPayload`
   // would throw `CorruptDatabaseError` on this row (see
   // `result_codec_test.dart`'s own "malformed json" case), so a passing
