@@ -108,6 +108,46 @@ ProductionRun buildRunWithAcknowledgement({required String id}) {
   return run;
 }
 
+/// A recipe with a single manual-entry component, so its calculated result
+/// carries exactly one warning: a blocking [ManualComponentWarning]. Built
+/// independently of [_buildRecipeWithAllWarningKinds], which mixes a
+/// blocking and a non-blocking warning together and is the wrong base for a
+/// test whose premise is exactly one blocking warning.
+Recipe _buildRecipeWithOneBlockingWarning({required String id}) => Recipe(
+  id: id,
+  revision: 1,
+  name: 'Needs a manual line',
+  baseYield: Quantity.parse('1000', Unit.gram),
+  modifiedAt: DateTime.utc(2026, 9, 7),
+  components: [
+    RecipeComponent(
+      id: 'garnish',
+      target: const IngredientRef('garnish'),
+      baseQuantity: null,
+      behavior: ScalingBehavior.manual,
+      displayOrder: 0,
+    ),
+  ],
+);
+
+/// A run computed from [_buildRecipeWithOneBlockingWarning].
+ProductionRun buildRunWithOneBlockingWarning({required String id}) {
+  final recipe = _buildRecipeWithOneBlockingWarning(id: 'needs-manual');
+  final targetYield = recipe.baseYield;
+  final result = const ProductionCalculator().calculate(
+    recipe: recipe,
+    targetYield: targetYield,
+  );
+  return ProductionRun(
+    id: id,
+    createdAt: DateTime.utc(2026, 9, 7),
+    recipe: recipe,
+    dependencySnapshot: const {},
+    targetYield: targetYield,
+    result: result,
+  );
+}
+
 void main() {
   setUpAll(sqfliteFfiInit);
 
@@ -347,29 +387,106 @@ void main() {
     expect(await repository.findById('absent'), isNull);
   });
 
-  test('recordAcknowledgement adds an acknowledgement outside save', () async {
-    await repository.save(buildRun(id: 'run-1'));
+  // Subsumes the former "recordAcknowledgement adds an acknowledgement
+  // outside save" test: the outside-save round trip is still exercised
+  // here, together with the finalizability transition it exists to enable.
+  test(
+    'recordAcknowledgement adds an acknowledgement outside save and can '
+    'make the run finalizable',
+    () async {
+      final run = buildRunWithOneBlockingWarning(id: 'run-1');
+      expect(run.result.warnings.where((w) => w.isBlocking), hasLength(1));
+      await repository.save(run);
+      expect((await repository.findById('run-1'))!.isFinalizable, isFalse);
 
-    const warning = ArchivedDependencyWarning('r');
+      final warning = run.result.warnings.first;
+      await repository.recordAcknowledgement('run-1', warning);
+
+      final loaded = await repository.findById('run-1');
+      expect(loaded!.acknowledgedWarnings, {warning});
+      expect(loaded.isFinalizable, isTrue);
+    },
+  );
+
+  // `_acknowledgementsFor` reconstructs rows into a `Set`, and the
+  // `ProductionWarning` family defines value equality, so two identical
+  // stored rows would collapse into a one-element `Set` regardless of
+  // whether the table holds one row or two. The query against
+  // `run_acknowledgements` directly is what actually proves no duplicate
+  // was written.
+  test('acknowledging the same warning twice does not duplicate', () async {
+    final run = buildRunWithOneBlockingWarning(id: 'run-1');
+    await repository.save(run);
+    final warning = run.result.warnings.first;
+
+    await repository.recordAcknowledgement('run-1', warning);
     await repository.recordAcknowledgement('run-1', warning);
 
     expect(
       (await repository.findById('run-1'))!.acknowledgedWarnings,
-      {warning},
+      hasLength(1),
     );
+    final rows = await db.query(
+      'run_acknowledgements',
+      where: 'run_id = ?',
+      whereArgs: ['run-1'],
+    );
+    expect(rows, hasLength(1));
   });
 
-  test('recordOverride adds an override outside save', () async {
-    await repository.save(buildRun(id: 'run-1'));
+  // Subsumes the former "recordOverride adds an override outside save"
+  // test: the outside-save round trip is still exercised here, together
+  // with the recipe-and-component-together key it exists to prove — a
+  // sub-recipe referenced twice can carry the same component id as its
+  // parent, so the key must be the pair, not the component id alone.
+  test(
+    'recordOverride adds an override outside save, keyed by recipe and '
+    'component together',
+    () async {
+      await repository.save(buildRun(id: 'run-1'));
 
-    final value = Quantity.parse('42', Unit.gram);
-    await repository.recordOverride('run-1', ('r', 'flour'), value);
+      final parentValue = Quantity.parse('5', Unit.gram);
+      final childValue = Quantity.parse('7', Unit.gram);
+      await repository.recordOverride(
+        'run-1',
+        ('parent', 'salt'),
+        parentValue,
+      );
+      await repository.recordOverride('run-1', ('child', 'salt'), childValue);
 
-    expect(
-      (await repository.findById('run-1'))!.overrides,
-      {('r', 'flour'): value},
-    );
-  });
+      final loaded = await repository.findById('run-1');
+      expect(loaded!.overrides, hasLength(2));
+      expect(loaded.overrides[('parent', 'salt')], parentValue);
+      expect(loaded.overrides[('child', 'salt')], childValue);
+    },
+  );
+
+  // `_overridesFor` builds a Dart map literal, which silently last-wins on
+  // a duplicate key — the same blindness `_acknowledgementsFor`'s `.toSet()`
+  // has above. The query against `run_overrides` directly is what actually
+  // proves the old row was replaced rather than duplicated.
+  test(
+    'recording an override replaces the previous value for that key',
+    () async {
+      await repository.save(buildRun(id: 'run-1'));
+      final firstValue = Quantity.parse('10', Unit.gram);
+      final secondValue = Quantity.parse('20', Unit.gram);
+
+      await repository.recordOverride('run-1', ('r', 'salt'), firstValue);
+      await repository.recordOverride('run-1', ('r', 'salt'), secondValue);
+
+      final loaded = await repository.findById('run-1');
+      expect(loaded!.overrides, hasLength(1));
+      expect(loaded.overrides[('r', 'salt')], secondValue);
+
+      final rows = await db.query(
+        'run_overrides',
+        where: 'run_id = ? AND recipe_id = ? AND component_id = ?',
+        whereArgs: ['run-1', 'r', 'salt'],
+      );
+      expect(rows, hasLength(1));
+    },
+  );
 
   test(
     'an unrecognised acknowledgement warning kind is a corrupt database',
