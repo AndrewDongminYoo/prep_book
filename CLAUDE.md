@@ -12,12 +12,13 @@ It solves exactly one job: scaling a saved production recipe to today's target y
 
 ## Current state versus target architecture
 
-The tree is still the Very Good CLI template plus its `counter` sample, with a finished domain layer added alongside it.
-`lib/` contains `app/`, `counter/`, `domain/`, `l10n/`, `bootstrap.dart`, and the three flavor entrypoints.
+The tree is still the Very Good CLI template plus its `counter` sample, with a finished domain layer and a finished persistence layer added alongside it.
+`lib/` contains `app/`, `counter/`, `domain/`, `l10n/`, `persistence/`, `bootstrap.dart`, and the three flavor entrypoints.
 
 The design document defines six isolated units as the target layout: presentation, application, domain, persistence, export, and migration.
 `lib/domain/` is complete for units and their conversion table, `Quantity`, rounding, the recipe model, dependency-cycle and missing-dependency validation, batch decomposition, the production calculator, nested sub-recipe expansion, and the immutable production-run snapshot.
-The other five are still targets to build, not directories to look for.
+`lib/persistence/` is complete for the version 1 schema and its upgrade path, the repositories for recipes, ingredients, and production runs, and the codecs that store an exact quantity and a run's result payload.
+The other four are still targets to build, not directories to look for.
 
 `test/domain/domain_purity_test.dart` enforces the pure-Dart rule as two independent gates.
 An import allowlist checks every `import`/`export` directive under `lib/domain/` against a short list of permitted `package:` prefixes (`decimal`, `rational`, `meta`, and sibling `lib/domain/` files); anything else, including any `dart:` import, fails the build.
@@ -92,8 +93,8 @@ If a task appears to require one, stop and ask.
 `bloc` and `flutter_bloc` are the state-management decision and are already wired through `Bloc.observer` in `lib/bootstrap.dart`.
 Do not introduce a second solution.
 
-The design document names capabilities the project does not yet have dependencies for: transactional SQLite storage, PDF rendering, printing, sharing, and file picking.
-Exact decimal arithmetic already has one: `decimal` and `rational` are dependencies, added for `lib/domain/`.
+The design document names capabilities the project does not yet have dependencies for: PDF rendering, printing, sharing, and file picking.
+Two already have theirs. Exact decimal arithmetic has `decimal` and `rational`, added for `lib/domain/`; transactional SQLite storage has `sqflite`, added for `lib/persistence/`, together with `sqflite_common_ffi` as a dev dependency, which is what makes that layer testable at all — `sqflite` reaches SQLite through a platform channel and does not run under `flutter test`.
 Each remaining capability is a separate decision. Add one package at a time, in the change that first needs it, with a stated reason.
 
 ## Flavors
