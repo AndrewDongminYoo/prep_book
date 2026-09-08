@@ -729,4 +729,131 @@ void main() {
       );
     },
   );
+
+  // The four cases below damage a component's total, its per-batch list, or
+  // the run's scale ratio — each one a value the decoder rebuilds from its
+  // own stored fields and would otherwise hand back as a valid production
+  // quantity. Each leaves the witness the codec checks it against intact.
+  test('a total that disagrees with its per-batch sum is corrupt', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
+            as Map<String, Object?>;
+    final result = encoded['result']! as Map<String, Object?>;
+    final butter =
+        (result['components']! as List<Object?>).first! as Map<String, Object?>;
+    // 'butter' is 200g over three batches of 80g, 80g and 40g. Replacing
+    // the total with the first batch leaves every per-batch quantity
+    // untouched, so the sum still remembers the real total.
+    butter['total'] = (butter['perBatch']! as List<Object?>).first;
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          contains('component butter stores a total of'),
+        ),
+      ),
+    );
+  });
+
+  test('a numeric component missing one per-batch quantity is corrupt', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
+            as Map<String, Object?>;
+    final result = encoded['result']! as Map<String, Object?>;
+    final butter =
+        (result['components']! as List<Object?>).first! as Map<String, Object?>;
+    // Only a manual component may carry an absent batch, and this one is
+    // proportional, so the total it still stores has nothing left to
+    // witness it.
+    (butter['perBatch']! as List<Object?>)[0] = null;
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          contains('2 of 3 are present'),
+        ),
+      ),
+    );
+  });
+
+  test('a manual component carrying a per-batch quantity is corrupt', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds()))
+            as Map<String, Object?>;
+    final result = encoded['result']! as Map<String, Object?>;
+    final components = result['components']! as List<Object?>;
+    final eggs = components.first! as Map<String, Object?>;
+    final sugar = components.last! as Map<String, Object?>;
+    // 'eggs' is manual, so it stores a null total and an all-null batch
+    // list. A quantity appearing in one of those batches is a total that
+    // went missing, or a batch that never belonged to this component.
+    (eggs['perBatch']! as List<Object?>)[0] = sugar['total'];
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          contains('component eggs has no total but carries 1'),
+        ),
+      ),
+    );
+  });
+
+  test('a displayed total altered on its own is corrupt', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds()))
+            as Map<String, Object?>;
+    final result = encoded['result']! as Map<String, Object?>;
+    final sugar =
+        (result['components']! as List<Object?>).last! as Map<String, Object?>;
+    final total = sugar['total']! as Map<String, Object?>;
+    // 'sugar' rounds 333g up to 350g, so exact and displayed differ.
+    // Flattening displayed onto exact leaves the exact half of the
+    // invariant satisfied and breaks only the displayed one — the case a
+    // check that compared exact amounts alone would let through.
+    total['displayed'] = total['exact'];
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          contains('component sugar stores a total of'),
+        ),
+      ),
+    );
+  });
+
+  test("a scale ratio that disagrees with a component's total is corrupt", () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
+            as Map<String, Object?>;
+    final result = encoded['result']! as Map<String, Object?>;
+    final scaleRatio = result['scaleRatio']! as Map<String, Object?>;
+    // The run scales 1:1. Doubling the ratio alone still decodes to a
+    // perfectly ordinary rational, and no other stored field is derived
+    // from it — only 'butter', whose 200g total was computed against the
+    // real ratio, disagrees.
+    scaleRatio['n'] = '2';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          contains("component butter's exact total"),
+        ),
+      ),
+    );
+  });
 }

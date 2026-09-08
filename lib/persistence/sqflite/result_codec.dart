@@ -514,8 +514,15 @@ ProductionResult _resultFromJson(
     }
   }
   _checkFullBatchYieldWitness(batchPlan, components);
+  _checkComponentTotalWitness(components);
+
+  final scaleRatio = _rationalFromJson(
+    json['scaleRatio']! as Map<String, Object?>,
+  );
+  _checkScaleRatioWitness(scaleRatio, components);
+
   return ProductionResult(
-    scaleRatio: _rationalFromJson(json['scaleRatio']! as Map<String, Object?>),
+    scaleRatio: scaleRatio,
     batchPlan: batchPlan,
     components: components,
     warnings: [
@@ -579,6 +586,113 @@ void _checkFullBatchYieldWitness(
         'batch plan full-batch yield ${batchPlan.fullBatchYield} is '
         "inconsistent with component ${component.source.id}'s per-batch "
         'quantities',
+      );
+    }
+  }
+}
+
+/// Cross-checks every component's `total` against its own per-batch
+/// quantities.
+///
+/// [_scaledComponentFromJson] decodes `total` independently of `perBatch`,
+/// so a `total` altered on its own decodes cleanly and is handed back as a
+/// valid production quantity — the same blind spot
+/// [_checkFullBatchYieldWitness] exists for, with the per-batch list as the
+/// independent witness this time.
+///
+/// Per `ProductionCalculator._presentTotal`
+/// (`lib/domain/scaling/production_calculator.dart:221-242`), a component
+/// with no rounding rule takes the exact sum of its per-batch amounts and
+/// displays that sum unchanged, while one with a rule takes
+/// `ScaledQuantity.summing(perBatch)`, which sums the exact and the
+/// displayed amounts independently. Either way the total is the sum of the
+/// per-batch values on both sides, for all three numeric behaviors: every
+/// branch of `_scale` builds its per-batch list out of the same `base`, so
+/// the parts always share one unit and the sum needs no conversion.
+///
+/// A manual component has no total and no witness — `_scale` returns it
+/// with a null total and an all-null per-batch list — so absence is checked
+/// for agreeing with absence instead.
+void _checkComponentTotalWitness(List<ScaledComponent> components) {
+  for (final component in components) {
+    final total = component.total;
+    final batches = component.perBatch;
+    final resolved = batches.whereType<ScaledQuantity>().toList();
+
+    if (total == null) {
+      if (resolved.isNotEmpty) {
+        throw CorruptDatabaseError(
+          'component ${component.source.id} has no total but carries '
+          '${resolved.length} per-batch quantities',
+        );
+      }
+      continue;
+    }
+
+    // `isEmpty` is what keeps `summing` — which rejects an empty iterable
+    // with an `ArgumentError` rather than a [CorruptDatabaseError] — off a
+    // batch plan corrupted down to zero batches.
+    if (resolved.length != batches.length || batches.isEmpty) {
+      throw CorruptDatabaseError(
+        'component ${component.source.id} has a total, but its per-batch '
+        'quantities do not witness it: ${resolved.length} of '
+        '${batches.length} are present',
+      );
+    }
+
+    final witness = ScaledQuantity.summing(resolved);
+    if (witness.exact != total.exact || witness.displayed != total.displayed) {
+      throw CorruptDatabaseError(
+        'component ${component.source.id} stores a total of ${total.exact} '
+        'exact and ${total.displayed} displayed, but its per-batch '
+        'quantities sum to ${witness.exact} and ${witness.displayed}',
+      );
+    }
+  }
+}
+
+/// Cross-checks [scaleRatio] against the components it scaled.
+///
+/// [_rationalFromJson] rebuilds the ratio from its own numerator and
+/// denominator, so an altered ratio decodes cleanly and nothing else
+/// decoded from the payload contradicts it — the third instance of the
+/// blind spot the two witnesses above cover.
+///
+/// A proportional component's own stored total is the witness. Per
+/// `ProductionCalculator.calculate` and `_scale`
+/// (`lib/domain/scaling/production_calculator.dart:47-62,110-115`), such a
+/// component's per-batch exact quantities are `base.scaleBy(ratio *
+/// batchRatio)` and its exact total is their sum, while `_batchRatios`
+/// yields ratios summing to exactly one — every full batch contributes
+/// `fullBatchYield / target` and the remainder `remainderYield / target`,
+/// for a target that is their sum. The exact total is therefore
+/// `base.scaleBy(ratio)`, reached from data stored inside the component
+/// rather than read back from `scaleRatio`.
+///
+/// The other two numeric behaviors carry no witness and are skipped
+/// deliberately, the way [_checkFullBatchYieldWitness] skips a run with no
+/// remainder batch: `_scale` fills a per-batch component's batches with
+/// `base` itself and a fixed-once component's with `base` and zeroes, so
+/// neither routes the ratio into a stored quantity at all. The null guard
+/// covers what the types allow rather than what a payload can reach — a
+/// numeric component with no base quantity, or a proportional one with no
+/// total, is rejected while its `source` is still being decoded.
+void _checkScaleRatioWitness(
+  Rational scaleRatio,
+  List<ScaledComponent> components,
+) {
+  for (final component in components) {
+    if (component.source.behavior != ScalingBehavior.proportional) continue;
+    final base = component.source.baseQuantity;
+    final total = component.total;
+    if (base == null || total == null) continue;
+
+    final witness = base.scaleBy(scaleRatio);
+    if (total.exact != witness) {
+      throw CorruptDatabaseError(
+        'scale ratio $scaleRatio is inconsistent with component '
+        "${component.source.id}'s exact total: $witness was expected, "
+        '${total.exact} was stored',
       );
     }
   }
