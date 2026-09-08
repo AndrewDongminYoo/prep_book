@@ -15,7 +15,7 @@ The application works entirely offline. It requires no account, no subscription,
 
 ## Status
 
-Pre-release, version `0.1.0+1`. The repository currently holds the project scaffolding and the Very Good CLI counter sample; the domain, persistence, and export layers are not implemented yet.
+Pre-release, version `0.1.0+1`. The domain, persistence, and application layers are implemented, and the recipe library is the first screen; export and migration are not implemented yet.
 
 The approved design is `docs/notes/2026-09-06-prepbook-pro-design.md`, which defines the scope, domain model, scaling semantics, screens, testing strategy, and definition of done.
 Contributors and agents should read it before starting any feature work.
@@ -50,8 +50,8 @@ Continuous integration requires 100 percent line coverage, so a change without i
 very_good test --coverage --test-randomize-ordering-seed random
 
 # A single file, or a single test by name
-flutter test test/counter/cubit/counter_cubit_test.dart
-flutter test test/counter/cubit/counter_cubit_test.dart --plain-name 'initial state is 0'
+flutter test test/presentation/recipe_library/recipe_library_cubit_test.dart
+flutter test test/presentation/recipe_library/recipe_library_cubit_test.dart --plain-name 'load orders by modifiedAt, newest first'
 ```
 
 To read the coverage report, use [lcov](https://github.com/linux-test-project/lcov).
@@ -93,9 +93,9 @@ To add a localizable string, add a key, value, and optional description to `lib/
 ```arb
 {
     "@@locale": "en",
-    "counterAppBarTitle": "Counter",
-    "@counterAppBarTitle": {
-        "description": "Text shown in the AppBar of the Counter Page"
+    "recipeLibraryTitle": "Recipe library",
+    "@recipeLibraryTitle": {
+        "description": "Title of the recipe library screen"
     }
 }
 ```
@@ -108,7 +108,7 @@ import 'package:prep_book/l10n/l10n.dart';
 @override
 Widget build(BuildContext context) {
   final l10n = context.l10n;
-  return Text(l10n.counterAppBarTitle);
+  return Text(l10n.recipeLibraryTitle);
 }
 ```
 
