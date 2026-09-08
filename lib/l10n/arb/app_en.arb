@@ -1,7 +1,51 @@
 {
     "@@locale": "en",
-    "counterAppBarTitle": "Counter",
-    "@counterAppBarTitle": {
-        "description": "Text shown in the AppBar of the Counter Page"
+    "recipeLibraryTitle": "Recipe library",
+    "@recipeLibraryTitle": {
+        "description": "Title of the recipe library screen"
+    },
+    "recipeLibrarySearchLabel": "Search recipes",
+    "@recipeLibrarySearchLabel": {
+        "description": "Label of the search field on the recipe library screen"
+    },
+    "recipeLibraryShowArchived": "Show archived recipes",
+    "@recipeLibraryShowArchived": {
+        "description": "Label of the switch that includes archived recipes in the list"
+    },
+    "recipeLibraryArchived": "Archived",
+    "@recipeLibraryArchived": {
+        "description": "Marker shown on a row whose recipe is archived"
+    },
+    "recipeLibraryProductionRun": "Production Run",
+    "@recipeLibraryProductionRun": {
+        "description": "Label of the per-recipe action that starts a production run"
+    },
+    "recipeLibraryEmpty": "No recipes yet.",
+    "@recipeLibraryEmpty": {
+        "description": "Shown when the library holds nothing to list"
+    },
+    "recipeLibraryNoMatches": "No recipes match your search.",
+    "@recipeLibraryNoMatches": {
+        "description": "Shown when a search matches no recipe"
+    },
+    "recipeLibraryOnlyArchived": "Every recipe here is archived. Turn the switch on to see them.",
+    "@recipeLibraryOnlyArchived": {
+        "description": "Shown when the list is empty only because the archived switch is hiding every row"
+    },
+    "recipeLibraryError": "The recipe library could not be loaded.",
+    "@recipeLibraryError": {
+        "description": "Shown when reading the library failed"
+    },
+    "recipeLibraryRetry": "Try again",
+    "@recipeLibraryRetry": {
+        "description": "Label of the button that retries a failed read"
+    },
+    "startupFailureMessage": "The recipe database could not be opened.",
+    "@startupFailureMessage": {
+        "description": "Shown in place of the app when startup failed before any screen could be built"
+    },
+    "startupFailureRetry": "Try again",
+    "@startupFailureRetry": {
+        "description": "Label of the button that runs startup again after it failed"
     }
 }

@@ -12,22 +12,20 @@ It solves exactly one job: scaling a saved production recipe to today's target y
 
 ## Current state versus target architecture
 
-The tree is still the Very Good CLI template plus its `counter` sample, with a finished domain layer and a finished persistence layer added alongside it.
-`lib/` contains `app/`, `counter/`, `domain/`, `l10n/`, `persistence/`, `bootstrap.dart`, and the three flavor entrypoints.
+The tree is the Very Good CLI template with its `counter` sample removed, plus four of the six units the design document names.
+`lib/` contains `app/`, `application/`, `domain/`, `l10n/`, `persistence/`, `presentation/`, `bootstrap.dart`, and the three flavor entrypoints.
 
 The design document defines six isolated units as the target layout: presentation, application, domain, persistence, export, and migration.
 `lib/domain/` is complete for units and their conversion table, `Quantity`, rounding, the recipe model, dependency-cycle and missing-dependency validation, batch decomposition, the production calculator, nested sub-recipe expansion, and the immutable production-run snapshot.
 `lib/persistence/` is complete for the version 1 schema and its upgrade path, the repositories for recipes, ingredients, and production runs, and the codecs that store an exact quantity and a run's result payload.
-The other four are still targets to build, not directories to look for.
+`lib/application/` holds one class per use case over the repository interfaces, and `lib/presentation/` holds the recipe library screen, the first one that shows stored data.
+Export and migration are still targets to build, not directories to look for.
 
 `test/domain/domain_purity_test.dart` enforces the pure-Dart rule as two independent gates.
 An import allowlist checks every `import`/`export` directive under `lib/domain/` against a short list of permitted `package:` prefixes (`decimal`, `rational`, `meta`, and sibling `lib/domain/` files); anything else, including any `dart:` import, fails the build.
 A raw-source denylist then scans each file's unstripped text for banned substrings such as `package:flutter/`, `package:sqflite`, and `package:pdf`, deliberately redundant with the allowlist — which also means a doc comment under `lib/domain/` must never spell one of those URIs out in its prose, or the build fails on the comment itself.
 A third test in the same file fails if any domain or domain-test source uses `double` or a floating-point literal.
-
-The `counter` feature is template scaffolding.
-Delete it together with `test/counter/`, its `home:` reference in `lib/app/view/app.dart`, and `test/app/view/app_test.dart` in the same change that introduces the first real screen.
-Removing it earlier leaves the app without a home widget and drops coverage below the CI gate.
+`test/application/application_boundary_test.dart` and `test/presentation/presentation_boundary_test.dart` apply the same two-gate shape to those units; neither gate is redundant, because an allowlist alone can be bypassed by an apostrophe in a doc comment above the directive.
 
 ## Commands
 
@@ -45,8 +43,8 @@ dart run bloc_tools:bloc lint .
 very_good test --coverage --test-randomize-ordering-seed random
 
 # One test file, or one test by name
-flutter test test/counter/cubit/counter_cubit_test.dart
-flutter test test/counter/cubit/counter_cubit_test.dart --plain-name 'initial state is 0'
+flutter test test/presentation/recipe_library/recipe_library_cubit_test.dart
+flutter test test/presentation/recipe_library/recipe_library_cubit_test.dart --plain-name 'load orders by modifiedAt, newest first'
 
 # Regenerate localizations after editing any ARB file
 flutter gen-l10n
@@ -82,6 +80,11 @@ A bullet naming no test is not evidence that nothing pins it — check before as
 - **Free-form amounts are `manual` components, not numeric zeroes.** "To taste" and "as needed" produce a review warning, not a quantity.
 - **Rounding never destroys the exact value.** The unrounded quantity stays visible and stored alongside the rounded one.
 - **A production run is computed before persistence.** The snapshot and its acknowledgement state are committed in one transaction.
+- **`test/app/view/app_test.dart` was rewritten with the counter deletion, not deleted.** The instruction that named it also named the `home:` reference in `lib/app/view/app.dart`, which cannot be removed and still leave an app, so it reads as "remove the counter's footprint" rather than "remove these paths"; both were replaced instead. Coverage is not the reason — a file no test imports is absent from `lcov.info` rather than counted as zero, so deleting the test would have dropped `lib/app/view/app.dart` out of the report and left the gate at 100 percent. What the rewritten test buys is the only check that the composition root wires the recipe library as the home screen.
+- **A read's outcome is built from the state as it is when the read lands, never from a snapshot taken before it suspended**, because the switch and the query both move while a read is in flight. `RecipeLibraryCubit._outcomeOf` carries the reason its `await` is hoisted; do not fold it back into the `copyWith` argument list.
+- **The empty list says why it is empty, in three messages rather than two**, and the archived case is decided before the query. `_LoadedBody._emptyMessage` carries the reason for that order.
+- **`bootstrap()` opens the database and hands the builder a recipe repository, and a failure there mounts `StartupFailureApp` instead of nothing.** The open runs before any widget exists, so `FlutterError.onError` cannot see it and an uncaught throw leaves the launch screen up forever with no message and no way out. The guard covers the open and the builder — the development entrypoint seeds inside that builder — but never `runApp` itself, because replacing a mounted tree with a failure screen is worse than the failure. Nothing tests that branch: no test imports `lib/bootstrap.dart`, so it is absent from `lcov.info` rather than counted, and the widget test covers only `StartupFailureApp`.
+- **The search field debounces, reversing the instruction the brief gave.** The brief asked for a read per keystroke on the grounds that the filter is in memory, which describes `SearchLibrary`'s filter but not the read it filters: the use case reads every recipe out of storage first, and that read is one query for the list plus one per recipe, so a keystroke was paying all of them. `RecipeLibraryCubit`'s `searchDebounce` parameter defaults to 250 milliseconds and the page takes that default; `recipe_library_page_test.dart`'s "a word typed into the field reads once, not per letter" fails if it is ever set to zero. Waiting is not cancelling — a read already running still runs to completion, and stopping one would need a cancellable read on the repository interface, which this layer does not get to add.
 
 ## Scope fence
 
