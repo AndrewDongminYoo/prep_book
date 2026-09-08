@@ -3,29 +3,73 @@ import 'package:prep_book/application/application.dart';
 import 'package:prep_book/bootstrap.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/persistence.dart';
+import 'package:prep_book/presentation/presentation.dart';
 
 Future<void> main() async {
-  await bootstrap((recipes) async {
-    await _seedIfEmpty(recipes);
+  await bootstrap((recipes, ingredients) async {
+    await _seedIfEmpty(recipes, ingredients);
     return App(
       listLibrary: ListLibrary(recipes),
       searchLibrary: SearchLibrary(recipes),
+      editor: RecipeEditorLauncher(
+        listLibrary: ListLibrary(recipes),
+        listIngredients: ListIngredients(ingredients),
+        saveRecipeRevision: SaveRecipeRevision(recipes, const SystemClock()),
+        saveIngredient: SaveIngredient(ingredients),
+      ),
     );
   });
 }
 
-/// Writes [_developmentLibrary] into an empty database, so a development
-/// build has something to list without duplicating itself on every run.
+/// Writes [_developmentLibrary] and [_developmentIngredients] into an empty
+/// database, so a development build has something to list without
+/// duplicating itself on every run.
 ///
 /// Development only, and deliberately so: a temporary fixture written into
 /// a production database is not removable afterwards. Nothing here is
 /// migrated data — these recipes were written for this file.
-Future<void> _seedIfEmpty(RecipeRepository recipes) async {
+///
+/// The two libraries are checked separately rather than under one guard: a
+/// development device already carrying the recipes from an earlier build
+/// would otherwise never receive the ingredient records those recipes have
+/// always referenced, and the editor would name every component by its
+/// identifier.
+Future<void> _seedIfEmpty(
+  RecipeRepository recipes,
+  IngredientRepository ingredients,
+) async {
+  if ((await ingredients.listAll()).isEmpty) {
+    for (final ingredient in _developmentIngredients()) {
+      await ingredients.upsert(ingredient);
+    }
+  }
   if ((await recipes.listLatestRevisions()).isNotEmpty) return;
   for (final recipe in _developmentLibrary()) {
     await recipes.saveRevision(recipe);
   }
 }
+
+/// A record for every ingredient identifier [_developmentLibrary] references.
+///
+/// The components have always named these; nothing stored what they are
+/// called, so the editor had no name to show for any of them. Every one is
+/// written in grams because that is the unit each component already uses.
+List<Ingredient> _developmentIngredients() => [
+  Ingredient(
+    id: 'almond-flakes',
+    name: 'Almond flakes',
+    defaultUnit: Unit.gram,
+  ),
+  Ingredient(id: 'butter', name: 'Butter', defaultUnit: Unit.gram),
+  Ingredient(id: 'cornstarch', name: 'Cornstarch', defaultUnit: Unit.gram),
+  Ingredient(id: 'egg-yolk', name: 'Egg yolk', defaultUnit: Unit.gram),
+  Ingredient(id: 'flour', name: 'Flour', defaultUnit: Unit.gram),
+  Ingredient(id: 'milk', name: 'Milk', defaultUnit: Unit.gram),
+  Ingredient(id: 'olive-oil', name: 'Olive oil', defaultUnit: Unit.gram),
+  Ingredient(id: 'sugar', name: 'Sugar', defaultUnit: Unit.gram),
+  Ingredient(id: 'tomatoes', name: 'Tomatoes', defaultUnit: Unit.gram),
+  Ingredient(id: 'water', name: 'Water', defaultUnit: Unit.gram),
+];
 
 final _piece = Unit.count('piece');
 final _tray = Unit.namedYield('tray');

@@ -7,6 +7,7 @@ class App extends StatelessWidget {
   const App({
     required this.listLibrary,
     required this.searchLibrary,
+    required this.editor,
     super.key,
   });
 
@@ -15,6 +16,10 @@ class App extends StatelessWidget {
 
   /// Filters that list by name.
   final SearchLibrary searchLibrary;
+
+  /// Opens the recipe editor, from the library's create action and from
+  /// each row.
+  final RecipeEditorLauncher editor;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +35,7 @@ class App extends StatelessWidget {
       home: RecipeLibraryPage(
         listLibrary: listLibrary,
         searchLibrary: searchLibrary,
+        editor: editor,
       ),
     );
   }

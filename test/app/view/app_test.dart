@@ -4,6 +4,7 @@ import 'package:prep_book/application/application.dart';
 import 'package:prep_book/presentation/presentation.dart';
 
 import '../../application/fakes.dart';
+import '../../presentation/fakes.dart';
 
 void main() {
   group('App', () {
@@ -14,6 +15,7 @@ void main() {
         App(
           listLibrary: ListLibrary(recipes),
           searchLibrary: SearchLibrary(recipes),
+          editor: buildEditorLauncher(recipes, FakeIngredientRepository()),
         ),
       );
       await tester.pump();

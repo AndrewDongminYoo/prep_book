@@ -47,5 +47,227 @@
     "startupFailureRetry": "다시 시도",
     "@startupFailureRetry": {
         "description": "실패한 시작 과정을 다시 실행하는 버튼의 라벨"
+    },
+    "recipeEditorNewTitle": "새 레시피",
+    "@recipeEditorNewTitle": {
+        "description": "레시피를 새로 만들 때 편집 화면의 제목"
+    },
+    "recipeEditorEditTitle": "레시피 편집",
+    "@recipeEditorEditTitle": {
+        "description": "저장된 레시피를 편집할 때 화면의 제목"
+    },
+    "recipeEditorSave": "저장",
+    "@recipeEditorSave": {
+        "description": "편집한 레시피를 저장하는 동작의 라벨"
+    },
+    "recipeEditorCancel": "취소",
+    "@recipeEditorCancel": {
+        "description": "선택하지 않고 선택 창을 닫는 동작의 라벨"
+    },
+    "recipeEditorNameLabel": "레시피 이름",
+    "@recipeEditorNameLabel": {
+        "description": "레시피 이름 입력란의 라벨"
+    },
+    "recipeEditorNameRequired": "이름을 입력하세요.",
+    "@recipeEditorNameRequired": {
+        "description": "이름이 비어 있을 때 입력란 아래에 보여 주는 문구"
+    },
+    "recipeEditorCategoryLabel": "분류 (선택)",
+    "@recipeEditorCategoryLabel": {
+        "description": "레시피 분류 입력란의 라벨"
+    },
+    "recipeEditorBaseYieldLabel": "기준 생산량",
+    "@recipeEditorBaseYieldLabel": {
+        "description": "레시피에 적힌 그대로의 생산량 입력란의 라벨"
+    },
+    "recipeEditorMaxBatchLabel": "1회 최대 생산량 (선택)",
+    "@recipeEditorMaxBatchLabel": {
+        "description": "한 배치가 만들 수 있는 최대 생산량 입력란의 라벨"
+    },
+    "recipeEditorUnitLabel": "단위",
+    "@recipeEditorUnitLabel": {
+        "description": "단위 선택기의 라벨"
+    },
+    "recipeEditorAmountRequired": "0보다 큰 값을 입력하세요.",
+    "@recipeEditorAmountRequired": {
+        "description": "수량이 비어 있거나 0보다 크지 않을 때 보여 주는 문구"
+    },
+    "recipeEditorUnitIncompatible": "기준 생산량과 환산할 수 있는 단위를 고르세요.",
+    "@recipeEditorUnitIncompatible": {
+        "description": "최대 생산량 단위를 기준 생산량 단위로 환산할 수 없을 때 보여 주는 문구"
+    },
+    "recipeEditorSubRecipeUnitIncompatible": "이 하위 레시피의 기준 생산량과 환산할 수 있는 단위를 고르세요.",
+    "@recipeEditorSubRecipeUnitIncompatible": {
+        "description": "하위 레시피 항목의 단위를 그 레시피의 기준 생산량 단위로 환산할 수 없을 때 보여 주는 문구"
+    },
+    "recipeEditorDependentsBlocked": "{recipes}이(가) 이 레시피를 이 기준 생산량 단위로 환산할 수 없는 단위로 사용합니다.",
+    "@recipeEditorDependentsBlocked": {
+        "description": "저장된 다른 레시피가 이 레시피를 지금 고른 기준 생산량 단위로 환산할 수 없는 단위로 사용할 때 보여 주는 문구. 그 레시피 이름을 함께 보여 준다",
+        "placeholders": {
+            "recipes": {
+                "type": "String",
+                "example": "아몬드 크루아상, 데니시"
+            }
+        }
+    },
+    "recipeEditorNotesLabel": "준비 메모, 한 줄에 하나",
+    "@recipeEditorNotesLabel": {
+        "description": "준비 메모 입력란의 라벨"
+    },
+    "recipeEditorComponentsTitle": "재료와 하위 레시피",
+    "@recipeEditorComponentsTitle": {
+        "description": "재료 목록 위에 놓이는 제목"
+    },
+    "recipeEditorNoComponents": "아직 재료가 없습니다.",
+    "@recipeEditorNoComponents": {
+        "description": "레시피에 재료가 하나도 없을 때 보여 주는 문구"
+    },
+    "recipeEditorAddIngredient": "재료 추가",
+    "@recipeEditorAddIngredient": {
+        "description": "재료 항목을 추가하는 동작의 라벨"
+    },
+    "recipeEditorAddSubRecipe": "하위 레시피 추가",
+    "@recipeEditorAddSubRecipe": {
+        "description": "하위 레시피 항목을 추가하는 동작의 라벨"
+    },
+    "recipeEditorAddCustomUnit": "단위 직접 추가",
+    "@recipeEditorAddCustomUnit": {
+        "description": "선택기에 아직 없는 단위를 직접 만드는 동작의 라벨"
+    },
+    "recipeEditorChangeTarget": "이 항목이 사용하는 재료 변경",
+    "@recipeEditorChangeTarget": {
+        "description": "항목이 사용할 재료나 하위 레시피를 다시 고르는 동작의 라벨"
+    },
+    "recipeEditorMoveUp": "위로 이동",
+    "@recipeEditorMoveUp": {
+        "description": "항목을 한 칸 앞으로 옮기는 동작의 라벨"
+    },
+    "recipeEditorMoveDown": "아래로 이동",
+    "@recipeEditorMoveDown": {
+        "description": "항목을 한 칸 뒤로 옮기는 동작의 라벨"
+    },
+    "recipeEditorRemoveComponent": "삭제",
+    "@recipeEditorRemoveComponent": {
+        "description": "항목을 삭제하는 동작의 라벨"
+    },
+    "recipeEditorAmountLabel": "수량",
+    "@recipeEditorAmountLabel": {
+        "description": "항목 수량 입력란의 라벨"
+    },
+    "recipeEditorBehaviorLabel": "환산 방식",
+    "@recipeEditorBehaviorLabel": {
+        "description": "항목의 환산 방식 선택기의 라벨"
+    },
+    "recipeEditorRoundingLabel": "올림 단위 (선택)",
+    "@recipeEditorRoundingLabel": {
+        "description": "항목의 올림 단위 입력란의 라벨"
+    },
+    "recipeEditorNoteLabel": "메모 (선택)",
+    "@recipeEditorNoteLabel": {
+        "description": "항목 메모 입력란의 라벨"
+    },
+    "recipeEditorBehaviorProportional": "비례 증감",
+    "@recipeEditorBehaviorProportional": {
+        "description": "생산 비율에 따라 곱해지는 환산 방식"
+    },
+    "recipeEditorBehaviorPerBatch": "배치마다",
+    "@recipeEditorBehaviorPerBatch": {
+        "description": "배치마다 같은 양이 들어가는 환산 방식"
+    },
+    "recipeEditorBehaviorFixedOnce": "전체에 한 번",
+    "@recipeEditorBehaviorFixedOnce": {
+        "description": "전체 생산에 한 번만 들어가는 환산 방식"
+    },
+    "recipeEditorBehaviorManual": "직접 입력",
+    "@recipeEditorBehaviorManual": {
+        "description": "작업자가 직접 정하는 자유 수량의 환산 방식"
+    },
+    "recipeEditorLoadError": "재료와 레시피 목록을 불러오지 못했습니다.",
+    "@recipeEditorLoadError": {
+        "description": "선택기에 채울 목록을 읽지 못했을 때 보여 주는 문구"
+    },
+    "recipeEditorRetry": "다시 시도",
+    "@recipeEditorRetry": {
+        "description": "목록을 다시 읽는 버튼의 라벨"
+    },
+    "recipeEditorSaveFailed": "변경 사항을 저장하지 못했습니다.",
+    "@recipeEditorSaveFailed": {
+        "description": "작업자가 손쓸 수 없는 이유로 저장이 실패했을 때 보여 주는 문구"
+    },
+    "recipeEditorSaveInProgress": "변경 사항을 아직 저장하는 중입니다.",
+    "@recipeEditorSaveInProgress": {
+        "description": "저장이 아직 진행 중이어서 뒤로 가기를 막았을 때 보여 주는 문구"
+    },
+    "recipeEditorIngredientPickerTitle": "재료 선택",
+    "@recipeEditorIngredientPickerTitle": {
+        "description": "재료 선택 창의 제목"
+    },
+    "recipeEditorIngredientNameLabel": "재료 이름",
+    "@recipeEditorIngredientNameLabel": {
+        "description": "재료를 찾거나 새로 이름 짓는 입력란의 라벨"
+    },
+    "recipeEditorIngredientSimilar": "비슷한 재료가 이미 있습니다. 기존 항목을 고르거나 새로 만드세요.",
+    "@recipeEditorIngredientSimilar": {
+        "description": "입력한 이름과 비슷한 재료가 이미 있을 때 보여 주는 문구"
+    },
+    "recipeEditorIngredientCreate": "새 재료 만들기",
+    "@recipeEditorIngredientCreate": {
+        "description": "입력한 이름을 새 재료로 저장하는 동작의 라벨"
+    },
+    "recipeEditorSubRecipePickerTitle": "하위 레시피 선택",
+    "@recipeEditorSubRecipePickerTitle": {
+        "description": "하위 레시피 선택 창의 제목"
+    },
+    "recipeEditorSubRecipeNone": "참조할 수 있는 레시피가 없습니다.",
+    "@recipeEditorSubRecipeNone": {
+        "description": "고를 수 있는 하위 레시피가 없을 때 보여 주는 문구"
+    },
+    "recipeEditorCustomUnitTitle": "새 단위",
+    "@recipeEditorCustomUnitTitle": {
+        "description": "단위를 직접 만드는 창의 제목"
+    },
+    "recipeEditorCustomUnitSymbol": "기호",
+    "@recipeEditorCustomUnitSymbol": {
+        "description": "직접 만드는 단위의 기호 입력란의 라벨"
+    },
+    "recipeEditorCustomUnitCount": "개수 단위",
+    "@recipeEditorCustomUnitCount": {
+        "description": "장, 개처럼 세는 단위의 종류"
+    },
+    "recipeEditorCustomUnitYield": "생산 단위",
+    "@recipeEditorCustomUnitYield": {
+        "description": "판처럼 레시피 산출물을 나타내는 단위의 종류"
+    },
+    "recipeEditorCustomUnitAdd": "추가",
+    "@recipeEditorCustomUnitAdd": {
+        "description": "만든 단위를 추가하는 동작의 라벨"
+    },
+    "recipeLibraryCreate": "새 레시피",
+    "@recipeLibraryCreate": {
+        "description": "빈 편집 화면을 여는 목록 화면 동작의 라벨"
+    },
+    "recipeLibraryEdit": "편집",
+    "@recipeLibraryEdit": {
+        "description": "레시피를 편집 화면에서 여는 항목별 동작의 라벨"
+    },
+    "recipeEditorCycleError": "레시피가 자기 자신을 참조하게 됩니다: {path}",
+    "@recipeEditorCycleError": {
+        "description": "저장하면 순환 참조가 생길 때 보여 주는 문구. 도메인이 찾은 경로를 함께 보여 준다",
+        "placeholders": {
+            "path": {
+                "type": "String",
+                "example": "cake -> syrup -> cake"
+            }
+        }
+    },
+    "recipeEditorMissingDependency": "하위 레시피 \"{recipeId}\"을(를) 목록에서 찾을 수 없습니다.",
+    "@recipeEditorMissingDependency": {
+        "description": "참조한 하위 레시피가 저장되어 있지 않을 때 보여 주는 문구. 식별자를 함께 보여 준다",
+        "placeholders": {
+            "recipeId": {
+                "type": "String",
+                "example": "seed-croissant-dough"
+            }
+        }
     }
 }

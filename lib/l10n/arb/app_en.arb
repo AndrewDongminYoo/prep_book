@@ -47,5 +47,227 @@
     "startupFailureRetry": "Try again",
     "@startupFailureRetry": {
         "description": "Label of the button that runs startup again after it failed"
+    },
+    "recipeEditorNewTitle": "New recipe",
+    "@recipeEditorNewTitle": {
+        "description": "Title of the recipe editor while it is creating a recipe"
+    },
+    "recipeEditorEditTitle": "Edit recipe",
+    "@recipeEditorEditTitle": {
+        "description": "Title of the recipe editor while it is editing a stored recipe"
+    },
+    "recipeEditorSave": "Save",
+    "@recipeEditorSave": {
+        "description": "Label of the action that stores the edited recipe"
+    },
+    "recipeEditorCancel": "Cancel",
+    "@recipeEditorCancel": {
+        "description": "Label of the action that closes a picker without choosing"
+    },
+    "recipeEditorNameLabel": "Recipe name",
+    "@recipeEditorNameLabel": {
+        "description": "Label of the recipe name field"
+    },
+    "recipeEditorNameRequired": "Enter a name.",
+    "@recipeEditorNameRequired": {
+        "description": "Shown under the name field when it is empty"
+    },
+    "recipeEditorCategoryLabel": "Category (optional)",
+    "@recipeEditorCategoryLabel": {
+        "description": "Label of the recipe category field"
+    },
+    "recipeEditorBaseYieldLabel": "Base yield",
+    "@recipeEditorBaseYieldLabel": {
+        "description": "Label of the amount the recipe produces as written"
+    },
+    "recipeEditorMaxBatchLabel": "Maximum batch yield (optional)",
+    "@recipeEditorMaxBatchLabel": {
+        "description": "Label of the largest yield one batch may produce"
+    },
+    "recipeEditorUnitLabel": "Unit",
+    "@recipeEditorUnitLabel": {
+        "description": "Label of a unit picker"
+    },
+    "recipeEditorAmountRequired": "Enter an amount above zero.",
+    "@recipeEditorAmountRequired": {
+        "description": "Shown under an amount field that is empty or not a positive number"
+    },
+    "recipeEditorUnitIncompatible": "Use a unit the base yield converts to.",
+    "@recipeEditorUnitIncompatible": {
+        "description": "Shown under the maximum batch yield when its unit cannot convert to the base yield's"
+    },
+    "recipeEditorSubRecipeUnitIncompatible": "Use a unit this sub-recipe's own yield converts to.",
+    "@recipeEditorSubRecipeUnitIncompatible": {
+        "description": "Shown under a sub-recipe line whose unit cannot convert to the referenced recipe's base yield unit"
+    },
+    "recipeEditorDependentsBlocked": "{recipes} uses this recipe in a unit this yield cannot convert to.",
+    "@recipeEditorDependentsBlocked": {
+        "description": "Shown under the base yield when a stored recipe consumes this one in a unit the chosen yield unit cannot convert to; carries those recipes' names",
+        "placeholders": {
+            "recipes": {
+                "type": "String",
+                "example": "Almond croissant, Danish"
+            }
+        }
+    },
+    "recipeEditorNotesLabel": "Preparation notes, one per line",
+    "@recipeEditorNotesLabel": {
+        "description": "Label of the preparation notes field"
+    },
+    "recipeEditorComponentsTitle": "Ingredients and sub-recipes",
+    "@recipeEditorComponentsTitle": {
+        "description": "Heading above the component list"
+    },
+    "recipeEditorNoComponents": "No ingredients yet.",
+    "@recipeEditorNoComponents": {
+        "description": "Shown when the recipe has no components"
+    },
+    "recipeEditorAddIngredient": "Add ingredient",
+    "@recipeEditorAddIngredient": {
+        "description": "Label of the action that adds an ingredient component"
+    },
+    "recipeEditorAddSubRecipe": "Add sub-recipe",
+    "@recipeEditorAddSubRecipe": {
+        "description": "Label of the action that adds a sub-recipe component"
+    },
+    "recipeEditorAddCustomUnit": "Add a custom unit",
+    "@recipeEditorAddCustomUnit": {
+        "description": "Label of the action that declares a unit the pickers do not offer yet"
+    },
+    "recipeEditorChangeTarget": "Change what this line uses",
+    "@recipeEditorChangeTarget": {
+        "description": "Label of the action that picks a different ingredient or sub-recipe for a component"
+    },
+    "recipeEditorMoveUp": "Move up",
+    "@recipeEditorMoveUp": {
+        "description": "Label of the action that moves a component one place earlier"
+    },
+    "recipeEditorMoveDown": "Move down",
+    "@recipeEditorMoveDown": {
+        "description": "Label of the action that moves a component one place later"
+    },
+    "recipeEditorRemoveComponent": "Remove",
+    "@recipeEditorRemoveComponent": {
+        "description": "Label of the action that deletes a component"
+    },
+    "recipeEditorAmountLabel": "Amount",
+    "@recipeEditorAmountLabel": {
+        "description": "Label of a component's base quantity field"
+    },
+    "recipeEditorBehaviorLabel": "Scaling",
+    "@recipeEditorBehaviorLabel": {
+        "description": "Label of a component's scaling behavior picker"
+    },
+    "recipeEditorRoundingLabel": "Round up to (optional)",
+    "@recipeEditorRoundingLabel": {
+        "description": "Label of a component's rounding increment field"
+    },
+    "recipeEditorNoteLabel": "Note (optional)",
+    "@recipeEditorNoteLabel": {
+        "description": "Label of a component's operator note field"
+    },
+    "recipeEditorBehaviorProportional": "Proportional",
+    "@recipeEditorBehaviorProportional": {
+        "description": "Scaling behavior that multiplies by the run's ratio"
+    },
+    "recipeEditorBehaviorPerBatch": "Per batch",
+    "@recipeEditorBehaviorPerBatch": {
+        "description": "Scaling behavior that repeats the amount once per batch"
+    },
+    "recipeEditorBehaviorFixedOnce": "Once per run",
+    "@recipeEditorBehaviorFixedOnce": {
+        "description": "Scaling behavior that includes the amount once for the whole run"
+    },
+    "recipeEditorBehaviorManual": "Manual",
+    "@recipeEditorBehaviorManual": {
+        "description": "Scaling behavior for a free-form amount the operator supplies"
+    },
+    "recipeEditorLoadError": "The ingredient and recipe libraries could not be loaded.",
+    "@recipeEditorLoadError": {
+        "description": "Shown when the editor could not read what its pickers offer"
+    },
+    "recipeEditorRetry": "Try again",
+    "@recipeEditorRetry": {
+        "description": "Label of the button that reads the libraries again"
+    },
+    "recipeEditorSaveFailed": "The change could not be saved.",
+    "@recipeEditorSaveFailed": {
+        "description": "Shown when a write failed for a reason the operator cannot act on"
+    },
+    "recipeEditorSaveInProgress": "The change is still being saved.",
+    "@recipeEditorSaveInProgress": {
+        "description": "Shown when leaving the editor is refused because a write is still in flight"
+    },
+    "recipeEditorIngredientPickerTitle": "Choose an ingredient",
+    "@recipeEditorIngredientPickerTitle": {
+        "description": "Title of the ingredient picker"
+    },
+    "recipeEditorIngredientNameLabel": "Ingredient name",
+    "@recipeEditorIngredientNameLabel": {
+        "description": "Label of the ingredient picker's search and naming field"
+    },
+    "recipeEditorIngredientSimilar": "Similar ingredients are already in the library. Pick one, or create a new one.",
+    "@recipeEditorIngredientSimilar": {
+        "description": "Shown in the ingredient picker when the typed name resembles stored ingredients"
+    },
+    "recipeEditorIngredientCreate": "Create new ingredient",
+    "@recipeEditorIngredientCreate": {
+        "description": "Label of the action that stores the typed name as a new ingredient"
+    },
+    "recipeEditorSubRecipePickerTitle": "Choose a sub-recipe",
+    "@recipeEditorSubRecipePickerTitle": {
+        "description": "Title of the sub-recipe picker"
+    },
+    "recipeEditorSubRecipeNone": "No recipe is available to reference.",
+    "@recipeEditorSubRecipeNone": {
+        "description": "Shown when the sub-recipe picker has nothing to offer"
+    },
+    "recipeEditorCustomUnitTitle": "New unit",
+    "@recipeEditorCustomUnitTitle": {
+        "description": "Title of the dialog that declares a custom unit"
+    },
+    "recipeEditorCustomUnitSymbol": "Symbol",
+    "@recipeEditorCustomUnitSymbol": {
+        "description": "Label of the custom unit's symbol field"
+    },
+    "recipeEditorCustomUnitCount": "Counted item",
+    "@recipeEditorCustomUnitCount": {
+        "description": "Custom unit kind for something counted, such as a sheet"
+    },
+    "recipeEditorCustomUnitYield": "Recipe output",
+    "@recipeEditorCustomUnitYield": {
+        "description": "Custom unit kind for what a recipe produces, such as a tray"
+    },
+    "recipeEditorCustomUnitAdd": "Add",
+    "@recipeEditorCustomUnitAdd": {
+        "description": "Label of the action that adds the declared custom unit"
+    },
+    "recipeLibraryCreate": "New recipe",
+    "@recipeLibraryCreate": {
+        "description": "Label of the library action that opens an empty editor"
+    },
+    "recipeLibraryEdit": "Edit",
+    "@recipeLibraryEdit": {
+        "description": "Label of the per-row action that opens the recipe in the editor"
+    },
+    "recipeEditorCycleError": "A recipe cannot depend on itself: {path}",
+    "@recipeEditorCycleError": {
+        "description": "Shown when saving would create a dependency cycle; carries the path the domain found",
+        "placeholders": {
+            "path": {
+                "type": "String",
+                "example": "cake -> syrup -> cake"
+            }
+        }
+    },
+    "recipeEditorMissingDependency": "The sub-recipe \"{recipeId}\" is not in the library.",
+    "@recipeEditorMissingDependency": {
+        "description": "Shown when a referenced sub-recipe is not stored; carries its identifier",
+        "placeholders": {
+            "recipeId": {
+                "type": "String",
+                "example": "seed-croissant-dough"
+            }
+        }
     }
 }

@@ -4,12 +4,27 @@ import 'dart:developer';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:prep_book/app/app.dart';
+import 'package:prep_book/application/application.dart';
 import 'package:prep_book/persistence/persistence.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// The file the application's SQLite database lives in, under the
 /// platform's databases directory.
 const _databaseFileName = 'prep_book.db';
+
+/// The platform clock, which is what every use case needing "now" is bound
+/// to outside a test.
+///
+/// Lives here because this is the composition root: a test binds its own
+/// fixed clock, and nothing else in `lib/` should be reading the wall clock
+/// on its own.
+final class SystemClock implements Clock {
+  /// Creates the clock.
+  const SystemClock();
+
+  @override
+  DateTime now() => DateTime.now();
+}
 
 class AppBlocObserver extends BlocObserver {
   const AppBlocObserver();
@@ -42,13 +57,13 @@ Future<void>? _startupInFlight;
 
 /// Runs the flavor-independent setup, then the widget [builder] returns.
 ///
-/// [builder] receives the recipe repository rather than the open database
-/// or a bare path, because that is what every current caller needs: the app
-/// builds its use cases from it and the development entrypoint seeds
-/// through it. Opening the database here rather than in an entrypoint is
-/// what keeps the three flavors from each carrying a copy of that, and it
-/// is what keeps `sqflite` out of them. A later slice that needs the
-/// ingredient or production-run repository widens this parameter.
+/// [builder] receives the recipe and ingredient repositories rather than the
+/// open database or a bare path, because that is what every current caller
+/// needs: the app builds its use cases from them and the development
+/// entrypoint seeds through them. Opening the database here rather than in
+/// an entrypoint is what keeps the three flavors from each carrying a copy
+/// of that, and it is what keeps `sqflite` out of them. A later slice that
+/// needs the production-run repository widens this parameter again.
 ///
 /// Everything that can fail before a widget tree exists is caught here and
 /// answered with [StartupFailureApp]. `FlutterError.onError` does not cover
@@ -60,7 +75,11 @@ Future<void>? _startupInFlight;
 /// A call made while another run is still in flight joins that run instead
 /// of starting a second one; see [_startupInFlight].
 Future<void> bootstrap(
-  FutureOr<Widget> Function(RecipeRepository recipes) builder,
+  FutureOr<Widget> Function(
+    RecipeRepository recipes,
+    IngredientRepository ingredients,
+  )
+  builder,
 ) {
   final inFlight = _startupInFlight;
   if (inFlight != null) return inFlight;
@@ -76,7 +95,11 @@ Future<void> bootstrap(
 /// there reads as one statement and cannot be skipped by an early return
 /// inside the sequence.
 Future<void> _runStartup(
-  FutureOr<Widget> Function(RecipeRepository recipes) builder,
+  FutureOr<Widget> Function(
+    RecipeRepository recipes,
+    IngredientRepository ingredients,
+  )
+  builder,
 ) async {
   // Resolving the databases directory is a platform-channel call, so the
   // binding has to exist before it. `runApp` initializes it too, but that
@@ -102,7 +125,10 @@ Future<void> _runStartup(
     // entrypoint seeds here and a failed seed leaves the same blank
     // screen. `runApp` itself stays outside it: once a tree is mounted,
     // replacing it with a failure screen would be worse than the failure.
-    app = await builder(SqfliteRecipeRepository(db));
+    app = await builder(
+      SqfliteRecipeRepository(db),
+      SqfliteIngredientRepository(db),
+    );
   } on Object catch (error, stackTrace) {
     log('startup failed', error: error, stackTrace: stackTrace);
     runApp(
