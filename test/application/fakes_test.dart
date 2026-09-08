@@ -100,4 +100,26 @@ void main() {
       expect(summaries.map((summary) => summary.id), ['newer', 'older']);
     });
   });
+
+  group('FakeProductionRunRepository.save matches the real ABORT conflict', () {
+    test('a second save under the same run id throws', () async {
+      final repo = FakeProductionRunRepository();
+      final recipe = buildRecipe(id: 'a');
+      final first = _buildRun(
+        id: 'run-1',
+        createdAt: DateTime.utc(2026, 9, 8, 12),
+        recipe: recipe,
+      );
+      final second = _buildRun(
+        id: 'run-1',
+        createdAt: DateTime.utc(2026, 9, 8, 13),
+        recipe: recipe,
+      );
+      await repo.save(first);
+
+      await expectLater(repo.save(second), throwsStateError);
+      // The first save is left standing, not silently replaced.
+      expect(await repo.findById('run-1'), same(first));
+    });
+  });
 }

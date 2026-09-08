@@ -66,8 +66,10 @@ Ingredient buildIngredient({required String id, String name = 'Flour'}) =>
 final class FakeRecipeRepository implements RecipeRepository {
   final Map<String, List<Recipe>> revisions = {};
 
-  /// Every call this fake received, in order, for asserting that a rejected
-  /// operation wrote nothing.
+  /// Every `findLatest`, `saveRevision`, and `setArchived` call this fake
+  /// received, in order, for asserting that a rejected operation wrote
+  /// nothing. `listLatestRevisions`, `findRevision`, and
+  /// `listLatestRevisionsUsingIngredient` are not logged here.
   final List<String> calls = [];
 
   void seed(Recipe recipe) =>
@@ -195,7 +197,16 @@ final class FakeProductionRunRepository implements ProductionRunRepository {
   Future<ProductionRun?> findById(String id) async => stored[id];
 
   @override
-  Future<void> save(ProductionRun run) async => stored[run.id] = run;
+  Future<void> save(ProductionRun run) async {
+    // Mirrors `FakeRecipeRepository.saveRevision`: the real repository's
+    // `save` is a bare `txn.insert` against a `TEXT PRIMARY KEY`, so SQLite's
+    // default ABORT conflict policy makes a second save of the same run id
+    // throw rather than replace the row.
+    if (stored.containsKey(run.id)) {
+      throw StateError('a run already exists under id ${run.id}');
+    }
+    stored[run.id] = run;
+  }
 
   @override
   Future<void> recordAcknowledgement(

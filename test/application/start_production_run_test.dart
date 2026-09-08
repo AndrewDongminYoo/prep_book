@@ -128,6 +128,10 @@ void main() {
         ),
       ),
     );
+    expect(
+      recipes.calls.where((call) => call.startsWith('saveRevision:')),
+      isEmpty,
+    );
   });
 
   test('a missing sub-recipe is the domain error, not a silent gap', () async {
@@ -148,6 +152,10 @@ void main() {
         ),
       ),
     );
+    expect(
+      recipes.calls.where((call) => call.startsWith('saveRevision:')),
+      isEmpty,
+    );
   });
 
   test('a zero target yield is the domain error', () async {
@@ -158,6 +166,10 @@ void main() {
         recipes,
       ).call(recipeId: 'a', targetYield: Quantity.parse('0', Unit.gram)),
       throwsA(isA<InvalidTargetYieldError>()),
+    );
+    expect(
+      recipes.calls.where((call) => call.startsWith('saveRevision:')),
+      isEmpty,
     );
   });
 }
