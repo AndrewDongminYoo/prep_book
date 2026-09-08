@@ -426,23 +426,19 @@ Rational exact(Rational a, Rational b) => a / b;
     expect(offenders, isEmpty);
   });
 
-  test(
-    'no domain source divides a number',
-    () async {
-      // The one gate that resolves rather than parses, and the only check
-      // here that tells a `Rational` division from a numeric one exactly.
-      //
-      // Scoped to `lib/domain` alone, unlike the scans above. The invariant
-      // is about domain arithmetic, and resolution is not free: measured on
-      // this machine `lib/domain` costs about 1.5 seconds, while adding
-      // `test/domain` took the whole suite from roughly 3 seconds to 21.
-      // Test sources stay covered for `double` literals and the `double`
-      // type by the parsed scan, which is where a test would realistically
-      // introduce one.
-      final violations = await findDivisionViolations(['lib/domain']);
+  test('no domain source divides a number', () async {
+    // The one gate that resolves rather than parses, and the only check
+    // here that tells a `Rational` division from a numeric one exactly.
+    //
+    // Scoped to `lib/domain` alone, unlike the scans above. The invariant
+    // is about domain arithmetic, and resolution is not free: measured on
+    // this machine `lib/domain` costs about 1.5 seconds, while adding
+    // `test/domain` took the whole suite from roughly 3 seconds to 21.
+    // Test sources stay covered for `double` literals and the `double`
+    // type by the parsed scan, which is where a test would realistically
+    // introduce one.
+    final violations = await findDivisionViolations(['lib/domain']);
 
-      expect(violations, isEmpty);
-    },
-    timeout: const Timeout(Duration(minutes: 2)),
-  );
+    expect(violations, isEmpty);
+  }, timeout: const Timeout(Duration(minutes: 2)));
 }
