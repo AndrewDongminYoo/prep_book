@@ -18,10 +18,10 @@ void main() {
 
   test('search matches a substring of the name, case-insensitively', () async {
     final recipes = FakeRecipeRepository()
-      ..seed(buildRecipe(id: 'a', name: 'Sourdough Loaf'))
+      ..seed(buildRecipe(id: 'a', name: 'CHOCOLATE Torte'))
       ..seed(buildRecipe(id: 'b', name: 'Brioche'));
 
-    final hits = await SearchLibrary(recipes).call('DOUGH');
+    final hits = await SearchLibrary(recipes).call('CHOCOLATE');
 
     expect(hits.map((r) => r.id), ['a']);
   });
@@ -38,8 +38,12 @@ void main() {
   });
 
   test('an empty query returns the whole library', () async {
-    final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a'));
+    final recipes = FakeRecipeRepository()
+      ..seed(buildRecipe(id: 'a', name: 'Recipe A'))
+      ..seed(buildRecipe(id: 'b', name: 'Recipe B'));
 
-    expect(await SearchLibrary(recipes).call(''), hasLength(1));
+    final hits = await SearchLibrary(recipes).call('');
+
+    expect(hits.map((r) => r.id), containsAll(<String>['a', 'b']));
   });
 }
