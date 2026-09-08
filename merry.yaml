@@ -65,11 +65,13 @@ postcoverage:
   (scripts): genhtml coverage/lcov.info -o coverage/html --quiet
 
 precheck:
-  # Not a convenience. `very_good_analysis` carries `formatter: trailing_commas:
-  # preserve`, and `dart format` only reaches that setting through the resolved
-  # package. On an unresolved checkout the formatter falls back to its default
-  # and reports eight test files as unformatted, which would stop the gate below
-  # on its first step. CI never sees this because it resolves packages first.
+  # Not a convenience. `very_good_analysis` sets a `formatter:` option that
+  # `dart format` reaches only through the resolved package, and its value has
+  # already changed once across a major bump, so this comment does not name it.
+  # On an unresolved checkout the formatter falls back to its own default, warns
+  # `Package resolution error` on its first line, and reports already-formatted
+  # files as changed, which would stop the gate below on its first step. CI
+  # never sees this because it resolves packages first.
   (description): Resolves packages, so the formatter can read the shared analysis options.
   (scripts): flutter pub get
 
