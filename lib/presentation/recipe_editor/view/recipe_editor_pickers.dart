@@ -125,7 +125,7 @@ Future<void> _declareUnit(BuildContext context) async {
   final cubit = context.read<RecipeEditorCubit>();
   final unit = await showDialog<Unit>(
     context: context,
-    builder: (_) => const _CustomUnitDialog(),
+    builder: (_) => _CustomUnitDialog(offered: cubit.state.unitChoices),
   );
   if (unit != null) cubit.addCustomUnit(unit);
 }
@@ -283,8 +283,24 @@ class _SubRecipePicker extends StatelessWidget {
 /// call is the operator's choice, because it is not recoverable from the
 /// symbol: neither kind ever converts into anything else, and the pair
 /// differs only in what it measures.
+///
+/// A symbol already among [offered] is refused, whatever dimension it is
+/// declared in. `Unit` equality includes the dimension, so a counted
+/// `portion` beside the built-in yield-only one is a second, distinct unit
+/// that never converts into the first — and every picker on this screen
+/// renders `Unit.symbol` alone, so the two rows would be indistinguishable
+/// and picking the wrong one would silently store different conversion
+/// semantics. The ingredient picker above refuses a second "Flour" on the
+/// same grounds.
+///
+/// The comparison is exact rather than case-insensitive, because what makes
+/// the rows indistinguishable is identical text: `L` and `l` render
+/// differently and are already distinct units in the fixed table.
 class _CustomUnitDialog extends StatefulWidget {
-  const _CustomUnitDialog();
+  const _CustomUnitDialog({required this.offered});
+
+  /// Every unit the pickers on this screen already list.
+  final List<Unit> offered;
 
   @override
   State<_CustomUnitDialog> createState() => _CustomUnitDialogState();
@@ -298,6 +314,7 @@ class _CustomUnitDialogState extends State<_CustomUnitDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final symbol = _symbol.trim();
+    final isTaken = widget.offered.any((unit) => unit.symbol == symbol);
     return AlertDialog(
       // Same reason as the ingredient picker above: this dialog also takes
       // focus on open, so the keyboard is up and the card is short, and the
@@ -316,6 +333,20 @@ class _CustomUnitDialogState extends State<_CustomUnitDialog> {
             ),
             onChanged: (value) => setState(() => _symbol = value),
           ),
+          // Said rather than only refused. The ingredient picker's silent
+          // disable is legible because the clashing ingredient is listed
+          // right below it; this dialog lists nothing, so a greyed-out Add
+          // would leave the operator with no way to learn why.
+          if (isTaken)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                l10n.recipeEditorCustomUnitTaken,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ),
           const SizedBox(height: 12),
           SegmentedButton<bool>(
             segments: [
@@ -340,7 +371,7 @@ class _CustomUnitDialogState extends State<_CustomUnitDialog> {
           child: Text(l10n.recipeEditorCancel),
         ),
         FilledButton(
-          onPressed: symbol.isEmpty
+          onPressed: symbol.isEmpty || isTaken
               ? null
               : () => Navigator.of(context).pop(
                   _isCounted ? Unit.count(symbol) : Unit.namedYield(symbol),

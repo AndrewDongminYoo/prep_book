@@ -242,6 +242,10 @@
     "@recipeEditorCustomUnitAdd": {
         "description": "Label of the action that adds the declared custom unit"
     },
+    "recipeEditorCustomUnitTaken": "A unit with this symbol already exists. The pickers show the symbol alone, so the two could not be told apart.",
+    "@recipeEditorCustomUnitTaken": {
+        "description": "Shown when the typed custom unit symbol is already offered, in any dimension"
+    },
     "recipeLibraryCreate": "New recipe",
     "@recipeLibraryCreate": {
         "description": "Label of the library action that opens an empty editor"

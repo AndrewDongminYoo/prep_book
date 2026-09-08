@@ -1050,6 +1050,47 @@ void main() {
 
       expect(find.text('New unit'), findsNothing);
     });
+
+    testWidgets('a symbol another unit already uses is refused', (
+      tester,
+    ) async {
+      await _openEditor(tester, recipes: recipes, ingredients: ingredients);
+      await _tap(tester, find.widgetWithText(TextButton, 'Add a custom unit'));
+      FilledButton add() =>
+          tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Add'));
+
+      await tester.enterText(_dialogField(), 'portion');
+      await tester.pumpAndSettle();
+
+      // The built-in `portion` is yield-only, so this is a plain duplicate:
+      // the same unit the choice set already holds.
+      await tester.tap(find.text('Recipe output'));
+      await tester.pumpAndSettle();
+      expect(add().onPressed, isNull);
+
+      // And across dimensions, which is the case that would otherwise reach
+      // the pickers. `Unit.count('portion')` is a distinct unit that never
+      // converts to the built-in one, yet every picker renders the symbol
+      // alone, so the two rows would be identical text. A guard comparing
+      // whole units instead of symbols passes the assertion above and fails
+      // this one, because `count:portion` is not among the choices.
+      await tester.tap(find.text('Counted item'));
+      await tester.pumpAndSettle();
+      expect(add().onPressed, isNull);
+      expect(
+        find.text(
+          'A unit with this symbol already exists. The pickers show the '
+          'symbol alone, so the two could not be told apart.',
+        ),
+        findsOneWidget,
+      );
+
+      // A symbol nothing uses is still accepted, so the refusal is about
+      // the collision rather than about the dialog having any choices.
+      await tester.enterText(_dialogField(), 'portions');
+      await tester.pumpAndSettle();
+      expect(add().onPressed, isNotNull);
+    });
   });
 
   group('saving', () {
