@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
+import 'package:prep_book/presentation/recipe_editor/recipe_editor.dart';
 import 'package:prep_book/presentation/recipe_library/recipe_library.dart';
 
 /// The recipe library: the screen the app opens on.
@@ -16,6 +17,7 @@ class RecipeLibraryPage extends StatelessWidget {
   const RecipeLibraryPage({
     required this.listLibrary,
     required this.searchLibrary,
+    required this.editor,
     super.key,
   });
 
@@ -24,6 +26,10 @@ class RecipeLibraryPage extends StatelessWidget {
 
   /// Filters that list by name.
   final SearchLibrary searchLibrary;
+
+  /// Opens the editor, which both the create action and each row's edit
+  /// action go through.
+  final RecipeEditorLauncher editor;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +41,7 @@ class RecipeLibraryPage extends StatelessWidget {
         unawaited(cubit.load());
         return cubit;
       },
-      child: const RecipeLibraryView(),
+      child: RecipeLibraryView(editor: editor),
     );
   }
 }
@@ -44,13 +50,32 @@ class RecipeLibraryPage extends StatelessWidget {
 /// that provides the cubit is not also the widget that reads it.
 class RecipeLibraryView extends StatelessWidget {
   /// Creates the view.
-  const RecipeLibraryView({super.key});
+  const RecipeLibraryView({required this.editor, super.key});
+
+  /// Opens the editor for the create action and for each row.
+  final RecipeEditorLauncher editor;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.recipeLibraryTitle)),
+      appBar: AppBar(
+        title: Text(l10n.recipeLibraryTitle),
+        // In the app bar rather than a floating action button, which is
+        // Material's position for the *dominant* action — and the design
+        // document gives that to Production Run and calls create
+        // secondary. It also keeps the button off the last row: the
+        // scaffold reserves no room under a floating one, and the space
+        // that would have to be reserved is most of a landscape phone's
+        // body with the keyboard up.
+        actions: [
+          IconButton(
+            tooltip: l10n.recipeLibraryCreate,
+            icon: const Icon(Icons.add),
+            onPressed: () => _openEditor(context, editor),
+          ),
+        ],
+      ),
       // One scroll view, filter row included, rather than a column holding
       // the list in an `Expanded`. The keyboard takes its inset off the
       // body's height, and on a short viewport — a phone in landscape, a
@@ -98,7 +123,8 @@ class RecipeLibraryView extends StatelessWidget {
             ),
             const SliverToBoxAdapter(child: Divider(height: 1)),
             BlocBuilder<RecipeLibraryCubit, RecipeLibraryState>(
-              builder: (context, state) => _LibraryBody(state: state),
+              builder: (context, state) =>
+                  _LibraryBody(state: state, editor: editor),
             ),
           ],
         ),
@@ -114,9 +140,10 @@ class RecipeLibraryView extends StatelessWidget {
 /// a message still centres on a tall screen, and shrink to their own height
 /// when the filter row above has already used the space up.
 class _LibraryBody extends StatelessWidget {
-  const _LibraryBody({required this.state});
+  const _LibraryBody({required this.state, required this.editor});
 
   final RecipeLibraryState state;
+  final RecipeEditorLauncher editor;
 
   @override
   Widget build(BuildContext context) => switch (state.status) {
@@ -128,16 +155,17 @@ class _LibraryBody extends StatelessWidget {
       hasScrollBody: false,
       child: _ErrorBody(),
     ),
-    RecipeLibraryStatus.loaded => _LoadedBody(state: state),
+    RecipeLibraryStatus.loaded => _LoadedBody(state: state, editor: editor),
   };
 }
 
 /// The list of rows, or the empty state when nothing is visible. A sliver
 /// either way, because the whole screen is one scroll view.
 class _LoadedBody extends StatelessWidget {
-  const _LoadedBody({required this.state});
+  const _LoadedBody({required this.state, required this.editor});
 
   final RecipeLibraryState state;
+  final RecipeEditorLauncher editor;
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +178,8 @@ class _LoadedBody extends StatelessWidget {
     }
     return SliverList.builder(
       itemCount: recipes.length,
-      itemBuilder: (context, index) => _RecipeRow(recipe: recipes[index]),
+      itemBuilder: (context, index) =>
+          _RecipeRow(recipe: recipes[index], editor: editor),
     );
   }
 
@@ -169,9 +198,10 @@ class _LoadedBody extends StatelessWidget {
 
 /// One recipe: its name, its base yield, and the run action.
 class _RecipeRow extends StatelessWidget {
-  const _RecipeRow({required this.recipe});
+  const _RecipeRow({required this.recipe, required this.editor});
 
   final Recipe recipe;
+  final RecipeEditorLauncher editor;
 
   @override
   Widget build(BuildContext context) {
@@ -179,6 +209,20 @@ class _RecipeRow extends StatelessWidget {
     final baseYield =
         '${recipe.baseYield.toDecimal()} ${recipe.baseYield.unit.symbol}';
     return ListTile(
+      // Edit sits in `leading` rather than beside Production Run in
+      // `trailing`, which is where it reads more naturally. `ListTile` lays
+      // the trailing slot out against the whole tile width and asserts when
+      // it fills it, and a `Row` that overflows clamps to exactly that
+      // width — so a second control in `trailing` cannot be made to shrink
+      // its way out, and the 48 logical pixels it costs come straight off
+      // the row's width and text-scale headroom. `leading` is measured
+      // separately and the design document calls edit a secondary action,
+      // so this is the slot that fits it.
+      leading: IconButton(
+        tooltip: l10n.recipeLibraryEdit,
+        icon: const Icon(Icons.edit_outlined),
+        onPressed: () => _openEditor(context, editor, recipe: recipe),
+      ),
       title: Text(recipe.name),
       subtitle: Text(
         recipe.isArchived
@@ -237,4 +281,24 @@ class _CenteredMessage extends StatelessWidget {
       child: Text(message, textAlign: TextAlign.center),
     ),
   );
+}
+
+/// Opens the editor over [recipe], and reads the library again when it comes
+/// back having stored something.
+///
+/// The cubit is read before the push, not after: awaiting a route leaves
+/// this widget's context free to have been disposed, and looking the cubit
+/// up afterwards is what would fail there.
+///
+/// `retry`, not `load`: it re-runs the current search, so a list filtered by
+/// what the field still shows stays filtered. The name is the library
+/// cubit's, and reading again after an edit is the same operation.
+Future<void> _openEditor(
+  BuildContext context,
+  RecipeEditorLauncher editor, {
+  Recipe? recipe,
+}) async {
+  final cubit = context.read<RecipeLibraryCubit>();
+  final saved = await editor.open(context, recipe: recipe);
+  if (saved != null) unawaited(cubit.retry());
 }

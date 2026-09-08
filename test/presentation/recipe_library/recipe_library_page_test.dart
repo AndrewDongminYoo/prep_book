@@ -40,9 +40,16 @@ final double _aboveTheKeyboard = _shortViewport.height - _keyboardInset;
 const _cutoutInset = 44.0;
 const _homeIndicatorInset = 21.0;
 
-Widget _libraryOver(RecipeRepository recipes) => RecipeLibraryPage(
+Widget _libraryOver(
+  RecipeRepository recipes, {
+  IngredientRepository? ingredients,
+}) => RecipeLibraryPage(
   listLibrary: ListLibrary(recipes),
   searchLibrary: SearchLibrary(recipes),
+  editor: buildEditorLauncher(
+    recipes,
+    ingredients ?? FakeIngredientRepository(),
+  ),
 );
 
 /// The screen's own scroll position.
@@ -316,6 +323,117 @@ void main() {
       expect(find.text('Summer focaccia'), findsOneWidget);
       expect(find.text('Ciabatta'), findsOneWidget);
       expect(find.textContaining('Archived'), findsOneWidget);
+    });
+
+    testWidgets('a row still lays out at a split-window width', (tester) async {
+      // The narrow end of what the design document asks the screen to
+      // survive: an Android split-screen pane, an iPad Slide Over, an
+      // iPhone SE in portrait. Every other viewport in this file is 568
+      // wide or more, which is above where this breaks.
+      //
+      // Rejects a `ListTile` whose `trailing` holds the edit action beside
+      // the Production Run button. `ListTile` measures its trailing slot
+      // against the whole tile width and asserts when it fills it, and a
+      // `Row` that overflows clamps to exactly that width — so the second
+      // control cannot be made to shrink out of the way, and its 48 pixels
+      // come straight off the row's headroom.
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      // Moved slot, not dropped action: the row still offers a labelled
+      // edit control, which is what the design document asks of every
+      // secondary action.
+      expect(find.byTooltip('Edit'), findsNWidgets(2));
+    });
+  });
+
+  group('RecipeLibraryPage, opening the editor', () {
+    late FakeRecipeRepository recipes;
+
+    setUp(() {
+      recipes = FakeRecipeRepository()
+        ..seed(
+          buildRecipe(
+            id: 'r-a',
+            name: 'Ciabatta',
+            modifiedAt: DateTime.utc(2026, 9, 11),
+          ),
+        );
+    });
+
+    testWidgets('the create action stores a recipe and lists it', (
+      tester,
+    ) async {
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('New recipe'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New recipe'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-name')),
+        'Summer focaccia',
+      );
+      await tester.enterText(find.byKey(const ValueKey('base-yield')), '2000');
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      // Back on the library, listing what the editor stored: the row is
+      // only there if the screen read again when the editor closed.
+      expect(find.byType(RecipeLibraryPage), findsOneWidget);
+      expect(find.text('Summer focaccia'), findsOneWidget);
+      expect((await recipes.findLatest('summer-focaccia'))!.revision, 1);
+    });
+
+    testWidgets('a row opens its own recipe and saves the next revision', (
+      tester,
+    ) async {
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.edit_outlined).last);
+      await tester.pumpAndSettle();
+
+      // The row's own recipe, filled in — the same editor the create
+      // action opens, because the save is the same call either way.
+      expect(find.text('Edit recipe'), findsOneWidget);
+      expect(find.widgetWithText(TextFormField, 'Ciabatta'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-name')),
+        'Ciabatta loaf',
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ciabatta loaf'), findsOneWidget);
+      expect((await recipes.findLatest('r-a'))!.revision, 2);
+    });
+
+    testWidgets('leaving the editor without saving changes nothing', (
+      tester,
+    ) async {
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.edit_outlined).last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-name')),
+        'Discarded',
+      );
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ciabatta'), findsOneWidget);
+      expect(find.text('Discarded'), findsNothing);
+      expect((await recipes.findLatest('r-a'))!.revision, 1);
     });
   });
 
