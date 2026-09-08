@@ -21,7 +21,7 @@ void main() {
       ..seed(buildRecipe(id: 'a', name: 'CHOCOLATE Torte'))
       ..seed(buildRecipe(id: 'b', name: 'Brioche'));
 
-    final hits = await SearchLibrary(recipes).call('CHOCOLATE');
+    final hits = await SearchLibrary(recipes).call('ChOcOlAtE');
 
     expect(hits.map((r) => r.id), ['a']);
   });
