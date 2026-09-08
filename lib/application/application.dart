@@ -4,3 +4,5 @@
 /// (`test/application/application_boundary_test.dart`) enforces which
 /// packages code under this directory may import.
 library;
+
+export 'dependency_closure.dart';
