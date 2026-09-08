@@ -6,6 +6,7 @@
 /// packages code under this directory may import.
 library;
 
+export 'delete_ingredient.dart';
 export 'dependency_closure.dart';
 export 'recipe_library.dart';
 export 'recipe_lifecycle.dart';
