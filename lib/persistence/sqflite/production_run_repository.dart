@@ -100,16 +100,20 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
     if (rows.isEmpty) return null;
     final row = rows.single;
 
-    // Only the two columns this method reads itself are wrapped. Everything
+    // Only the columns this method reads itself are wrapped. Everything
     // else it goes on to call — `decodeRunPayload`, `quantityFromColumns`,
     // `_acknowledgementsFor`, `_overridesFor` — already names its own row in
     // a [CorruptDatabaseError], and catching those here would relabel a
     // corrupt acknowledgement or override as a corrupt `production_runs` row.
     final String resultJson;
     final DateTime createdAt;
+    final String recipeId;
+    final int recipeRevision;
     try {
       resultJson = row['result_json']! as String;
       createdAt = DateTime.parse(row['created_at']! as String);
+      recipeId = row['recipe_id']! as String;
+      recipeRevision = row['recipe_revision']! as int;
       // A wrong-typed column is a corrupt row, not a programmer bug, so its
       // `TypeError` is caught rather than left to escape.
       // ignore: avoid_catching_errors
@@ -127,6 +131,28 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
       resultJson,
       rowLabel: 'production_runs row $id',
     );
+
+    // The recipe a run was calculated from is stored twice: as the two
+    // scalar columns [listSummaries] answers from, and inside the payload
+    // this method answers from. [save] writes both from one `run.recipe`, so
+    // a row whose copies disagree has been damaged, and it has no single
+    // revision left to reconstruct — the same run would identify one recipe
+    // through the list and another through this method. That is a row that
+    // exists but cannot be reconstructed, so it throws rather than letting
+    // either copy win.
+    //
+    // The check covers what persistence itself duplicated, and stops there.
+    // It does not re-derive the payload's own arithmetic, which the domain
+    // guarantees at construction.
+    if (recipeId != payload.recipe.id ||
+        recipeRevision != payload.recipe.revision) {
+      throw CorruptDatabaseError(
+        'production_runs row $id names recipe $recipeId revision '
+        '$recipeRevision, but its result_json holds recipe '
+        '${payload.recipe.id} revision ${payload.recipe.revision}',
+      );
+    }
+
     final acknowledgedWarnings = await _acknowledgementsFor(id);
     final overrides = await _overridesFor(id);
 

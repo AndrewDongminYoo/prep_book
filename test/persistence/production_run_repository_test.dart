@@ -610,4 +610,73 @@ void main() {
       );
     },
   );
+
+  // The recipe is stored twice — as the scalar columns `listSummaries`
+  // answers from, and inside `result_json`, which `findById` answers from.
+  // These two cases damage one copy and leave the other intact, so a
+  // `findById` that read only the payload would return a run whose recipe
+  // disagrees with the one the history list shows for the same id. Each
+  // case moves a different column, because either one alone makes the row
+  // unreconstructable.
+  test('a recipe_id disagreeing with the payload is a corrupt row', () async {
+    // `buildRun` defaults the recipe id to `r`, which the payload keeps.
+    await repository.save(buildRun(id: 'run-1'));
+    await db.update(
+      'production_runs',
+      {'recipe_id': 'someone-elses-recipe'},
+      where: 'id = ?',
+      whereArgs: ['run-1'],
+    );
+
+    // The summary still reads, from the damaged copy — which is what makes
+    // the two readers disagree rather than both failing.
+    final summaries = await repository.listSummaries();
+    expect(summaries.single.recipeId, 'someone-elses-recipe');
+
+    await expectLater(
+      repository.findById('run-1'),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          allOf(
+            contains('production_runs row run-1'),
+            contains('names recipe someone-elses-recipe'),
+            contains('holds recipe r revision 1'),
+          ),
+        ),
+      ),
+    );
+  });
+
+  test(
+    'a recipe_revision disagreeing with the payload is a corrupt row',
+    () async {
+      await repository.save(buildRun(id: 'run-1', recipeRevision: 3));
+      await db.update(
+        'production_runs',
+        {'recipe_revision': 4},
+        where: 'id = ?',
+        whereArgs: ['run-1'],
+      );
+
+      final summaries = await repository.listSummaries();
+      expect(summaries.single.recipeRevision, 4);
+
+      await expectLater(
+        repository.findById('run-1'),
+        throwsA(
+          isA<CorruptDatabaseError>().having(
+            (error) => error.message,
+            'message',
+            allOf(
+              contains('production_runs row run-1'),
+              contains('names recipe r revision 4'),
+              contains('holds recipe r revision 3'),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
