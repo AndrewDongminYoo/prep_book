@@ -15,7 +15,11 @@
 - **`lib/application/` may import only** `package:prep_book/domain/…`, `package:prep_book/persistence/repositories.dart`, sibling `package:prep_book/application/…` files, `package:meta/…`, and `dart:` libraries. Task 1 makes this a test.
 - **Never import** `package:sqflite`, `package:sqflite_common_ffi`, `package:flutter/…`, or anything under `lib/persistence/sqflite/`.
 - **Coverage must be 100 percent.** `VeryGoodOpenSource/very_good_workflows` defaults `min_coverage` to 100, so every line added needs its test in the same task.
-- **Verification command for every task:** `flutter analyze && very_good test --coverage`. Use `very_good`, not plain `flutter test --coverage`; CLAUDE.md explains why.
+- **Formatting is a manual gate, not a hook.** `.trunk/trunk.yaml` disables the `dart` linter, so `trunk fmt` and `trunk check` touch no `.dart` file. Nothing local formats Dart on commit, and the first thing that checks it is CI, which fails the build on it.
+- **Verification command for every task:** `flutter pub get && merry format && merry check && merry coverage`. `merry.yaml` owns what each of those runs; do not restate their contents or substitute the underlying commands.
+- **`flutter pub get` comes first, and it is not ceremony.** `very_good_analysis` sets `formatter: trailing_commas: preserve`, which `dart format` reads only through the resolved package. On an unresolved worktree the formatter silently falls back to its default and rewrites files the wrong way. `merry check` resolves packages itself through its `precheck` hook; `merry format` does not, which is why the explicit `flutter pub get` leads.
+- **`merry coverage` is separate from `merry check` on purpose.** `check` runs the fast suite; `coverage` is the run CI decides the 100 percent gate on. A task needs both.
+- **`trunk fmt` and `trunk check` still apply to the non-Dart files a task touches** — markdown, YAML, shell — and are still run with explicit paths.
 - **`Recipe` has no `copyWith`.** Rebuilding one means calling the factory with all ten arguments. Two tasks do this; both spell it out.
 - **`OverrideKey` is `typedef OverrideKey = (String recipeId, String componentId)`**, a record, not a class.
 - **A recipe's dependency list is `Recipe.subRecipeIds`**, a getter returning `List<String>`. There is no `dependsOn`.
@@ -347,7 +351,7 @@ Run: `flutter test test/application/application_boundary_test.dart`
 
 - [ ] **Step 5: Run the full gate**
 
-Run: `flutter analyze && very_good test --coverage`
+Run: `flutter pub get && merry format && merry check && merry coverage`
 Expected: analyze clean, all tests pass. `application.dart` is an empty barrel at this point and contributes no uncovered lines.
 
 - [ ] **Step 6: Commit**
@@ -537,7 +541,7 @@ export 'dependency_closure.dart';
 
 - [ ] **Step 6: Run the full gate**
 
-Run: `flutter analyze && very_good test --coverage`
+Run: `flutter pub get && merry format && merry check && merry coverage`
 
 - [ ] **Step 7: Commit**
 
@@ -706,7 +710,7 @@ Expected: PASS, five tests.
 
 Add `export 'save_recipe_revision.dart';` to the barrel.
 
-Run: `flutter analyze && very_good test --coverage`
+Run: `flutter pub get && merry format && merry check && merry coverage`
 
 ```bash
 git add lib/application test/application
@@ -761,7 +765,7 @@ void main() {
   test('search returns latest revisions only', () async {
     final recipes = FakeRecipeRepository()
       ..seed(buildRecipe(id: 'a', name: 'Brioche'))
-      ..seed(buildRecipe(id: 'a', revision: 2, name: 'Brioche Sucree'));
+      ..seed(buildRecipe(id: 'a', revision: 2, name: 'Brioche Loaf'));
 
     final hits = await SearchLibrary(recipes).call('brioche');
 
@@ -830,7 +834,7 @@ Run: `flutter test test/application/recipe_library_test.dart` — expect PASS.
 
 Add `export 'recipe_library.dart';` to the barrel.
 
-Run: `flutter analyze && very_good test --coverage`
+Run: `flutter pub get && merry format && merry check && merry coverage`
 
 ```bash
 git add lib/application test/application
@@ -998,7 +1002,7 @@ final class DuplicateRecipe {
 
 Add `export 'recipe_lifecycle.dart';` to the barrel.
 
-Run: `flutter analyze && very_good test --coverage`
+Run: `flutter pub get && merry format && merry check && merry coverage`
 
 ```bash
 git add lib/application test/application
@@ -1675,7 +1679,7 @@ final class OpenProductionRun {
 
 Add `export 'production_history.dart';` to the barrel.
 
-Run: `flutter analyze && very_good test --coverage` and confirm coverage is at 100 percent for the whole project, not only the new files.
+Run: `flutter pub get && merry format && merry check && merry coverage` and confirm coverage is at 100 percent for the whole project, not only the new files.
 
 ```bash
 git add lib/application test/application
@@ -1688,6 +1692,7 @@ git commit -m "feat(application): list and reopen production history"
 
 - Every use case in `docs/specs/2026-09-08-application-layer.md` exists and is exported from `lib/application/application.dart`.
 - `test/application/application_boundary_test.dart` passes, and its failure was observed once in Task 1.
-- `flutter analyze` clean, `very_good test --coverage` at 100 percent.
-- `trunk fmt` and `trunk check` clean on every touched path.
+- `merry check` passes, which covers the format check, analysis, and bloc lints, and `merry coverage` reports 100 percent.
+- The format check is listed because nothing local enforces it: trunk's dart linter is disabled, so an unformatted file reaches CI untouched.
+- `trunk fmt` and `trunk check` clean on every non-Dart path a task touched.
 - `lib/counter/` is untouched.
