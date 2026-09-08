@@ -74,9 +74,9 @@ final class FakeRecipeRepository implements RecipeRepository {
       revisions.putIfAbsent(recipe.id, () => []).add(recipe);
 
   @override
-  Future<List<Recipe>> listLatestRevisions() async => [
-    for (final list in revisions.values) _highest(list),
-  ];
+  Future<List<Recipe>> listLatestRevisions() async =>
+      [for (final list in revisions.values) _highest(list)]
+        ..sort((a, b) => a.id.compareTo(b.id));
 
   @override
   Future<Recipe?> findRevision(String id, int revision) async {
@@ -119,7 +119,7 @@ final class FakeRecipeRepository implements RecipeRepository {
   ) async => [
     for (final list in revisions.values)
       if (_usesIngredient(_highest(list), ingredientId)) _highest(list),
-  ];
+  ]..sort((a, b) => a.id.compareTo(b.id));
 
   static bool _usesIngredient(Recipe recipe, String ingredientId) =>
       recipe.components.any(
@@ -174,7 +174,10 @@ final class FakeProductionRunRepository implements ProductionRunRepository {
   @override
   Future<List<ProductionRunSummary>> listSummaries() async {
     final runs = stored.values.toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      ..sort((a, b) {
+        final byCreatedAt = b.createdAt.compareTo(a.createdAt);
+        return byCreatedAt != 0 ? byCreatedAt : a.id.compareTo(b.id);
+      });
     return [
       for (final run in runs)
         ProductionRunSummary(

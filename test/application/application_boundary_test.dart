@@ -47,6 +47,9 @@ void main() {
   test(
     'every application import or export resolves inside the allowed set',
     () {
+      final dir = Directory('lib/application');
+      expect(dir.existsSync(), isTrue, reason: 'lib/application must exist');
+
       final offenders = <String>[];
       for (final file in _dartFilesUnder('lib/application')) {
         final source = file.readAsStringSync();
