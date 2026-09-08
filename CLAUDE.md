@@ -116,9 +116,12 @@ Flavor-independent setup, such as opening the database or registering an error h
 - **Pull request titles must be conventional commits.** The `semantic-pull-request` job checks the title, not the commits.
 - **CI pins a Flutter version.** `.github/workflows/main.yaml` owns that number; do not restate it elsewhere. Keep it aligned with the version installed locally, because a mismatch surfaces as analyzer or formatter differences that reproduce nowhere else.
 
-Trunk runs `trunk fmt` on pre-commit and `trunk check` on pre-push.
-Its `dart` linter comes from the `quality-configs` plugin source, runs `dart format` and `dart analyze --format=json` from the directory holding `analysis_options.yaml`, and resolves `dart` from `PATH` ahead of its own pinned download, so the analysis uses the Flutter SDK's Dart rather than a standalone one.
-The `dart@3.10.8` pin in `.trunk/trunk.yaml` is that download fallback, not the version the gate actually runs.
+Trunk runs `trunk fmt` on pre-commit and `trunk check` on pre-push, but its `dart` linter sits in the `disabled` list, so neither hook formats or analyzes Dart.
+A green trunk run says nothing about Dart at all; it covers the shell, YAML, Markdown, and security linters that remain enabled.
+`dart format --set-exit-if-changed lib test` therefore first runs in CI, and `merry check` is what closes that gap before a push.
+
+Re-enabling the linter is not the fix.
+The pinned `quality-configs` dart definition scrapes `dart analyze --format=json` through a hand-written `parse_regex` under `output: regex` rather than trunk's JSON output mode, and that definition is byte-identical between `v0.6.0` and the plugin source's current head, so no newer one is available to switch to.
 
 ## Localization
 
