@@ -2,18 +2,26 @@ import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/repositories.dart';
 
 /// A one-component recipe, enough for most use-case tests.
+///
+/// [baseYield] and [modifiedAt] default to what every earlier caller got
+/// before they became parameters. The presentation layer needs both: it
+/// sorts on `modifiedAt` and renders `baseYield`, and a fixture where every
+/// recipe carries the same value cannot tell a right implementation from a
+/// wrong one.
 Recipe buildRecipe({
   required String id,
   int revision = 1,
   String name = 'Test recipe',
   List<RecipeComponent>? components,
   bool isArchived = false,
+  Quantity? baseYield,
+  DateTime? modifiedAt,
 }) => Recipe(
   id: id,
   revision: revision,
   name: name,
-  baseYield: Quantity.parse('1000', Unit.gram),
-  modifiedAt: DateTime.utc(2026, 9, 8),
+  baseYield: baseYield ?? Quantity.parse('1000', Unit.gram),
+  modifiedAt: modifiedAt ?? DateTime.utc(2026, 9, 8),
   isArchived: isArchived,
   components:
       components ??
