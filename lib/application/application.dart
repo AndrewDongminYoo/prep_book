@@ -8,6 +8,7 @@ library;
 
 export 'delete_ingredient.dart';
 export 'dependency_closure.dart';
+export 'ingredient_library.dart';
 export 'production_history.dart';
 export 'production_run_edits.dart';
 export 'recipe_library.dart';
