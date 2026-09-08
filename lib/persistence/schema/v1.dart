@@ -1,0 +1,114 @@
+/// The tables as of schema version 1.
+///
+/// A quantity is three columns (numerator, denominator, unit) because a
+/// `Rational` holds `BigInt` values that SQLite's 64-bit `INTEGER` cannot be
+/// relied on to store. A scaled quantity is no columns at all: one only ever
+/// appears inside a `ProductionResult`, which `production_runs` keeps whole
+/// in `result_json`, so its exact and displayed values are two quantities
+/// encoded there rather than a column group here.
+const _createIdxRunsRecipe =
+    'CREATE INDEX idx_runs_recipe ON production_runs '
+    '(recipe_id, recipe_revision)';
+
+const schemaV1Statements = <String>[
+  // `default_unit` carries the same encoding as every other `_unit` column:
+  // a bare symbol for one of the domain's fixed units, and a `count:` or
+  // `yield:` prefixed form for one built from an arbitrary symbol. It is not
+  // a bare symbol, so it is not named one.
+  '''
+CREATE TABLE ingredients (
+  id                  TEXT PRIMARY KEY,
+  name                TEXT NOT NULL,
+  default_unit        TEXT NOT NULL,
+  category            TEXT
+)''',
+  '''
+CREATE TABLE recipes (
+  id                     TEXT NOT NULL,
+  revision               INTEGER NOT NULL,
+  name                   TEXT NOT NULL,
+  category               TEXT,
+  base_yield_numerator   TEXT NOT NULL,
+  base_yield_denominator TEXT NOT NULL,
+  base_yield_unit        TEXT NOT NULL,
+  max_batch_numerator    TEXT,
+  max_batch_denominator  TEXT,
+  max_batch_unit         TEXT,
+  preparation_notes      TEXT NOT NULL,
+  modified_at            TEXT NOT NULL,
+  is_archived            INTEGER NOT NULL,
+  PRIMARY KEY (id, revision)
+)''',
+  '''
+CREATE TABLE recipe_components (
+  recipe_id            TEXT NOT NULL,
+  recipe_revision      INTEGER NOT NULL,
+  component_id         TEXT NOT NULL,
+  target_kind          TEXT NOT NULL,
+  target_id            TEXT NOT NULL,
+  base_numerator       TEXT,
+  base_denominator     TEXT,
+  base_unit            TEXT,
+  behavior             TEXT NOT NULL,
+  rounding_increment   TEXT,
+  note                 TEXT,
+  display_order        INTEGER NOT NULL,
+  PRIMARY KEY (recipe_id, recipe_revision, component_id),
+  FOREIGN KEY (recipe_id, recipe_revision)
+    REFERENCES recipes (id, revision) ON DELETE CASCADE
+)''',
+  '''
+CREATE TABLE production_runs (
+  id                    TEXT PRIMARY KEY,
+  recipe_id             TEXT NOT NULL,
+  recipe_revision       INTEGER NOT NULL,
+  target_numerator      TEXT NOT NULL,
+  target_denominator    TEXT NOT NULL,
+  target_unit           TEXT NOT NULL,
+  created_at            TEXT NOT NULL,
+  result_json           TEXT NOT NULL
+)''',
+  // No PRIMARY KEY here: SQLite treats NULLs in a PRIMARY KEY or UNIQUE
+  // index as distinct from one another, so a composite key that includes
+  // the nullable component_id would not reject a second insert of the same
+  // (run_id, warning_kind, recipe_id, NULL) tuple — it would permit the
+  // duplicate. The two partial unique indexes below are what actually
+  // enforce one row per acknowledgement, for the with-component and
+  // without-component shapes separately.
+  '''
+CREATE TABLE run_acknowledgements (
+  run_id       TEXT NOT NULL,
+  warning_kind TEXT NOT NULL,
+  recipe_id    TEXT NOT NULL,
+  component_id TEXT,
+  FOREIGN KEY (run_id) REFERENCES production_runs (id) ON DELETE CASCADE
+)''',
+  '''
+CREATE TABLE run_overrides (
+  run_id               TEXT NOT NULL,
+  recipe_id            TEXT NOT NULL,
+  component_id         TEXT NOT NULL,
+  override_numerator   TEXT NOT NULL,
+  override_denominator TEXT NOT NULL,
+  override_unit        TEXT NOT NULL,
+  PRIMARY KEY (run_id, recipe_id, component_id),
+  FOREIGN KEY (run_id) REFERENCES production_runs (id) ON DELETE CASCADE
+)''',
+  _createIdxRunsRecipe,
+  'CREATE INDEX idx_runs_created ON production_runs (created_at DESC)',
+  '''
+CREATE UNIQUE INDEX idx_ack_with_component
+  ON run_acknowledgements (run_id, warning_kind, recipe_id, component_id)
+  WHERE component_id IS NOT NULL
+''',
+  '''
+CREATE UNIQUE INDEX idx_ack_without_component
+  ON run_acknowledgements (run_id, warning_kind, recipe_id)
+  WHERE component_id IS NULL
+''',
+  // The only query against this table filters on `run_id` alone, which
+  // implies neither partial index's `WHERE` clause, so SQLite could use
+  // neither and scanned the table instead. One plain index now costs a line;
+  // adding it later costs a schema upgrade.
+  'CREATE INDEX idx_ack_run ON run_acknowledgements (run_id)',
+];

@@ -1,0 +1,1124 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:prep_book/domain/domain.dart';
+import 'package:prep_book/persistence/database.dart';
+import 'package:prep_book/persistence/errors.dart';
+import 'package:prep_book/persistence/sqflite/ingredient_repository.dart';
+import 'package:prep_book/persistence/sqflite/production_run_repository.dart';
+import 'package:prep_book/persistence/sqflite/recipe_repository.dart';
+import 'package:prep_book/persistence/sqflite/result_codec.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+/// A one-component recipe, built through the domain's real factory. Kept
+/// independent of the other suites' fixtures, matching this directory's
+/// convention of self-contained per-file fixtures.
+Recipe buildRecipe({
+  String id = 'r',
+  int revision = 1,
+  Quantity? maxBatchYield,
+}) => Recipe(
+  id: id,
+  revision: revision,
+  name: 'Test recipe',
+  baseYield: Quantity.parse('1000', Unit.gram),
+  maxBatchYield: maxBatchYield,
+  modifiedAt: DateTime.utc(2026, 9, 7),
+  components: [
+    RecipeComponent(
+      id: 'flour',
+      target: const IngredientRef('flour'),
+      baseQuantity: Quantity.parse('500', Unit.gram),
+      behavior: ScalingBehavior.proportional,
+      displayOrder: 0,
+    ),
+  ],
+);
+
+/// A run computed from [buildRecipe], scaled 1:1.
+ProductionRun buildRun({String id = 'run-1'}) {
+  final recipe = buildRecipe();
+  final targetYield = recipe.baseYield;
+  return ProductionRun(
+    id: id,
+    createdAt: DateTime.utc(2026, 9, 7),
+    recipe: recipe,
+    dependencySnapshot: const {},
+    targetYield: targetYield,
+    result: const ProductionCalculator().calculate(
+      recipe: recipe,
+      targetYield: targetYield,
+    ),
+  );
+}
+
+/// The label the repositories would thread into [decodeRunPayload]. The
+/// payload tests that call the codec directly work on a payload belonging to
+/// no stored row, so the label only has to be present — the tests that prove
+/// a real row's id reaches the message go through the repository instead.
+const _payloadRowLabel = 'production_runs row run-1';
+
+/// Matches a [CorruptDatabaseError] whose message names [row] *and* contains
+/// [detail], so a test proves both that the failure identifies the stored row
+/// and *which* guard fired.
+///
+/// The row is a separate argument rather than one half of a single fragment
+/// because a one-argument matcher can certify a message that names no row at
+/// all — which is what this file exists to rule out, and what an earlier
+/// revision of this suite pinned as correct for `unknown unit symbol`.
+///
+/// Splitting the two does not make that omission unwritable, and the comment
+/// here claimed it did. The arguments are `contains`ed independently, so a
+/// [detail] that already spells the row out satisfies the row check for
+/// free — which two of this file's calls do, legitimately, because their
+/// guard's message really does name the row inside its own text. What the
+/// split buys is that the row each call claims is stated in an argument of
+/// its own, where a reader sees it missing, instead of being hidden inside a
+/// fragment nobody reads for that.
+Matcher corruptRowNaming(String row, String detail) =>
+    isA<CorruptDatabaseError>().having(
+      (error) => error.message,
+      'message',
+      allOf(contains(row), contains(detail)),
+    );
+
+/// Matches a [CorruptDatabaseError] whose message names [row] exactly once
+/// and contains [detail].
+///
+/// [decodeRunPayload] labels every failure raised inside a run payload with
+/// the row it read the payload from, and one of the messages it can label —
+/// an unknown warning kind — already names that row itself. A `contains`
+/// assertion cannot tell a single label from a doubled one, so
+/// [corruptRowNaming] would certify `<row>: … in <row>: …` just as readily.
+/// Counting the occurrences is what pins the label's idempotence.
+Matcher corruptRowNamedOnce(String row, String detail) =>
+    isA<CorruptDatabaseError>()
+        .having((error) => error.message, 'message', contains(detail))
+        .having(
+          (error) => row.allMatches(error.message).length,
+          'occurrences of the row label',
+          1,
+        );
+
+void main() {
+  setUpAll(sqfliteFfiInit);
+
+  late Database db;
+  late SqfliteIngredientRepository ingredients;
+  late SqfliteRecipeRepository recipes;
+  late SqfliteProductionRunRepository runs;
+
+  setUp(() async {
+    db = await openPrepBookDatabase(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    ingredients = SqfliteIngredientRepository(db);
+    recipes = SqfliteRecipeRepository(db);
+    runs = SqfliteProductionRunRepository(db);
+  });
+
+  tearDown(() => db.close());
+
+  test(
+    'an unknown unit symbol in a stored row throws rather than guessing',
+    () async {
+      await db.insert('ingredients', <String, Object?>{
+        'id': 'x',
+        'name': 'X',
+        'default_unit': 'parsec',
+        'category': null,
+      });
+
+      await expectLater(
+        ingredients.findById('x'),
+        throwsA(
+          corruptRowNaming(
+            'ingredients row x',
+            'unknown unit symbol in ingredients row x: parsec',
+          ),
+        ),
+      );
+    },
+  );
+
+  // `production_run_repository_test.dart` reaches the same guard from the
+  // other direction, on a row `save` wrote and a later `UPDATE` corrupted,
+  // to show `listSummaries` never decodes the payload. This one inserts the
+  // row directly instead: `findById` must reject a `result_json` it cannot
+  // parse even for a row no `save` of this build ever produced, which is the
+  // shape a restored or hand-edited database actually has.
+  test(
+    'unparseable result_json throws rather than returning a partial run',
+    () async {
+      await db.insert('production_runs', <String, Object?>{
+        'id': 'broken',
+        'recipe_id': 'r',
+        'recipe_revision': 1,
+        'target_numerator': '1',
+        'target_denominator': '1',
+        'target_unit': 'kg',
+        'created_at': DateTime.utc(2026).toIso8601String(),
+        'result_json': '{not json',
+      });
+
+      await expectLater(
+        runs.findById('broken'),
+        throwsA(
+          corruptRowNaming(
+            'production_runs row broken',
+            'run payload of production_runs row broken is not valid JSON',
+          ),
+        ),
+      );
+    },
+  );
+
+  // The brief's third corruption test targeted `ingredients`, whose
+  // `default_unit` is `NOT NULL` and so cannot be set to NULL at all.
+  // `recipe_components.base_numerator` is legitimately nullable — a manual
+  // component stores the whole group as NULL — so a group filled in *part
+  // way* is the hazard that can really occur.
+  //
+  // The asserted fragment carries the row label as well as the column group.
+  // `base` and `target` name column groups on more than one table, so the
+  // group alone would leave the reader knowing only that some quantity
+  // somewhere was incomplete — which is what this whole file exists to
+  // rule out.
+  test(
+    'a half-filled quantity group throws rather than defaulting to zero',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate('UPDATE recipe_components SET base_numerator = NULL');
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipe_components row r revision 1 component flour',
+            'incomplete quantity in column group base',
+          ),
+        ),
+      );
+    },
+  );
+
+  // The mirror of the test above, and the direction the reader used to fail
+  // open on. `quantityFromColumns` guards "all three present or throw", but
+  // it was only called when the *unit* column was non-null, so a group whose
+  // unit alone is NULL never reached the guard: the component read as
+  // manual and its stored amount was dropped. On a proportional component
+  // the domain then rejects the missing quantity with a `DomainError`, which
+  // is neither `TypeError` nor `FormatException` and escaped the only two
+  // clauses `_componentFromRow` had then — so a caller wrapping storage
+  // reads in `on CorruptDatabaseError` saw nothing at all. That block has an
+  // `on DomainError` clause now (see the last section of this file), but
+  // this test still pins the presence check: the label it asserts is the
+  // column group's, which only the reached guard can name.
+  //
+  // A CHECK constraint would make the half-filled group unrepresentable, but
+  // it would also block the `UPDATE … SET base_numerator = NULL` the test
+  // above uses to plant its corruption. The decision moves to the reader
+  // instead.
+  test(
+    'a component quantity group missing only its unit throws too',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate('UPDATE recipe_components SET base_unit = NULL');
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipe_components row r revision 1 component flour',
+            'incomplete quantity in column group base',
+          ),
+        ),
+      );
+    },
+  );
+
+  // The same fail-open shape on `recipes.max_batch`, where it is worse
+  // because nothing downstream objects: a recipe with no maximum batch
+  // yield is entirely legal, so the stored amount was dropped in silence
+  // and the recipe read back as one that never batched at all.
+  test('a max batch group missing only its unit throws too', () async {
+    await recipes.saveRevision(
+      buildRecipe(maxBatchYield: Quantity.parse('250', Unit.gram)),
+    );
+    await db.rawUpdate('UPDATE recipes SET max_batch_unit = NULL');
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'incomplete quantity in column group max_batch',
+        ),
+      ),
+    );
+  });
+
+  // SQLite has type affinity rather than strict typing, and TEXT affinity
+  // leaves a BLOB alone while it would convert a number to text. So a BLOB
+  // written into any `TEXT NOT NULL` column comes back from sqflite as a
+  // `Uint8List` and reaches the row reader's unchecked cast. Without the
+  // guard the cast throws a bare `TypeError` that names no row at all.
+  test('a BLOB in an ingredients TEXT column is a corrupt row', () async {
+    await db.insert('ingredients', <String, Object?>{
+      'id': 'blob',
+      'name': Uint8List.fromList(const [1, 2, 3]),
+      'default_unit': 'g',
+      'category': null,
+    });
+
+    await expectLater(
+      ingredients.findById('blob'),
+      throwsA(
+        corruptRowNaming(
+          'ingredients row blob',
+          'holds a column of the wrong type',
+        ),
+      ),
+    );
+  });
+
+  // The INTEGER half of the same hazard: INTEGER affinity converts a string
+  // only when it looks like a number, so a non-numeric one stays TEXT and
+  // reaches `_recipeFromRow`'s `as int`.
+  test('a non-numeric recipes.revision is a corrupt row', () async {
+    await recipes.saveRevision(
+      Recipe(
+        id: 'r',
+        revision: 1,
+        name: 'No components',
+        baseYield: Quantity.parse('1000', Unit.gram),
+        modifiedAt: DateTime.utc(2026, 9, 7),
+        components: const [],
+      ),
+    );
+    await db.rawUpdate("UPDATE recipes SET revision = 'not-an-integer'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision not-an-integer',
+          'holds a column of the wrong type',
+        ),
+      ),
+    );
+  });
+
+  // `is_archived` is the one stored flag whose misreading is more than a
+  // diagnosability problem. Reading it as `== 1` made every other integer
+  // `false`, and `false` is the failing-open direction: an archived recipe
+  // read as active raises no blocking `ArchivedDependencyWarning`, so a run
+  // the domain would refuse to finalize becomes finalizable out of a corrupt
+  // stored value, with nothing reported. Measured against the unguarded read
+  // before this guard existed — a recipe saved archived, its column set to
+  // 2, came back with `isArchived` false, `ProductionCalculator` emitted no
+  // warning at all, and the resulting run's `isFinalizable` was true where
+  // the honest archived recipe's was false.
+  //
+  // 2 rather than a wrong-typed value on purpose. INTEGER affinity keeps it
+  // an `int`, so it reaches the read as one and is exactly the shape the old
+  // `== 1` absorbed. A BLOB would prove nothing about the widening: it threw
+  // against the old read too, out of the surrounding `on TypeError` clause,
+  // so such a test would have passed either way. It reaches the new guard
+  // instead, which changes that value's message and not its behavior — both
+  // name the row, and neither guesses.
+  test(
+    'an is_archived value that is neither 0 nor 1 is a corrupt row',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.update('recipes', <String, Object?>{'is_archived': 2});
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipes row r revision 1',
+            'unrecognised is_archived value in recipes row r revision 1: 2',
+          ),
+        ),
+      );
+    },
+  );
+
+  // A component's own guard, proven separately from the recipe's: the
+  // message must name the `recipe_components` row, not the `recipes` row
+  // that reads it, or a corrupt component would be reported against the
+  // wrong table.
+  test('a BLOB in a recipe_components TEXT column is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.update('recipe_components', <String, Object?>{
+      'component_id': Uint8List.fromList(const [4, 5, 6]),
+    });
+
+    // The corrupted column is the one the label itself names, so the label
+    // reports the BLOB rather than a component id — which is the point: it
+    // is built from the raw values so it survives the corruption it
+    // describes. `holds a column of the wrong type` pins which of this
+    // block's two clauses fired.
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipe_components row r revision 1 component [4, 5, 6]',
+          'holds a column of the wrong type',
+        ),
+      ),
+    );
+  });
+
+  // --- the row label each caller threads into quantityFromColumns ---------
+  //
+  // A quantity group knows its column prefix but not its table, and the
+  // prefixes repeat: `base` is on `recipe_components`, `base_yield` on
+  // `recipes`, `target` on `production_runs`, `override` on `run_overrides`.
+  // Each caller therefore passes a row label, and each label needs a test
+  // that pins it — otherwise a wrong label is invisible, since the guard
+  // still throws the right *type*. The four tests below corrupt the same way
+  // in four tables and assert that the four messages differ.
+  //
+  // They corrupt by writing a BLOB rather than a NULL: only
+  // `recipe_components.base_*` is nullable, so `UPDATE … SET
+  // base_yield_numerator = NULL` is refused by the `NOT NULL` constraint
+  // before the read ever happens. A BLOB satisfies the constraint and still
+  // fails `quantityFromColumns`'s `is! String` check, which is the branch
+  // under test.
+
+  test('a wrong-typed quantity column names the recipes row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.update('recipes', <String, Object?>{
+      'base_yield_numerator': Uint8List.fromList(const [1]),
+    });
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'incomplete quantity in column group base_yield',
+        ),
+      ),
+    );
+  });
+
+  // The worst case the row label exists for: `listSummaries` walks the whole
+  // run history, so a message naming only the column group would say a
+  // quantity somewhere in the table was incomplete and leave the reader to
+  // find which run.
+  test(
+    'a wrong-typed target column names the run on the summary path',
+    () async {
+      await runs.save(buildRun());
+      await db.update('production_runs', <String, Object?>{
+        'target_numerator': Uint8List.fromList(const [1]),
+      });
+
+      await expectLater(
+        runs.listSummaries(),
+        throwsA(
+          corruptRowNaming(
+            'production_runs row run-1',
+            'incomplete quantity in column group target',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'a wrong-typed target column names the run on the findById path',
+    () async {
+      await runs.save(buildRun());
+      await db.update('production_runs', <String, Object?>{
+        'target_numerator': Uint8List.fromList(const [1]),
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNaming(
+            'production_runs row run-1',
+            'incomplete quantity in column group target',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('a wrong-typed override column names the override row', () async {
+    await runs.save(buildRun());
+    await runs.recordOverride(
+      'run-1',
+      ('r', 'flour'),
+      Quantity.parse('5', Unit.gram),
+    );
+    await db.update('run_overrides', <String, Object?>{
+      'override_numerator': Uint8List.fromList(const [1]),
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNaming(
+          'run_overrides row for run run-1 recipe r component flour',
+          'incomplete quantity in column group override',
+        ),
+      ),
+    );
+  });
+
+  // `Rational` throws `ArgumentError` on a zero denominator, which is an
+  // `Error` rather than an `Exception` and is not a `TypeError` either, so
+  // it escapes every shape guard this layer has. Both places that rebuild a
+  // stored numerator/denominator pair go through `parseStoredRational`; each
+  // is covered here so neither can regress to a raw `Rational` call.
+  // Driven through the repository rather than by calling
+  // `quantityFromColumns` on a hand-built map, so the assertion pins the row
+  // label the caller threads in as well as the guard itself. A synthetic map
+  // belongs to no table and could not tell the two apart.
+  test(
+    'a zero denominator in a stored quantity group is corrupt',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate("UPDATE recipe_components SET base_denominator = '0'");
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipe_components row r revision 1 component flour',
+            'has a zero denominator',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('a zero denominator in a stored run payload is corrupt', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
+    final recipe = encoded['recipe']! as Map<String, Object?>;
+    (recipe['baseYield']! as Map<String, Object?>)['d'] = '0';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
+      throwsA(
+        corruptRowNaming(
+          _payloadRowLabel,
+          'a run payload quantity has a zero denominator',
+        ),
+      ),
+    );
+  });
+
+  // The other way `parseStoredRational` can fail: `BigInt.parse` throws a
+  // `FormatException`, which is not an `Error` and so would have escaped
+  // past a handler that only caught `ArgumentError`.
+  test('a non-integer stored amount is corrupt', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipe_components SET base_numerator = 'half'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipe_components row r revision 1 component flour',
+          'is not an integer pair',
+        ),
+      ),
+    );
+  });
+
+  // --- production_runs and its two side tables ----------------------------
+  //
+  // The same wrong-typed-column hazard as `ingredients` and `recipes`, on the
+  // fourth repository. `findById` is the reason these matter beyond
+  // symmetry: `_overridesFor` and `_acknowledgementsFor` are read on its own
+  // call path, so without a guard there a corrupt override row surfaces a
+  // raw `TypeError` out of the very method whose other failure modes name
+  // their row.
+
+  test('a BLOB in a production_runs TEXT column is a corrupt row', () async {
+    await runs.save(buildRun());
+    await db.update('production_runs', <String, Object?>{
+      'recipe_id': Uint8List.fromList(const [1, 2, 3]),
+    });
+
+    await expectLater(
+      runs.listSummaries(),
+      throwsA(
+        corruptRowNaming(
+          'production_runs row run-1',
+          'holds a column of the wrong type',
+        ),
+      ),
+    );
+  });
+
+  test('an unparseable production_runs.created_at is a corrupt row', () async {
+    await runs.save(buildRun());
+    await db.update('production_runs', <String, Object?>{
+      'created_at': 'yesterday',
+    });
+
+    await expectLater(
+      runs.listSummaries(),
+      throwsA(
+        corruptRowNaming(
+          'production_runs row run-1',
+          'has an unparseable column',
+        ),
+      ),
+    );
+  });
+
+  // `findById` reads `result_json` and `created_at` itself rather than
+  // through `_summaryFromRow`, so both of its clauses need their own reach.
+  test('a BLOB in production_runs.result_json is a corrupt row', () async {
+    await runs.save(buildRun());
+    await db.update('production_runs', <String, Object?>{
+      'result_json': Uint8List.fromList(const [1, 2, 3]),
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNaming(
+          'production_runs row run-1',
+          'holds a column of the wrong type',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'an unparseable created_at is a corrupt row on the findById path too',
+    () async {
+      await runs.save(buildRun());
+      await db.update('production_runs', <String, Object?>{
+        'created_at': 'yesterday',
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNaming(
+            'production_runs row run-1',
+            'has an unparseable column',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('a BLOB in a run_acknowledgements column is a corrupt row', () async {
+    await runs.save(buildRun());
+    await db.insert('run_acknowledgements', <String, Object?>{
+      'run_id': 'run-1',
+      'warning_kind': 'archived_dependency',
+      'recipe_id': Uint8List.fromList(const [7]),
+      'component_id': null,
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNaming(
+          'run_acknowledgements row for run run-1',
+          'holds a column of the wrong type',
+        ),
+      ),
+    );
+  });
+
+  // `archived_dependency` is the one acknowledgement kind this layer writes
+  // with `component_id = NULL`, and the schema picks a *different* partial
+  // unique index on exactly that nullness. A row carrying a component id
+  // lands under `idx_ack_with_component`, where several of them — one per
+  // component id — are all distinct to SQLite, and then collapse into a
+  // single entry in `_acknowledgementsFor`'s `.toSet()`, because
+  // `ArchivedDependencyWarning` compares by recipe id alone. Measured
+  // against the unguarded branch: two such rows stored, one warning decoded,
+  // no error raised.
+  //
+  // The planted `component_id` is a plain `String` on purpose.
+  // `_warningFromRow` never casts that column, so a wrong-typed value would
+  // reach this same branch rather than the `on TypeError` clause beside it,
+  // and a test that planted one could not tell the two apart.
+  test(
+    'an archived_dependency acknowledgement carrying a component id is a '
+    'corrupt row',
+    () async {
+      await runs.save(buildRun());
+      await db.insert('run_acknowledgements', <String, Object?>{
+        'run_id': 'run-1',
+        'warning_kind': 'archived_dependency',
+        'recipe_id': 'r',
+        'component_id': 'flour',
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNaming(
+            'run_acknowledgements row for run run-1',
+            'warning_kind=archived_dependency, component_id=flour',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('a BLOB in a run_overrides key column is a corrupt row', () async {
+    await runs.save(buildRun());
+    await runs.recordOverride(
+      'run-1',
+      ('r', 'flour'),
+      Quantity.parse('5', Unit.gram),
+    );
+    await db.update('run_overrides', <String, Object?>{
+      'component_id': Uint8List.fromList(const [8]),
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNaming(
+          'run_overrides row for run run-1',
+          'holds a column of the wrong type',
+        ),
+      ),
+    );
+  });
+
+  // --- parses that read a stored column -----------------------------------
+  //
+  // `DateTime.parse`, `Decimal.parse`, and `jsonDecode` all throw
+  // `FormatException`, which is not an `Error` and so is not caught by the
+  // `on TypeError` guards above. Each block that owns one of these parses
+  // needs its own clause, and each clause needs a test that reaches it.
+
+  test('an unparseable recipes.preparation_notes is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipes SET preparation_notes = 'not json'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'has an unparseable column',
+        ),
+      ),
+    );
+  });
+
+  // The second corrupt input to the same column, and it takes a different
+  // clause: text that parses as JSON but is not a list fails at the
+  // `as List<dynamic>` cast, which is a `TypeError`, not at the parse.
+  test(
+    'a preparation_notes that is valid JSON but not a list is a corrupt row',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate(
+        'UPDATE recipes SET preparation_notes = \'{"a":1}\'',
+      );
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipes row r revision 1',
+            'holds a column of the wrong type',
+          ),
+        ),
+      );
+    },
+  );
+
+  // The third corrupt input to the same column, and the one guard in this
+  // layer whose fail-closed behavior depends on a property of a domain
+  // internal rather than on anything visible here. `_recipeFromRow` builds
+  // the notes as a lazy `cast<String>()` view, which checks no element at
+  // construction — the first two lines assert exactly that, since an eager
+  // cast would throw on the line that builds it and this test would then
+  // pass for a reason unrelated to the guard.
+  //
+  // What forces the check back inside the try block is `Recipe`'s factory
+  // copying the list with `List.unmodifiable`, which iterates it (see
+  // `lib/domain/recipe/recipe.dart`). Without that copy the element
+  // `TypeError` would be raised later, by whichever caller first read the
+  // list, outside every guard this layer has. Pinned here so a domain
+  // change that stopped copying is caught by this suite rather than by a
+  // bare `TypeError` reaching a screen.
+  test(
+    'a preparation_notes element of the wrong type is a corrupt row',
+    () async {
+      // The lazy half of the premise: `cast` checks no element when the
+      // view is built, only when one is read. An eager cast would throw on
+      // the line below and this test would pass for a reason that has
+      // nothing to do with the guard.
+      final lazy = <Object?>[1].cast<String>();
+      expect(() => lazy.first, throwsA(isA<TypeError>()));
+
+      // The domain half, asserted against the domain rather than assumed:
+      // `Recipe`'s factory copies the list, so the element check happens
+      // during construction — synchronously, inside whatever try block the
+      // caller built it in. A domain that stopped copying fails here.
+      expect(
+        () => Recipe(
+          id: 'premise',
+          revision: 1,
+          name: 'Premise',
+          baseYield: Quantity.parse('1', Unit.gram),
+          modifiedAt: DateTime.utc(2026, 9, 7),
+          components: const [],
+          preparationNotes: <Object?>[1].cast<String>(),
+        ),
+        throwsA(isA<TypeError>()),
+      );
+
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate("UPDATE recipes SET preparation_notes = '[1, 2]'");
+
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipes row r revision 1',
+            'holds a column of the wrong type',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('an unparseable recipes.modified_at is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipes SET modified_at = 'yesterday'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'has an unparseable column',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'an unparseable recipe_components.rounding_increment is a corrupt row',
+    () async {
+      await recipes.saveRevision(buildRecipe());
+      await db.rawUpdate(
+        "UPDATE recipe_components SET rounding_increment = 'a lot'",
+      );
+
+      // `recipe_components row …` alone is the prefix both of this block's
+      // clauses emit, so it would pass just as well if the `TypeError`
+      // clause had fired. `has an unparseable column` is the half that pins
+      // the clause.
+      await expectLater(
+        recipes.findLatest('r'),
+        throwsA(
+          corruptRowNaming(
+            'recipe_components row r revision 1 component flour',
+            'has an unparseable column',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('an unparseable rounding increment in a run payload is corrupt', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
+    final recipe = encoded['recipe']! as Map<String, Object?>;
+    final components = recipe['components']! as List<Object?>;
+    (components.first! as Map<String, Object?>)['roundingIncrement'] = 'a lot';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
+      throwsA(
+        corruptRowNaming(_payloadRowLabel, 'holds an unparseable value'),
+      ),
+    );
+  });
+
+  test('an unparseable modifiedAt in a run payload is corrupt', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
+    (encoded['recipe']! as Map<String, Object?>)['modifiedAt'] = 'yesterday';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
+      throwsA(
+        corruptRowNaming(_payloadRowLabel, 'holds an unparseable value'),
+      ),
+    );
+  });
+
+  // --- a corrupt value inside a stored result_json ------------------------
+
+  /// Rewrites the `result_json` of the run `run-1` after [edit] has mutated
+  /// the decoded payload in place, so the corruption reaches [findById]
+  /// through the column rather than through a hand-built argument.
+  Future<void> corruptStoredPayload(
+    void Function(Map<String, Object?> payload) edit,
+  ) async {
+    final stored =
+        (await db.query(
+              'production_runs',
+              columns: ['result_json'],
+            )).single['result_json']!
+            as String;
+    final payload = jsonDecode(stored) as Map<String, Object?>;
+    edit(payload);
+    await db.update('production_runs', <String, Object?>{
+      'result_json': jsonEncode(payload),
+    });
+  }
+
+  // The specification requires an unknown unit symbol to name the row without
+  // qualifying where it was read from, and a stored payload carries units of
+  // its own. `unitFromStorage` is handed one string and can only name a
+  // position inside the payload; the row is knowledge `decodeRunPayload`
+  // has and nothing deeper does, so it is labelled there.
+  test(
+    'an unknown unit symbol inside a stored payload names the row',
+    () async {
+      await runs.save(buildRun());
+      await corruptStoredPayload((payload) {
+        final recipe = payload['recipe']! as Map<String, Object?>;
+        (recipe['baseYield']! as Map<String, Object?>)['u'] = 'parsec';
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNaming(
+            'production_runs row run-1',
+            'unknown unit symbol in a run payload quantity: parsec',
+          ),
+        ),
+      );
+    },
+  );
+
+  // The idempotence half of the same label. An unknown warning kind names the
+  // row itself, so the wrapper must leave it alone rather than prefixing a
+  // second copy — a message naming two rows reads as a failure spanning two
+  // rows.
+  test(
+    'a payload failure that already names the row is labelled only once',
+    () async {
+      await runs.save(buildRun());
+      await corruptStoredPayload((payload) {
+        (payload['result']! as Map<String, Object?>)['warnings'] = <Object?>[
+          <String, Object?>{'kind': 'invented'},
+        ];
+      });
+
+      await expectLater(
+        runs.findById('run-1'),
+        throwsA(
+          corruptRowNamedOnce(
+            'production_runs row run-1',
+            'unknown warning kind',
+          ),
+        ),
+      );
+    },
+  );
+
+  // --- a stored value the domain itself rejects ---------------------------
+  //
+  // The whole class the guards above miss. Every read path rebuilds its
+  // domain object through the domain's real factory, and those factories
+  // raise `DomainError`, which is `sealed class DomainError implements
+  // Exception` — neither a `TypeError` nor a `FormatException`. So a stored
+  // value that is well-typed and parses cleanly, but that the domain
+  // refuses, escaped every clause in this layer unlabelled, straight past a
+  // caller wrapping its storage reads in `on CorruptDatabaseError`.
+  //
+  // Four reading sites can actually reach a rejecting factory, and the four
+  // tests below reach one clause each. The remaining wrapper blocks in this
+  // layer construct nothing that validates, so they were deliberately left
+  // without a clause: an unreachable clause fails the coverage gate and
+  // proves nothing.
+
+  // `parseStoredRational` accepts a negative numerator — `BigInt.parse` and
+  // `Rational` both take one — and `Quantity.fromRational` then rejects it.
+  // Guarded in `quantityFromColumns` rather than at each of its callers,
+  // because that is the one function every stored quantity group goes
+  // through: `recipes.base_yield`, `recipes.max_batch`,
+  // `recipe_components.base`, `production_runs.target`, and
+  // `run_overrides.override` all reach the domain factory only there.
+  test('a negative stored amount is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipe_components SET base_numerator = '-500'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipe_components row r revision 1 component flour',
+          'invalid quantity in column group base',
+        ),
+      ),
+    );
+  });
+
+  // The same guard reached through the other four callers, so a clause
+  // added at one call site instead of inside `quantityFromColumns` cannot
+  // pass. Each asserts its own row label, which is what says the failure
+  // was reported against the table it was read from.
+  test('a negative stored amount is a corrupt row on every path', () async {
+    await recipes.saveRevision(
+      buildRecipe(maxBatchYield: Quantity.parse('250', Unit.gram)),
+    );
+    await db.rawUpdate("UPDATE recipes SET max_batch_numerator = '-250'");
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'invalid quantity in column group max_batch',
+        ),
+      ),
+    );
+
+    await runs.save(buildRun());
+    await runs.recordOverride(
+      'run-1',
+      ('r', 'flour'),
+      Quantity.parse('5', Unit.gram),
+    );
+    await db.rawUpdate("UPDATE run_overrides SET override_numerator = '-5'");
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNaming(
+          'run_overrides row for run run-1 recipe r component flour',
+          'invalid quantity in column group override',
+        ),
+      ),
+    );
+
+    await db.rawUpdate("UPDATE production_runs SET target_numerator = '-1000'");
+    await expectLater(
+      runs.listSummaries(),
+      throwsA(
+        corruptRowNaming(
+          'production_runs row run-1',
+          'invalid quantity in column group target',
+        ),
+      ),
+    );
+  });
+
+  // The second named instance: a row whose every column is well-typed and
+  // parses, and which the recipe factory still refuses. A zero base yield is
+  // the reachable one — `Quantity.fromRational` accepts zero, since zero is
+  // not negative, so the value survives every guard below `Recipe`.
+  test('a zero stored base yield is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipes SET base_yield_numerator = '0'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipes row r revision 1',
+          'holds a value the domain rejects',
+        ),
+      ),
+    );
+  });
+
+  // A component's own factory, proven separately from the recipe's, because
+  // the two blocks are separate and the message must name the
+  // `recipe_components` row rather than the `recipes` row that reads it.
+  // `RoundingRule.upToIncrement` rejects a non-positive increment, and `'0'`
+  // is a decimal literal `Decimal.parse` accepts, so it reaches that factory
+  // rather than the `FormatException` clause beside it.
+  test('a non-positive stored rounding increment is a corrupt row', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipe_components SET rounding_increment = '0'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipe_components row r revision 1 component flour',
+          'holds a value the domain rejects',
+        ),
+      ),
+    );
+  });
+
+  // The payload side of the same class. Every domain factory the codec
+  // calls sits inside one try block, so one corruption reaches the clause
+  // that covers `Recipe`, `RecipeComponent`, `RoundingRule`, `BatchPlan`,
+  // and `Quantity` alike.
+  //
+  // `corruptRowNamedOnce` rather than `corruptRowNaming`: the new clause
+  // interpolates the row itself, so a nested rather than sibling clause
+  // would label it a second time.
+  test('a negative amount in a stored run payload is corrupt', () async {
+    await runs.save(buildRun());
+    await corruptStoredPayload((payload) {
+      final recipe = payload['recipe']! as Map<String, Object?>;
+      (recipe['baseYield']! as Map<String, Object?>)['n'] = '-1000';
+    });
+
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNamedOnce(
+          'production_runs row run-1',
+          'holds a value the domain rejects',
+        ),
+      ),
+    );
+  });
+
+  // The other direction, and the reason each new clause names `DomainError`
+  // rather than `Exception`: `CorruptDatabaseError` is an `Exception` too,
+  // so a clause widened by one word would catch the labelled failures the
+  // inner guards already raised and relabel them against the outer row.
+  //
+  // Asserted with `startsWith` rather than `contains`, for the reason
+  // `result_codec_test.dart` gives for the same choice: the wrapper
+  // interpolates the inner message, so a `contains` assertion passes under
+  // the relabel it exists to rule out. The corruption travels through both
+  // blocks that gained a clause — `_componentFromRow` raises it and
+  // `_recipeFromRow` reads that component — so either one widened fails
+  // here.
+  test('a labelled failure is not relabelled by the new clauses', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipe_components SET base_denominator = '0'");
+
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          startsWith(
+            'amount in column group base of recipe_components row r '
+            'revision 1 component flour has a zero denominator',
+          ),
+        ),
+      ),
+    );
+  });
+}
