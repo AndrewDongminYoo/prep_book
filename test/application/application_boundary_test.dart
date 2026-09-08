@@ -33,9 +33,35 @@ bool _isAllowedUri(String uri) {
   return !uri.contains('../');
 }
 
+/// Plain substrings that must never appear in an application-layer source,
+/// checked against the raw, unstripped source as a second, independent
+/// gate. The allowlist above is the primary check; this denylist is
+/// deliberately redundant so that anything which slips past the directive
+/// parser — such as an apostrophe in a doc comment pairing with a directive's
+/// opening quote and hiding the whole `import` from `_directiveStatement` —
+/// is still caught by a search that cannot be fooled by parsing tricks.
+/// Accepted tradeoff: a banned name appearing inside an application string
+/// literal would also trip this gate — a false positive, which is loud and
+/// gets reworded, never a silent pass. Mirrors
+/// `test/domain/domain_purity_test.dart`'s denylist.
+const _bannedSubstrings = <String>[
+  'package:flutter/',
+  'package:sqflite',
+  'prep_book/persistence/sqflite/',
+];
+
+/// Every `.dart` file directly or transitively under [path].
+///
+/// Asserts [path] exists rather than silently answering "nothing here" for
+/// a directory that isn't there. Both scans below share this helper, and a
+/// missing directory must fail loudly for either of them — reporting a
+/// non-existent tree as clean is the exact vacuity hole an earlier fix round
+/// closed for the allowlist scan alone.
 List<File> _dartFilesUnder(String path) {
   final dir = Directory(path);
-  if (!dir.existsSync()) return const [];
+  if (!dir.existsSync()) {
+    throw StateError('$path does not exist, so nothing was checked.');
+  }
   return dir
       .listSync(recursive: true)
       .whereType<File>()
@@ -47,9 +73,6 @@ void main() {
   test(
     'every application import or export resolves inside the allowed set',
     () {
-      final dir = Directory('lib/application');
-      expect(dir.existsSync(), isTrue, reason: 'lib/application must exist');
-
       final offenders = <String>[];
       for (final file in _dartFilesUnder('lib/application')) {
         final source = file.readAsStringSync();
@@ -60,6 +83,22 @@ void main() {
             if (!_isAllowedUri(uri)) {
               offenders.add('${file.path} references disallowed uri: $uri');
             }
+          }
+        }
+      }
+      expect(offenders, isEmpty);
+    },
+  );
+
+  test(
+    'no application source contains a banned substring (denylist backstop)',
+    () {
+      final offenders = <String>[];
+      for (final file in _dartFilesUnder('lib/application')) {
+        final source = file.readAsStringSync();
+        for (final banned in _bannedSubstrings) {
+          if (source.contains(banned)) {
+            offenders.add('${file.path} contains banned substring: $banned');
           }
         }
       }
