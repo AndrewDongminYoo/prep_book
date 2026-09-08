@@ -977,7 +977,10 @@ final class DuplicateRecipe {
     // references the source here — the operator asked for it directly.
     if (source == null) throw MissingDependencyError(sourceId, sourceId);
 
-    return SaveRecipeRevision(_recipes).call(
+    // `return await`, not a bare `return`: `very_good_analysis` enables
+    // `async_return_with_no_await`, which rejects an `async` body that hands
+    // back a future it never awaited.
+    return await SaveRecipeRevision(_recipes).call(
       Recipe(
         id: newId,
         // Ignored by SaveRecipeRevision, which assigns the real number.
@@ -1394,7 +1397,9 @@ final class _FixedClock implements Clock {
 Future<ProductionRun> _buildRun() async {
   final recipes = FakeRecipeRepository()
     ..seed(buildRecipeWithManualComponent(id: 'a'));
-  return StartProductionRun(recipes, _FixedIds(), _FixedClock()).call(
+  // `return await` for the reason Task 5 records: `async_return_with_no_await`
+  // rejects an `async` body that returns a future without awaiting it.
+  return await StartProductionRun(recipes, _FixedIds(), _FixedClock()).call(
     recipeId: 'a',
     targetYield: Quantity.parse('1000', Unit.gram),
   );
