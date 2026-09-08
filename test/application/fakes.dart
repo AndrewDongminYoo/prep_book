@@ -88,6 +88,7 @@ final class FakeRecipeRepository implements RecipeRepository {
 
   @override
   Future<Recipe?> findLatest(String id) async {
+    calls.add('findLatest:$id');
     final list = revisions[id];
     if (list == null || list.isEmpty) return null;
     return _highest(list);

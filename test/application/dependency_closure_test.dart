@@ -62,6 +62,7 @@ void main() {
     final closure = await resolveDependencyClosure(recipes, root);
 
     expect(closure.keys.toSet(), {'cake', 'left', 'right', 'syrup'});
+    expect(recipes.calls.where((call) => call == 'findLatest:syrup').length, 1);
   });
 
   test('a cycle terminates the walk instead of hanging', () async {
