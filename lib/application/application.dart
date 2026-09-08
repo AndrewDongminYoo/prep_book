@@ -11,3 +11,4 @@ export 'dependency_closure.dart';
 export 'recipe_library.dart';
 export 'recipe_lifecycle.dart';
 export 'save_recipe_revision.dart';
+export 'start_production_run.dart';
