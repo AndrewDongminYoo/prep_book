@@ -77,6 +77,7 @@ A bullet naming no test is not evidence that nothing pins it — check before as
 - **A saved recipe edit creates a new revision.** Existing snapshots keep the revision values they were computed from.
 - **The recipe dependency graph is acyclic.** Direct and indirect cycles are rejected before a revision is committed, and the rejection names the dependency path.
 - **No inferred conversions.** Conversion is allowed only within one unit dimension with a defined factor. Never infer density, and never convert mass to volume automatically.
+- **A recipe's base yield unit is guarded in both directions, and the inbound direction blocks the save.** The editor already refused a sub-recipe line measured in a unit the referenced recipe's yield cannot convert to; it now also refuses a base yield unit that a recipe consuming this one cannot convert to, which would otherwise throw `IncompatibleYieldUnitError` on every future run of that parent. The check fires on a breakage that was already stored, not only on one the current edit introduces. `RecipeEditorState.dependentsBlockedByBaseYieldUnit` owns it and states why converting the parent's amount instead is not on offer.
 - **Free-form amounts are `manual` components, not numeric zeroes.** "To taste" and "as needed" produce a review warning, not a quantity.
 - **Rounding never destroys the exact value.** The unrounded quantity stays visible and stored alongside the rounded one.
 - **A production run is computed before persistence.** The snapshot and its acknowledgement state are committed in one transaction.
