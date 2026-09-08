@@ -207,14 +207,12 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
   });
 
   @override
-  Future<void> recordAcknowledgement(
-    String runId,
-    ProductionWarning warning,
-  ) => _db.insert(
-    'run_acknowledgements',
-    _acknowledgementRow(runId, warning),
-    conflictAlgorithm: ConflictAlgorithm.replace,
-  );
+  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
+      _db.insert(
+        'run_acknowledgements',
+        _acknowledgementRow(runId, warning),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
 
   @override
   Future<void> recordOverride(String runId, OverrideKey key, Quantity value) =>

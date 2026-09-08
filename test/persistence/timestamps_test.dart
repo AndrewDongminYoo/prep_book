@@ -18,10 +18,7 @@ void main() {
     expect(wholeMillisecond.microsecond, 0);
     expect(wholeMillisecond.toIso8601String(), '2026-09-07T12:00:00.001Z');
 
-    expect(
-      timestampToStorage(wholeMillisecond),
-      '2026-09-07T12:00:00.001000Z',
-    );
+    expect(timestampToStorage(wholeMillisecond), '2026-09-07T12:00:00.001000Z');
   });
 
   test('an instant carrying microseconds is stored unchanged', () {
@@ -49,9 +46,9 @@ void main() {
   test('lexical order follows chronological order across the two forms', () {
     expect(oneMicrosecondLater.isAfter(wholeMillisecond), isTrue);
     expect(
-      timestampToStorage(wholeMillisecond).compareTo(
-        timestampToStorage(oneMicrosecondLater),
-      ),
+      timestampToStorage(
+        wholeMillisecond,
+      ).compareTo(timestampToStorage(oneMicrosecondLater)),
       lessThan(0),
     );
   });

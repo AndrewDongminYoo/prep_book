@@ -337,9 +337,10 @@ void main() {
     final flour = decoded.result.components.first;
     expect(
       flour.total!.exact,
-      Quantity.parse('1', Unit.kilogram).scaleBy(
-        Rational(BigInt.one, BigInt.from(3)),
-      ),
+      Quantity.parse(
+        '1',
+        Unit.kilogram,
+      ).scaleBy(Rational(BigInt.one, BigInt.from(3))),
     );
     expect(flour.total!.exact, flour.total!.displayed);
   });
@@ -353,39 +354,33 @@ void main() {
 
     expect(decoded.result.warnings, run.result.warnings);
     expect(decoded.result.warnings, hasLength(3));
-    expect(
-      decoded.result.warnings.map((w) => w.runtimeType).toSet(),
-      {
-        ManualComponentWarning,
-        RoundingAdjustedWarning,
-        ArchivedDependencyWarning,
-      },
-    );
+    expect(decoded.result.warnings.map((w) => w.runtimeType).toSet(), {
+      ManualComponentWarning,
+      RoundingAdjustedWarning,
+      ArchivedDependencyWarning,
+    });
   });
 
-  test(
-    'a run with a sub-recipe and multiple batches round-trips',
-    () {
-      final run = buildRunWithSubRecipeAndBatches();
-      final decoded = decodeRunPayload(
-        encodeRunPayload(run),
-        rowLabel: _rowLabel,
-      );
+  test('a run with a sub-recipe and multiple batches round-trips', () {
+    final run = buildRunWithSubRecipeAndBatches();
+    final decoded = decodeRunPayload(
+      encodeRunPayload(run),
+      rowLabel: _rowLabel,
+    );
 
-      expectRecipe(decoded.recipe, run.recipe);
-      expectDependencySnapshot(
-        decoded.dependencySnapshot,
-        run.dependencySnapshot,
-      );
-      expectResult(decoded.result, run.result);
+    expectRecipe(decoded.recipe, run.recipe);
+    expectDependencySnapshot(
+      decoded.dependencySnapshot,
+      run.dependencySnapshot,
+    );
+    expectResult(decoded.result, run.result);
 
-      expect(decoded.result.batchPlan.fullBatchCount, 2);
-      expect(decoded.result.batchPlan.remainderYield, isNotNull);
-      final syrupRef = decoded.result.components.last;
-      expect(syrupRef.subRecipe, isNotNull);
-      expect(syrupRef.subRecipe!.components, hasLength(1));
-    },
-  );
+    expect(decoded.result.batchPlan.fullBatchCount, 2);
+    expect(decoded.result.batchPlan.remainderYield, isNotNull);
+    final syrupRef = decoded.result.components.last;
+    expect(syrupRef.subRecipe, isNotNull);
+    expect(syrupRef.subRecipe!.components, hasLength(1));
+  });
 
   test('a run with dynamic count and named-yield units round-trips', () {
     final run = buildRunWithDynamicUnits();
@@ -585,36 +580,33 @@ void main() {
   // the test above never walks. It must still name the row, which is the
   // whole reason the label is threaded through `_scaledComponentFromJson`
   // rather than only used at the top level.
-  test(
-    "an unrecognized warning kind inside a sub-recipe's result names the "
-    'row too',
-    () {
-      final encoded =
-          jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-              as Map<String, Object?>;
-      final result = encoded['result']! as Map<String, Object?>;
-      final components = result['components']! as List<Object?>;
-      final syrup = components.last! as Map<String, Object?>;
-      final subResult = syrup['subRecipe']! as Map<String, Object?>;
-      // The sub-recipe's own result carries no warnings of its own, so one
-      // is planted rather than mutated — the decoder must reject it wherever
-      // in the tree it appears.
-      subResult['warnings'] = <Object?>[
-        <String, Object?>{'kind': 'invented'},
-      ];
+  test("an unrecognized warning kind inside a sub-recipe's result names the "
+      'row too', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
+            as Map<String, Object?>;
+    final result = encoded['result']! as Map<String, Object?>;
+    final components = result['components']! as List<Object?>;
+    final syrup = components.last! as Map<String, Object?>;
+    final subResult = syrup['subRecipe']! as Map<String, Object?>;
+    // The sub-recipe's own result carries no warnings of its own, so one
+    // is planted rather than mutated — the decoder must reject it wherever
+    // in the tree it appears.
+    subResult['warnings'] = <Object?>[
+      <String, Object?>{'kind': 'invented'},
+    ];
 
-      expect(
-        () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
-        throwsA(
-          isA<CorruptDatabaseError>().having(
-            (error) => error.message,
-            'message',
-            allOf(contains(_rowLabel), contains('unknown warning kind')),
-          ),
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          allOf(contains(_rowLabel), contains('unknown warning kind')),
         ),
-      );
-    },
-  );
+      ),
+    );
+  });
 
   test('an unrecognized component target kind is a corrupt database', () {
     final encoded =
@@ -682,53 +674,46 @@ void main() {
     );
   });
 
-  test(
-    'a batch count that disagrees with a component perBatch length '
-    'is a corrupt database',
-    () {
-      final encoded =
-          jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-              as Map<String, Object?>;
-      final result = encoded['result']! as Map<String, Object?>;
-      final batchPlan = result['batchPlan']! as Map<String, Object?>;
-      // fullBatchCount changes, but remainderYield is left alone, so
-      // BatchPlan.decompose still reconstructs a self-consistent triple —
-      // only the components' perBatch length still remembers the truth.
-      batchPlan['fullBatchCount'] = (batchPlan['fullBatchCount']! as int) + 3;
+  test('a batch count that disagrees with a component perBatch length '
+      'is a corrupt database', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
+            as Map<String, Object?>;
+    final result = encoded['result']! as Map<String, Object?>;
+    final batchPlan = result['batchPlan']! as Map<String, Object?>;
+    // fullBatchCount changes, but remainderYield is left alone, so
+    // BatchPlan.decompose still reconstructs a self-consistent triple —
+    // only the components' perBatch length still remembers the truth.
+    batchPlan['fullBatchCount'] = (batchPlan['fullBatchCount']! as int) + 3;
 
-      expect(
-        () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
-        throwsA(isA<CorruptDatabaseError>()),
-      );
-    },
-  );
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(isA<CorruptDatabaseError>()),
+    );
+  });
 
-  test(
-    "a full-batch yield that disagrees with a proportional component's "
-    'per-batch ratio is a corrupt database',
-    () {
-      final encoded =
-          jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-              as Map<String, Object?>;
-      final result = encoded['result']! as Map<String, Object?>;
-      final batchPlan = result['batchPlan']! as Map<String, Object?>;
-      final fullBatchYield =
-          batchPlan['fullBatchYield']! as Map<String, Object?>;
-      // fullBatchYield changes alone (400g -> 500g); remainderYield (200g)
-      // is left untouched. BatchPlan.decompose still reconstructs a
-      // self-consistent triple from these two numbers alone (2 full
-      // batches of 500g plus a 200g remainder), so only 'butter' — a
-      // proportional component whose stored per-batch quantities were
-      // scaled against the real 400g yield — still remembers the truth.
-      fullBatchYield['n'] = '500';
-      fullBatchYield['d'] = '1';
+  test("a full-batch yield that disagrees with a proportional component's "
+      'per-batch ratio is a corrupt database', () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
+            as Map<String, Object?>;
+    final result = encoded['result']! as Map<String, Object?>;
+    final batchPlan = result['batchPlan']! as Map<String, Object?>;
+    final fullBatchYield = batchPlan['fullBatchYield']! as Map<String, Object?>;
+    // fullBatchYield changes alone (400g -> 500g); remainderYield (200g)
+    // is left untouched. BatchPlan.decompose still reconstructs a
+    // self-consistent triple from these two numbers alone (2 full
+    // batches of 500g plus a 200g remainder), so only 'butter' — a
+    // proportional component whose stored per-batch quantities were
+    // scaled against the real 400g yield — still remembers the truth.
+    fullBatchYield['n'] = '500';
+    fullBatchYield['d'] = '1';
 
-      expect(
-        () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
-        throwsA(isA<CorruptDatabaseError>()),
-      );
-    },
-  );
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(isA<CorruptDatabaseError>()),
+    );
+  });
 
   // The four cases below damage a component's total, its per-batch list, or
   // the run's scale ratio — each one a value the decoder rebuilds from its

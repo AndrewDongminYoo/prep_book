@@ -221,23 +221,20 @@ void main() {
   // it would also block the `UPDATE … SET base_numerator = NULL` the test
   // above uses to plant its corruption. The decision moves to the reader
   // instead.
-  test(
-    'a component quantity group missing only its unit throws too',
-    () async {
-      await recipes.saveRevision(buildRecipe());
-      await db.rawUpdate('UPDATE recipe_components SET base_unit = NULL');
+  test('a component quantity group missing only its unit throws too', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate('UPDATE recipe_components SET base_unit = NULL');
 
-      await expectLater(
-        recipes.findLatest('r'),
-        throwsA(
-          corruptRowNaming(
-            'recipe_components row r revision 1 component flour',
-            'incomplete quantity in column group base',
-          ),
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipe_components row r revision 1 component flour',
+          'incomplete quantity in column group base',
         ),
-      );
-    },
-  );
+      ),
+    );
+  });
 
   // The same fail-open shape on `recipes.max_batch`, where it is worse
   // because nothing downstream objects: a recipe with no maximum batch
@@ -453,11 +450,10 @@ void main() {
 
   test('a wrong-typed override column names the override row', () async {
     await runs.save(buildRun());
-    await runs.recordOverride(
-      'run-1',
-      ('r', 'flour'),
-      Quantity.parse('5', Unit.gram),
-    );
+    await runs.recordOverride('run-1', (
+      'r',
+      'flour',
+    ), Quantity.parse('5', Unit.gram));
     await db.update('run_overrides', <String, Object?>{
       'override_numerator': Uint8List.fromList(const [1]),
     });
@@ -482,23 +478,20 @@ void main() {
   // `quantityFromColumns` on a hand-built map, so the assertion pins the row
   // label the caller threads in as well as the guard itself. A synthetic map
   // belongs to no table and could not tell the two apart.
-  test(
-    'a zero denominator in a stored quantity group is corrupt',
-    () async {
-      await recipes.saveRevision(buildRecipe());
-      await db.rawUpdate("UPDATE recipe_components SET base_denominator = '0'");
+  test('a zero denominator in a stored quantity group is corrupt', () async {
+    await recipes.saveRevision(buildRecipe());
+    await db.rawUpdate("UPDATE recipe_components SET base_denominator = '0'");
 
-      await expectLater(
-        recipes.findLatest('r'),
-        throwsA(
-          corruptRowNaming(
-            'recipe_components row r revision 1 component flour',
-            'has a zero denominator',
-          ),
+    await expectLater(
+      recipes.findLatest('r'),
+      throwsA(
+        corruptRowNaming(
+          'recipe_components row r revision 1 component flour',
+          'has a zero denominator',
         ),
-      );
-    },
-  );
+      ),
+    );
+  });
 
   test('a zero denominator in a stored run payload is corrupt', () {
     final encoded =
@@ -651,37 +644,33 @@ void main() {
   // `_warningFromRow` never casts that column, so a wrong-typed value would
   // reach this same branch rather than the `on TypeError` clause beside it,
   // and a test that planted one could not tell the two apart.
-  test(
-    'an archived_dependency acknowledgement carrying a component id is a '
-    'corrupt row',
-    () async {
-      await runs.save(buildRun());
-      await db.insert('run_acknowledgements', <String, Object?>{
-        'run_id': 'run-1',
-        'warning_kind': 'archived_dependency',
-        'recipe_id': 'r',
-        'component_id': 'flour',
-      });
+  test('an archived_dependency acknowledgement carrying a component id is a '
+      'corrupt row', () async {
+    await runs.save(buildRun());
+    await db.insert('run_acknowledgements', <String, Object?>{
+      'run_id': 'run-1',
+      'warning_kind': 'archived_dependency',
+      'recipe_id': 'r',
+      'component_id': 'flour',
+    });
 
-      await expectLater(
-        runs.findById('run-1'),
-        throwsA(
-          corruptRowNaming(
-            'run_acknowledgements row for run run-1',
-            'warning_kind=archived_dependency, component_id=flour',
-          ),
+    await expectLater(
+      runs.findById('run-1'),
+      throwsA(
+        corruptRowNaming(
+          'run_acknowledgements row for run run-1',
+          'warning_kind=archived_dependency, component_id=flour',
         ),
-      );
-    },
-  );
+      ),
+    );
+  });
 
   test('a BLOB in a run_overrides key column is a corrupt row', () async {
     await runs.save(buildRun());
-    await runs.recordOverride(
-      'run-1',
-      ('r', 'flour'),
-      Quantity.parse('5', Unit.gram),
-    );
+    await runs.recordOverride('run-1', (
+      'r',
+      'flour',
+    ), Quantity.parse('5', Unit.gram));
     await db.update('run_overrides', <String, Object?>{
       'component_id': Uint8List.fromList(const [8]),
     });
@@ -726,9 +715,7 @@ void main() {
     'a preparation_notes that is valid JSON but not a list is a corrupt row',
     () async {
       await recipes.saveRevision(buildRecipe());
-      await db.rawUpdate(
-        'UPDATE recipes SET preparation_notes = \'{"a":1}\'',
-      );
+      await db.rawUpdate('UPDATE recipes SET preparation_notes = \'{"a":1}\'');
 
       await expectLater(
         recipes.findLatest('r'),
@@ -847,9 +834,7 @@ void main() {
 
     expect(
       () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
-      throwsA(
-        corruptRowNaming(_payloadRowLabel, 'holds an unparseable value'),
-      ),
+      throwsA(corruptRowNaming(_payloadRowLabel, 'holds an unparseable value')),
     );
   });
 
@@ -860,9 +845,7 @@ void main() {
 
     expect(
       () => decodeRunPayload(jsonEncode(encoded), rowLabel: _payloadRowLabel),
-      throwsA(
-        corruptRowNaming(_payloadRowLabel, 'holds an unparseable value'),
-      ),
+      throwsA(corruptRowNaming(_payloadRowLabel, 'holds an unparseable value')),
     );
   });
 
@@ -997,11 +980,10 @@ void main() {
     );
 
     await runs.save(buildRun());
-    await runs.recordOverride(
-      'run-1',
-      ('r', 'flour'),
-      Quantity.parse('5', Unit.gram),
-    );
+    await runs.recordOverride('run-1', (
+      'r',
+      'flour',
+    ), Quantity.parse('5', Unit.gram));
     await db.rawUpdate("UPDATE run_overrides SET override_numerator = '-5'");
     await expectLater(
       runs.findById('run-1'),

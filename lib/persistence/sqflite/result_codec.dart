@@ -748,8 +748,6 @@ ProductionWarning _warningFromJson(
     'archived_dependency' => ArchivedDependencyWarning(
       json['recipeId']! as String,
     ),
-    _ => throw CorruptDatabaseError(
-      'unknown warning kind in $rowLabel: $kind',
-    ),
+    _ => throw CorruptDatabaseError('unknown warning kind in $rowLabel: $kind'),
   };
 }

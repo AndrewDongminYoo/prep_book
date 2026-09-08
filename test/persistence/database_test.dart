@@ -126,10 +126,7 @@ void main() {
       );
 
       // With a component_id: covered by idx_ack_with_component instead.
-      await db.insert(
-        'run_acknowledgements',
-        ack(componentId: 'flour'),
-      );
+      await db.insert('run_acknowledgements', ack(componentId: 'flour'));
       await expectLater(
         db.insert('run_acknowledgements', ack(componentId: 'flour')),
         throwsA(isA<DatabaseException>()),

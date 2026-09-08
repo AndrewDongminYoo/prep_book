@@ -59,21 +59,15 @@ void main() {
     expect(quantityFromColumns(columns, 'base', rowLabel: _testRow), quantity);
   });
 
-  test(
-    'a count unit built from an empty symbol round-trips, because the '
-    'domain permits constructing one',
-    () {
-      final quantity = Quantity.parse('1', Unit.count(''));
+  test('a count unit built from an empty symbol round-trips, because the '
+      'domain permits constructing one', () {
+    final quantity = Quantity.parse('1', Unit.count(''));
 
-      final columns = quantityToColumns(quantity, 'base');
-      expect(columns['base_unit'], 'count:');
+    final columns = quantityToColumns(quantity, 'base');
+    expect(columns['base_unit'], 'count:');
 
-      expect(
-        quantityFromColumns(columns, 'base', rowLabel: _testRow),
-        quantity,
-      );
-    },
-  );
+    expect(quantityFromColumns(columns, 'base', rowLabel: _testRow), quantity);
+  });
 
   test('unitToStorage and unitFromStorage agree for every fixed unit', () {
     for (final unit in _knownFixedUnits) {
@@ -99,24 +93,18 @@ void main() {
     );
   });
 
-  test(
-    'a recognised separator with an unrecognised kind is a corrupt '
-    'database',
-    () {
-      expect(
-        () => unitFromStorage('inch:5', location: _testRow),
-        throwsA(isA<CorruptDatabaseError>()),
-      );
-    },
-  );
+  test('a recognised separator with an unrecognised kind is a corrupt '
+      'database', () {
+    expect(
+      () => unitFromStorage('inch:5', location: _testRow),
+      throwsA(isA<CorruptDatabaseError>()),
+    );
+  });
 
   test('a column group missing a column is a corrupt database', () {
     expect(
       () => quantityFromColumns(
-        <String, Object?>{
-          'base_numerator': '1',
-          'base_denominator': '3',
-        },
+        <String, Object?>{'base_numerator': '1', 'base_denominator': '3'},
         'base',
         rowLabel: _testRow,
       ),
