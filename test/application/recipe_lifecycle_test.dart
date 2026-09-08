@@ -4,6 +4,11 @@ import 'package:prep_book/domain/domain.dart';
 
 import 'fakes.dart';
 
+final class _FixedClock implements Clock {
+  @override
+  DateTime now() => DateTime.utc(2026, 9, 8, 12);
+}
+
 void main() {
   test('archiving sets the flag on every revision', () async {
     final recipes = FakeRecipeRepository()
@@ -25,12 +30,32 @@ void main() {
     expect((await recipes.findLatest('a'))!.isArchived, isFalse);
   });
 
+  test('archiving a recipe that does not exist throws', () async {
+    final recipes = FakeRecipeRepository();
+
+    await expectLater(
+      ArchiveRecipe(recipes).call('gone', isArchived: true),
+      throwsA(
+        isA<MissingDependencyError>().having(
+          (e) => e.message,
+          'message',
+          'recipe gone is not in the index',
+        ),
+      ),
+    );
+    expect(
+      recipes.calls.where((call) => call.startsWith('setArchived:')),
+      isEmpty,
+    );
+  });
+
   test('a duplicate starts at revision 1 under the new id', () async {
     final recipes = FakeRecipeRepository()
       ..seed(buildRecipe(id: 'a', revision: 4, name: 'Original'));
 
     final copy = await DuplicateRecipe(
       recipes,
+      _FixedClock(),
     ).call(sourceId: 'a', newId: 'b', name: 'Copy');
 
     expect(copy.id, 'b');
@@ -45,6 +70,7 @@ void main() {
 
     final copy = await DuplicateRecipe(
       recipes,
+      _FixedClock(),
     ).call(sourceId: 'a', newId: 'b', name: 'Copy');
 
     expect(copy.isArchived, isFalse);
@@ -54,7 +80,10 @@ void main() {
     final recipes = FakeRecipeRepository();
 
     await expectLater(
-      DuplicateRecipe(recipes).call(sourceId: 'gone', newId: 'b', name: 'Copy'),
+      DuplicateRecipe(
+        recipes,
+        _FixedClock(),
+      ).call(sourceId: 'gone', newId: 'b', name: 'Copy'),
       throwsA(
         isA<MissingDependencyError>().having(
           (e) => e.message,
@@ -63,7 +92,35 @@ void main() {
         ),
       ),
     );
+    expect(
+      recipes.calls.where((call) => call.startsWith('saveRevision:')),
+      isEmpty,
+    );
   });
+
+  test(
+    'duplicating into an id that already has a stored recipe throws',
+    () async {
+      final recipes = FakeRecipeRepository()
+        ..seed(buildRecipe(id: 'a', name: 'Source'))
+        ..seed(buildRecipe(id: 'b', name: 'Occupant'));
+
+      await expectLater(
+        DuplicateRecipe(
+          recipes,
+          _FixedClock(),
+        ).call(sourceId: 'a', newId: 'b', name: 'Copy'),
+        throwsA(isA<ArgumentError>()),
+      );
+      // The occupant's own latest revision is untouched, not silently
+      // revised into a copy of the source under the occupant's id.
+      expect((await recipes.findLatest('b'))!.name, 'Occupant');
+      expect(
+        recipes.calls.where((call) => call.startsWith('saveRevision:')),
+        isEmpty,
+      );
+    },
+  );
 
   test(
     'category, maxBatchYield, and preparationNotes survive onto the copy',
@@ -93,6 +150,7 @@ void main() {
 
       final copy = await DuplicateRecipe(
         recipes,
+        _FixedClock(),
       ).call(sourceId: 'a', newId: 'b', name: 'Copy');
 
       expect(copy.category, 'Pastry');

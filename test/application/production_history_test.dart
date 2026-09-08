@@ -142,6 +142,7 @@ void main() {
       // argument and always asks the repository for a hardcoded id would
       // still pass. Two distinct stored runs close that gap.
       expect(await OpenProductionRun(runs).call('first'), same(first));
+      expect(await OpenProductionRun(runs).call('second'), same(second));
     },
   );
 
@@ -152,6 +153,12 @@ void main() {
     );
   });
 
+  // This is an integration check across StartProductionRun, SaveProductionRun,
+  // SaveRecipeRevision, and OpenProductionRun together, not new coverage of
+  // logic this task added — the same invariant is pinned where it is
+  // actually at risk, at the domain layer
+  // (test/domain/production_run_test.dart) and the persistence layer
+  // (test/persistence/production_run_repository_test.dart).
   test('a stored run keeps the revision it was computed from', () async {
     final recipes = FakeRecipeRepository()
       ..seed(buildRecipe(id: 'a', name: 'Original'));
@@ -165,6 +172,7 @@ void main() {
 
     await SaveRecipeRevision(
       recipes,
+      _Clock([DateTime.utc(2026, 9, 8, 11)]),
     ).call(buildRecipe(id: 'a', name: 'Edited'));
 
     final reopened = await OpenProductionRun(runs).call('run-1');
