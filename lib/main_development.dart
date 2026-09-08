@@ -7,7 +7,7 @@ import 'package:prep_book/presentation/presentation.dart';
 
 Future<void> main() async {
   await bootstrap((recipes, ingredients) async {
-    await _seedIfEmpty(recipes, ingredients);
+    await _seedDevelopmentData(recipes, ingredients);
     return App(
       listLibrary: ListLibrary(recipes),
       searchLibrary: SearchLibrary(recipes),
@@ -21,27 +21,30 @@ Future<void> main() async {
   });
 }
 
-/// Writes [_developmentLibrary] and [_developmentIngredients] into an empty
-/// database, so a development build has something to list without
-/// duplicating itself on every run.
+/// Writes [_developmentLibrary] and [_developmentIngredients] into a
+/// development database, so a development build has something to list
+/// without duplicating itself on every run.
 ///
 /// Development only, and deliberately so: a temporary fixture written into
 /// a production database is not removable afterwards. Nothing here is
 /// migrated data — these recipes were written for this file.
 ///
-/// The two libraries are checked separately rather than under one guard: a
-/// development device already carrying the recipes from an earlier build
-/// would otherwise never receive the ingredient records those recipes have
-/// always referenced, and the editor would name every component by its
-/// identifier.
-Future<void> _seedIfEmpty(
+/// Only the recipes are guarded on an empty library, and the asymmetry is
+/// the point. `saveRevision` only ever inserts a revision, so re-running
+/// that loop over fixtures pinned at revision 1 would throw rather than
+/// heal. `upsert` replaces a row carrying the same id, so the ingredients
+/// are written unconditionally: a launch that stored some of them and then
+/// failed is repaired by the next one, where a guard on a nonempty table
+/// would leave the rest missing for good and the editor would name their
+/// components by identifier. That reserves these ids: renaming one of these
+/// ingredients in the editor does not survive the next development launch,
+/// while an ingredient the editor creates under its own id is untouched.
+Future<void> _seedDevelopmentData(
   RecipeRepository recipes,
   IngredientRepository ingredients,
 ) async {
-  if ((await ingredients.listAll()).isEmpty) {
-    for (final ingredient in _developmentIngredients()) {
-      await ingredients.upsert(ingredient);
-    }
+  for (final ingredient in _developmentIngredients()) {
+    await ingredients.upsert(ingredient);
   }
   if ((await recipes.listLatestRevisions()).isNotEmpty) return;
   for (final recipe in _developmentLibrary()) {
