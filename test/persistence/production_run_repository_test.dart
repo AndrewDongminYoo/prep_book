@@ -360,25 +360,22 @@ void main() {
   // rounding_adjusted, so the archived_dependency row is already inserted
   // when the collision aborts the transaction. Without the transaction the
   // table would be left holding two rows, not one.
-  test(
-    'a colliding acknowledgement rolls back the whole save',
-    () async {
-      await db.execute('PRAGMA foreign_keys = OFF');
-      await db.insert('run_acknowledgements', <String, Object?>{
-        'run_id': 'run-1',
-        'warning_kind': 'manual_component',
-        'recipe_id': 'cake',
-        'component_id': 'eggs',
-      });
-      await db.execute('PRAGMA foreign_keys = ON');
+  test('a colliding acknowledgement rolls back the whole save', () async {
+    await db.execute('PRAGMA foreign_keys = OFF');
+    await db.insert('run_acknowledgements', <String, Object?>{
+      'run_id': 'run-1',
+      'warning_kind': 'manual_component',
+      'recipe_id': 'cake',
+      'component_id': 'eggs',
+    });
+    await db.execute('PRAGMA foreign_keys = ON');
 
-      final run = buildRunWithAcknowledgement(id: 'run-1');
-      await expectLater(repository.save(run), throwsA(anything));
+    final run = buildRunWithAcknowledgement(id: 'run-1');
+    await expectLater(repository.save(run), throwsA(anything));
 
-      expect(await repository.findById('run-1'), isNull);
-      expect(await db.query('run_acknowledgements'), hasLength(1));
-    },
-  );
+    expect(await repository.findById('run-1'), isNull);
+    expect(await db.query('run_acknowledgements'), hasLength(1));
+  });
 
   // `Unit.count('egg')` is not one of the eight fixed units, so this is the
   // only test that would notice `_overrideRow` regressing from
@@ -449,23 +446,20 @@ void main() {
   // Subsumes the former "recordAcknowledgement adds an acknowledgement
   // outside save" test: the outside-save round trip is still exercised
   // here, together with the finalizability transition it exists to enable.
-  test(
-    'recordAcknowledgement adds an acknowledgement outside save and can '
-    'make the run finalizable',
-    () async {
-      final run = buildRunWithOneBlockingWarning(id: 'run-1');
-      expect(run.result.warnings.where((w) => w.isBlocking), hasLength(1));
-      await repository.save(run);
-      expect((await repository.findById('run-1'))!.isFinalizable, isFalse);
+  test('recordAcknowledgement adds an acknowledgement outside save and can '
+      'make the run finalizable', () async {
+    final run = buildRunWithOneBlockingWarning(id: 'run-1');
+    expect(run.result.warnings.where((w) => w.isBlocking), hasLength(1));
+    await repository.save(run);
+    expect((await repository.findById('run-1'))!.isFinalizable, isFalse);
 
-      final warning = run.result.warnings.first;
-      await repository.recordAcknowledgement('run-1', warning);
+    final warning = run.result.warnings.first;
+    await repository.recordAcknowledgement('run-1', warning);
 
-      final loaded = await repository.findById('run-1');
-      expect(loaded!.acknowledgedWarnings, {warning});
-      expect(loaded.isFinalizable, isTrue);
-    },
-  );
+    final loaded = await repository.findById('run-1');
+    expect(loaded!.acknowledgedWarnings, {warning});
+    expect(loaded.isFinalizable, isTrue);
+  });
 
   // `_acknowledgementsFor` reconstructs rows into a `Set`, and the
   // `ProductionWarning` family defines value equality, so two identical
@@ -498,27 +492,20 @@ void main() {
   // with the recipe-and-component-together key it exists to prove — a
   // sub-recipe referenced twice can carry the same component id as its
   // parent, so the key must be the pair, not the component id alone.
-  test(
-    'recordOverride adds an override outside save, keyed by recipe and '
-    'component together',
-    () async {
-      await repository.save(buildRun(id: 'run-1'));
+  test('recordOverride adds an override outside save, keyed by recipe and '
+      'component together', () async {
+    await repository.save(buildRun(id: 'run-1'));
 
-      final parentValue = Quantity.parse('5', Unit.gram);
-      final childValue = Quantity.parse('7', Unit.gram);
-      await repository.recordOverride(
-        'run-1',
-        ('parent', 'salt'),
-        parentValue,
-      );
-      await repository.recordOverride('run-1', ('child', 'salt'), childValue);
+    final parentValue = Quantity.parse('5', Unit.gram);
+    final childValue = Quantity.parse('7', Unit.gram);
+    await repository.recordOverride('run-1', ('parent', 'salt'), parentValue);
+    await repository.recordOverride('run-1', ('child', 'salt'), childValue);
 
-      final loaded = await repository.findById('run-1');
-      expect(loaded!.overrides, hasLength(2));
-      expect(loaded.overrides[('parent', 'salt')], parentValue);
-      expect(loaded.overrides[('child', 'salt')], childValue);
-    },
-  );
+    final loaded = await repository.findById('run-1');
+    expect(loaded!.overrides, hasLength(2));
+    expect(loaded.overrides[('parent', 'salt')], parentValue);
+    expect(loaded.overrides[('child', 'salt')], childValue);
+  });
 
   // `_overridesFor` builds a Dart map literal, which silently last-wins on
   // a duplicate key — the same blindness `_acknowledgementsFor`'s `.toSet()`
@@ -582,34 +569,31 @@ void main() {
   // table, so on their own they identify no row to repair. `findById` is
   // the only reader of this table, but it is reached from a history screen
   // where the operator has many runs to choose between.
-  test(
-    'an unrecognised acknowledgement warning kind is a corrupt database '
-    'naming the run',
-    () async {
-      await repository.save(buildRun(id: 'run-1'));
-      await db.insert('run_acknowledgements', <String, Object?>{
-        'run_id': 'run-1',
-        'warning_kind': 'invented',
-        'recipe_id': 'r',
-        'component_id': null,
-      });
+  test('an unrecognised acknowledgement warning kind is a corrupt database '
+      'naming the run', () async {
+    await repository.save(buildRun(id: 'run-1'));
+    await db.insert('run_acknowledgements', <String, Object?>{
+      'run_id': 'run-1',
+      'warning_kind': 'invented',
+      'recipe_id': 'r',
+      'component_id': null,
+    });
 
-      await expectLater(
-        repository.findById('run-1'),
-        throwsA(
-          isA<CorruptDatabaseError>().having(
-            (error) => error.message,
-            'message',
-            allOf(
-              contains('run_acknowledgements row for run run-1'),
-              contains('unrecognised acknowledgement'),
-              contains('warning_kind=invented'),
-            ),
+    await expectLater(
+      repository.findById('run-1'),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          allOf(
+            contains('run_acknowledgements row for run run-1'),
+            contains('unrecognised acknowledgement'),
+            contains('warning_kind=invented'),
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  });
 
   // The recipe is stored twice — as the scalar columns `listSummaries`
   // answers from, and inside `result_json`, which `findById` answers from.

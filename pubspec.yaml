@@ -15,21 +15,21 @@ dependencies:
   flutter_bloc: ^9.1.1
   flutter_localizations:
     sdk: flutter
-  intl: ^0.20.2
+  intl: ^0.20.3
   meta: ^1.19.0
   rational: ^2.2.3
   sqflite: ^2.4.3
 
 dev_dependencies:
   analyzer: ^13.3.0
-  bloc_lint: ^0.4.1
+  bloc_lint: ^0.4.2
   bloc_test: ^10.0.0
   bloc_tools: ^0.1.0-dev.24
   flutter_test:
     sdk: flutter
   mocktail: ^1.0.5
   sqflite_common_ffi: ^2.4.2+1
-  very_good_analysis: ^10.3.0
+  very_good_analysis: ^11.0.0
 
 flutter:
   generate: true

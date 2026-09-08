@@ -42,20 +42,17 @@ void main() {
       expect(roundTripped, original);
     });
 
-    test(
-      'a non-terminating amount survives a round trip through a compatible '
-      'unit exactly, not merely within a rounded precision',
-      () {
-        final original = Quantity.parse(
-          '1',
-          Unit.kilogram,
-        ).scaleBy(Rational(BigInt.one, BigInt.from(3)));
-        final roundTripped = original
-            .convertTo(Unit.gram)
-            .convertTo(Unit.kilogram);
-        expect(roundTripped, original);
-      },
-    );
+    test('a non-terminating amount survives a round trip through a compatible '
+        'unit exactly, not merely within a rounded precision', () {
+      final original = Quantity.parse(
+        '1',
+        Unit.kilogram,
+      ).scaleBy(Rational(BigInt.one, BigInt.from(3)));
+      final roundTripped = original
+          .convertTo(Unit.gram)
+          .convertTo(Unit.kilogram);
+      expect(roundTripped, original);
+    });
 
     test('rejects a conversion across dimensions', () {
       final grams = Quantity.parse('100', Unit.gram);

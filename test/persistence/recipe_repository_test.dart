@@ -165,23 +165,20 @@ void main() {
     expect(latest.map((r) => r.revision), containsAll([1, 3]));
   });
 
-  test(
-    'setArchived flips every revision of the id, and listLatestRevisions '
-    'still includes it',
-    () async {
-      await repository.saveRevision(buildRecipe(id: 'r', revision: 1));
-      await repository.saveRevision(buildRecipe(id: 'r', revision: 2));
+  test('setArchived flips every revision of the id, and listLatestRevisions '
+      'still includes it', () async {
+    await repository.saveRevision(buildRecipe(id: 'r', revision: 1));
+    await repository.saveRevision(buildRecipe(id: 'r', revision: 2));
 
-      await repository.setArchived('r', isArchived: true);
+    await repository.setArchived('r', isArchived: true);
 
-      expect((await repository.findRevision('r', 1))!.isArchived, isTrue);
-      expect((await repository.findRevision('r', 2))!.isArchived, isTrue);
-      expect(await repository.listLatestRevisions(), hasLength(1));
+    expect((await repository.findRevision('r', 1))!.isArchived, isTrue);
+    expect((await repository.findRevision('r', 2))!.isArchived, isTrue);
+    expect(await repository.listLatestRevisions(), hasLength(1));
 
-      await repository.setArchived('r', isArchived: false);
-      expect((await repository.findRevision('r', 1))!.isArchived, isFalse);
-    },
-  );
+    await repository.setArchived('r', isArchived: false);
+    expect((await repository.findRevision('r', 1))!.isArchived, isFalse);
+  });
 
   // `Recipe` and `RecipeComponent` have no `operator ==` (Task 3 found the
   // same for `Ingredient`), so the round trip is checked field by field.
@@ -191,68 +188,65 @@ void main() {
   // corrupt rather than a unit `Unit.portion` (a fixed unit whose symbol is
   // also its storage form) could not have caught. `Unit.count('egg')` on
   // the component covers the same trap for a component's own quantity.
-  test(
-    'a recipe with a named-yield base and max yield and a count-unit '
-    'component round-trips',
-    () async {
-      final recipe = Recipe(
-        id: 'batch-recipe',
-        revision: 1,
-        name: 'Batch recipe',
-        category: 'Bread',
-        baseYield: Quantity.parse('10', Unit.namedYield('tray')),
-        maxBatchYield: Quantity.parse('5', Unit.namedYield('tray')),
-        preparationNotes: const ['Mix', 'Bake'],
-        modifiedAt: DateTime.utc(2026, 9, 7, 12),
-        components: [
-          RecipeComponent(
-            id: 'eggs',
-            target: const IngredientRef('egg'),
-            baseQuantity: Quantity.parse('4', Unit.count('egg')),
-            behavior: ScalingBehavior.proportional,
-            displayOrder: 0,
-            rounding: RoundingRule.upToIncrement(Decimal.one),
-            note: 'room temperature',
-          ),
-          RecipeComponent(
-            id: 'starter',
-            target: const SubRecipeRef('sourdough-starter'),
-            baseQuantity: null,
-            behavior: ScalingBehavior.manual,
-            displayOrder: 1,
-          ),
-        ],
-      );
+  test('a recipe with a named-yield base and max yield and a count-unit '
+      'component round-trips', () async {
+    final recipe = Recipe(
+      id: 'batch-recipe',
+      revision: 1,
+      name: 'Batch recipe',
+      category: 'Bread',
+      baseYield: Quantity.parse('10', Unit.namedYield('tray')),
+      maxBatchYield: Quantity.parse('5', Unit.namedYield('tray')),
+      preparationNotes: const ['Mix', 'Bake'],
+      modifiedAt: DateTime.utc(2026, 9, 7, 12),
+      components: [
+        RecipeComponent(
+          id: 'eggs',
+          target: const IngredientRef('egg'),
+          baseQuantity: Quantity.parse('4', Unit.count('egg')),
+          behavior: ScalingBehavior.proportional,
+          displayOrder: 0,
+          rounding: RoundingRule.upToIncrement(Decimal.one),
+          note: 'room temperature',
+        ),
+        RecipeComponent(
+          id: 'starter',
+          target: const SubRecipeRef('sourdough-starter'),
+          baseQuantity: null,
+          behavior: ScalingBehavior.manual,
+          displayOrder: 1,
+        ),
+      ],
+    );
 
-      await repository.saveRevision(recipe);
-      final found = await repository.findRevision('batch-recipe', 1);
+    await repository.saveRevision(recipe);
+    final found = await repository.findRevision('batch-recipe', 1);
 
-      expect(found?.id, recipe.id);
-      expect(found?.name, recipe.name);
-      expect(found?.category, recipe.category);
-      expect(found?.baseYield, recipe.baseYield);
-      expect(found?.maxBatchYield, recipe.maxBatchYield);
-      expect(found?.preparationNotes, recipe.preparationNotes);
-      expect(found?.modifiedAt, recipe.modifiedAt);
-      expect(found?.isArchived, recipe.isArchived);
-      expect(found?.components, hasLength(2));
+    expect(found?.id, recipe.id);
+    expect(found?.name, recipe.name);
+    expect(found?.category, recipe.category);
+    expect(found?.baseYield, recipe.baseYield);
+    expect(found?.maxBatchYield, recipe.maxBatchYield);
+    expect(found?.preparationNotes, recipe.preparationNotes);
+    expect(found?.modifiedAt, recipe.modifiedAt);
+    expect(found?.isArchived, recipe.isArchived);
+    expect(found?.components, hasLength(2));
 
-      final eggs = found!.components.firstWhere((c) => c.id == 'eggs');
-      expect(eggs.target, const IngredientRef('egg'));
-      expect(eggs.baseQuantity, Quantity.parse('4', Unit.count('egg')));
-      expect(eggs.behavior, ScalingBehavior.proportional);
-      expect(eggs.rounding?.increment, Decimal.one);
-      expect(eggs.note, 'room temperature');
-      expect(eggs.displayOrder, 0);
+    final eggs = found!.components.firstWhere((c) => c.id == 'eggs');
+    expect(eggs.target, const IngredientRef('egg'));
+    expect(eggs.baseQuantity, Quantity.parse('4', Unit.count('egg')));
+    expect(eggs.behavior, ScalingBehavior.proportional);
+    expect(eggs.rounding?.increment, Decimal.one);
+    expect(eggs.note, 'room temperature');
+    expect(eggs.displayOrder, 0);
 
-      final starter = found.components.firstWhere((c) => c.id == 'starter');
-      expect(starter.target, const SubRecipeRef('sourdough-starter'));
-      expect(starter.baseQuantity, isNull);
-      expect(starter.behavior, ScalingBehavior.manual);
-      expect(starter.rounding, isNull);
-      expect(starter.note, isNull);
-    },
-  );
+    final starter = found.components.firstWhere((c) => c.id == 'starter');
+    expect(starter.target, const SubRecipeRef('sourdough-starter'));
+    expect(starter.baseQuantity, isNull);
+    expect(starter.behavior, ScalingBehavior.manual);
+    expect(starter.rounding, isNull);
+    expect(starter.note, isNull);
+  });
 
   // Every other fixture in this suite builds its `modifiedAt` with
   // `DateTime.utc`, so the suite exercised only the form that already
