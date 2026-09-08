@@ -137,7 +137,7 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       limit: 1,
     );
     if (rows.isEmpty) return null;
-    return _recipeFromRow(rows.single);
+    return await _recipeFromRow(rows.single);
   }
 
   @override
@@ -150,7 +150,7 @@ final class SqfliteRecipeRepository implements RecipeRepository {
       limit: 1,
     );
     if (rows.isEmpty) return null;
-    return _recipeFromRow(rows.single);
+    return await _recipeFromRow(rows.single);
   }
 
   /// Writes [recipe] and its components as a new revision, in one
@@ -194,10 +194,7 @@ final class SqfliteRecipeRepository implements RecipeRepository {
     });
 
     for (final component in recipe.components) {
-      await txn.insert(
-        'recipe_components',
-        _componentToRow(recipe, component),
-      );
+      await txn.insert('recipe_components', _componentToRow(recipe, component));
     }
   });
 
@@ -273,10 +270,7 @@ final class SqfliteRecipeRepository implements RecipeRepository {
             (jsonDecode(row['preparation_notes']! as String) as List<dynamic>)
                 .cast<String>(),
         modifiedAt: DateTime.parse(row['modified_at']! as String),
-        isArchived: _archivedFromColumn(
-          row['is_archived'],
-          rowLabel: rowLabel,
-        ),
+        isArchived: _archivedFromColumn(row['is_archived'], rowLabel: rowLabel),
       );
       // A wrong-typed column is a corrupt row, not a programmer bug, so its
       // `TypeError` is caught rather than left to escape — see the doc
