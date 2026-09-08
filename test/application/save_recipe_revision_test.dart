@@ -39,6 +39,38 @@ void main() {
     expect(saved.revision, 2);
   });
 
+  test('category, maxBatchYield, preparationNotes, and isArchived survive onto '
+      'the new revision', () async {
+    final recipes = FakeRecipeRepository();
+    final edited = Recipe(
+      id: 'a',
+      revision: 1,
+      name: 'Test recipe',
+      baseYield: Quantity.parse('1000', Unit.gram),
+      modifiedAt: DateTime.utc(2026, 9, 8),
+      category: 'Pastry',
+      maxBatchYield: Quantity.parse('5000', Unit.gram),
+      preparationNotes: const ['Preheat oven', 'Rest dough'],
+      isArchived: true,
+      components: [
+        RecipeComponent(
+          id: 'flour',
+          target: const IngredientRef('flour'),
+          baseQuantity: Quantity.parse('500', Unit.gram),
+          behavior: ScalingBehavior.proportional,
+          displayOrder: 0,
+        ),
+      ],
+    );
+
+    final saved = await SaveRecipeRevision(recipes).call(edited);
+
+    expect(saved.category, 'Pastry');
+    expect(saved.maxBatchYield, edited.maxBatchYield);
+    expect(saved.preparationNotes, ['Preheat oven', 'Rest dough']);
+    expect(saved.isArchived, isTrue);
+  });
+
   test('a missing sub-recipe is rejected and nothing is written', () async {
     final recipes = FakeRecipeRepository();
     final edited = buildRecipe(
