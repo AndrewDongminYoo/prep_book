@@ -7,3 +7,4 @@
 library;
 
 export 'dependency_closure.dart';
+export 'save_recipe_revision.dart';
