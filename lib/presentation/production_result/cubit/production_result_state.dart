@@ -241,14 +241,37 @@ final class ProductionResultState {
   /// Derived rather than tracked, so collapsing a line hides everything
   /// under it without the collapse having to walk the tree — and so
   /// reopening it brings back exactly what was open before.
-  bool _isVisible(String path) {
+  bool _isVisible(String path) =>
+      ancestorsOf(path).every(expandedPaths.contains);
+
+  /// Every path that has to be open for the line at [path] to be seen,
+  /// outermost first.
+  ///
+  /// The line's own path is not among them: opening a line shows what sits
+  /// under it, not the line itself. So a root line has no ancestors and is
+  /// visible unconditionally.
+  static Iterable<String> ancestorsOf(String path) sync* {
     final segments = path.split('/');
     for (var depth = 1; depth < segments.length; depth++) {
-      if (!expandedPaths.contains(segments.take(depth).join('/'))) {
-        return false;
-      }
+      yield segments.take(depth).join('/');
     }
-    return true;
+  }
+
+  /// Where the component [key] names sits in the tree, or `null` when no
+  /// line carries it.
+  ///
+  /// The first occurrence in display order when there are several. A
+  /// component id is unique inside its own recipe, so two lines share a key
+  /// only when one recipe is reached by two routes — a sub-recipe
+  /// referenced twice — and a warning is raised against the component
+  /// rather than against either route. Which of them to show is therefore a
+  /// choice with no better answer available, and it is the same one the
+  /// override control makes: a value recorded on either row reaches both.
+  String? pathOf(OverrideKey key) {
+    for (final row in allRows) {
+      if (row.key == key) return row.path;
+    }
+    return null;
   }
 
   /// Appends every component of [result] to [into], recursing into the

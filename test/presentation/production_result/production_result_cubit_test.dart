@@ -504,6 +504,89 @@ void main() {
     });
   });
 
+  group('finding the line a warning names', () {
+    test('a component reached by two routes reports the first', () async {
+      final state = _cubit(await buildReviewableRun()).state;
+
+      // Starter is referenced twice — from inside Dough and again from the
+      // root — so its one ingredient is two lines under one key. Which of
+      // them to show is a choice with no better answer, and it is written
+      // down rather than left to fall out of the walk.
+      expect(
+        state.allRows
+            .where((row) => row.key == ('starter', 'rye'))
+            .map((row) => row.path),
+        ['1/1/0', '2/0'],
+      );
+      expect(state.pathOf(('starter', 'rye')), '1/1/0');
+    });
+
+    test('a component no line carries has no path', () async {
+      final state = _cubit(await buildReviewableRun()).state;
+
+      expect(state.pathOf(('bun', 'not-a-component')), isNull);
+    });
+
+    test('revealing a nested line opens every sub-recipe above it', () async {
+      final cubit = _cubit(await buildReviewableRun());
+      expect(
+        cubit.state.visibleRows.map((row) => row.path),
+        isNot(contains('1/1/0')),
+      );
+
+      cubit.componentRevealed(('starter', 'rye'));
+
+      // Both levels at once. Opening one at a time is what the operator
+      // was doing by hand, and it is what this exists to replace.
+      expect(cubit.state.expandedPaths, {'1', '1/1'});
+      expect(cubit.state.visibleRows.map((row) => row.path), contains('1/1/0'));
+    });
+
+    test('revealing leaves the tree the operator already opened', () async {
+      final cubit = _cubit(await buildReviewableRun())..expansionToggled('2');
+      expect(cubit.state.expandedPaths, {'2'});
+
+      cubit.componentRevealed(('starter', 'rye'));
+
+      // The reveal adds and never removes, so the second route into
+      // Starter is still open afterwards.
+      expect(cubit.state.expandedPaths, {'2', '1', '1/1'});
+    });
+
+    test('revealing a line already in view opens nothing', () async {
+      final cubit = _cubit(await buildReviewableRun());
+      expect(cubit.state.pathOf(('bun', 'salt')), '3');
+
+      cubit.componentRevealed(('bun', 'salt'));
+
+      // A root line has no ancestors. The screen still scrolls to it,
+      // which is not this layer's half of the job.
+      expect(cubit.state.expandedPaths, isEmpty);
+    });
+
+    test('a component no line carries opens nothing', () async {
+      final cubit = _cubit(await buildReviewableRun())..expansionToggled('1');
+      expect(cubit.state.pathOf(('bun', 'not-a-component')), isNull);
+
+      cubit.componentRevealed(('bun', 'not-a-component'));
+
+      expect(cubit.state.expandedPaths, {'1'});
+    });
+
+    test('a stored run can still be opened up', () async {
+      final cubit = _cubit(await buildReviewableRun());
+      await cubit.save();
+      expect(cubit.state.isEditable, isFalse);
+
+      cubit.componentRevealed(('starter', 'rye'));
+
+      // Unlike acknowledging and overriding, which the test below pins as
+      // refused once a run is stored. This moves view state alone, and a
+      // stored run has to stay reviewable.
+      expect(cubit.state.expandedPaths, {'1', '1/1'});
+    });
+  });
+
   group('overrides', () {
     test('a typed amount is recorded, calculation untouched', () async {
       final cubit = _cubit(await buildReviewableRun());

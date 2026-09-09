@@ -40,6 +40,34 @@ final class ProductionResultCubit extends Cubit<ProductionResultState> {
     ),
   );
 
+  /// Opens whatever is keeping the component [key] names out of sight.
+  ///
+  /// Every ancestor at once rather than one level at a time, because a
+  /// warning names a component wherever it sits and the operator's
+  /// alternative is opening each sub-recipe by hand until the line turns
+  /// up. Lines already open stay open: this adds to the set and removes
+  /// nothing, so the tree the operator had built is still there afterwards.
+  ///
+  /// Deliberately not guarded on [ProductionResultState.isEditable], unlike
+  /// the two mutators below it. Expansion moves view state alone, and a
+  /// stored run has to stay reviewable.
+  ///
+  /// A key no line carries opens nothing. Nothing in the calculator raises a
+  /// component warning against a component it left out of the tree, so this
+  /// is a guard rather than a case.
+  void componentRevealed(OverrideKey key) {
+    final path = state.pathOf(key);
+    if (path == null) return;
+    emit(
+      state.copyWith(
+        expandedPaths: {
+          ...state.expandedPaths,
+          ...ProductionResultState.ancestorsOf(path),
+        },
+      ),
+    );
+  }
+
   /// Records that the operator has seen [warning].
   ///
   /// Refused once the run has stopped being editable, for the reason

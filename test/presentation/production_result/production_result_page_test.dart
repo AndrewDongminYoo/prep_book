@@ -70,6 +70,13 @@ TextFormField _amountField(WidgetTester tester, String path) =>
 /// of the level above it.
 String _chainPath(int depth) => List.filled(depth + 1, '0').join('/');
 
+/// The path of the free-form line `warnAtTheDeepest` adds.
+///
+/// The sibling of the deepest ingredient line: both belong to the last
+/// link, so they hang off the line one level up, at index one rather than
+/// zero.
+String _deepWarningPath(int depth) => '${_chainPath(depth - 1)}/1';
+
 /// A run whose sub-recipes chain [depth] levels below the root.
 ///
 /// Local to this suite rather than in `fakes.dart`, which is the fixture
@@ -83,7 +90,17 @@ String _chainPath(int depth) => List.filled(depth + 1, '0').join('/');
 ///
 /// Every link asks for exactly its own yield and states no maximum, so each
 /// scales 1:1 into a single batch and nothing decays down the chain.
-Future<ProductionRun> _buildChainedRun({required int depth}) {
+///
+/// With [warnAtTheDeepest] the last link carries a second, free-form
+/// component beside its ingredient line. That raises a component warning
+/// against a component the run keeps at the bottom of the tree, which is
+/// what a reveal has to reach — the shared fixture's two warnings both name
+/// root components, which are on screen whether anything reveals them or
+/// not. Its path is [_deepWarningPath].
+Future<ProductionRun> _buildChainedRun({
+  required int depth,
+  bool warnAtTheDeepest = false,
+}) {
   final recipes = FakeRecipeRepository();
   for (var level = 0; level <= depth; level++) {
     recipes.seed(
@@ -103,6 +120,14 @@ Future<ProductionRun> _buildChainedRun({required int depth}) {
             behavior: ScalingBehavior.proportional,
             displayOrder: 0,
           ),
+          if (warnAtTheDeepest && level == depth)
+            RecipeComponent(
+              id: 'taste',
+              target: const IngredientRef('salt'),
+              baseQuantity: null,
+              behavior: ScalingBehavior.manual,
+              displayOrder: 1,
+            ),
         ],
       ),
     );
@@ -446,6 +471,72 @@ void main() {
       await _open(tester, await buildArchivedRun());
 
       expect(find.text('Summer focaccia is archived.'), findsOneWidget);
+    });
+
+    testWidgets('a warning naming a recipe offers no line to show', (
+      tester,
+    ) async {
+      await _open(tester, await buildArchivedRun());
+
+      // An archived dependency is raised against the whole recipe, and
+      // the line that recipe sits on is one the operator is already
+      // looking at. The two component warnings do get the action.
+      final archived = _warning<ArchivedDependencyWarning>(
+        await buildArchivedRun(),
+      );
+      expect(find.byKey(ValueKey('reveal-${archived.hashCode}')), findsNothing);
+      expect(find.text('Show the line'), findsNothing);
+    });
+
+    testWidgets('a warning opens every sub-recipe hiding its line', (
+      tester,
+    ) async {
+      final run = await _buildChainedRun(depth: 8, warnAtTheDeepest: true);
+      await _open(tester, run);
+      final path = _deepWarningPath(8);
+      expect(find.byKey(ValueKey('override-amount-$path')), findsNothing);
+
+      await tester.tap(
+        find.byKey(
+          ValueKey('reveal-${_warning<ManualComponentWarning>(run).hashCode}'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Eight levels opened by one tap. Reaching it by hand is eight taps,
+      // each on a control the previous tap put on screen.
+      expect(find.byKey(ValueKey('override-amount-$path')), findsOneWidget);
+    });
+
+    testWidgets('a warning scrolls to the line it names', (tester) async {
+      final run = await _buildChainedRun(depth: 8, warnAtTheDeepest: true);
+      // A window a run of this size does not fit in, unlike the roomy
+      // default: with everything on screen already there is no scrolling
+      // to observe, and this is the half of the reveal that the opening
+      // above does not cover. Nine levels are not opened by hand here
+      // either — in this window the control for each level lands below the
+      // fold, which is the operator's own difficulty and would make the
+      // setup untappable.
+      await _open(tester, run, viewport: const Size(800, 600));
+      final target = find.byKey(
+        ValueKey('override-amount-${_deepWarningPath(8)}'),
+      );
+
+      await tester.tap(
+        find.byKey(
+          ValueKey('reveal-${_warning<ManualComponentWarning>(run).hashCode}'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Built *and* in view. Only the first is the widened cache extent's
+      // doing — every line exists during a reveal whether or not anything
+      // scrolled — so the rect is what says the scroll happened.
+      expect(target, findsOneWidget);
+      final list = tester.getRect(find.byType(ListView));
+      final row = tester.getRect(target);
+      expect(row.top, greaterThanOrEqualTo(list.top));
+      expect(row.bottom, lessThanOrEqualTo(list.bottom));
     });
 
     testWidgets('saving stores the run and closes the controls', (
