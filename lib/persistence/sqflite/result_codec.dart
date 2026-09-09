@@ -106,17 +106,24 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
   try {
     final map = decoded! as Map<String, Object?>;
     final snapshotJson = map['dependencySnapshot']! as Map<String, Object?>;
-    // Nullable rather than forced, and for a different reason than the
-    // other nullable casts here. `note` and `category` are nullable because
-    // the value may be null — `_recipeComponentToJson` and `_recipeToJson`
+    // Read through the key's presence rather than as a nullable cast, and
+    // for a different reason than the nullable casts here. `note` and
+    // `category` are nullable because the value may be null —
+    // `_recipeComponentToJson`, `_recipeToJson`, and `_ingredientToJson`
     // write those keys unconditionally, so a payload this codec produced
-    // always carries them. This one is nullable because the key may not be
-    // there at all: a run stored before the ingredient snapshot existed has
-    // none, and reading that as no ingredient data is what the run held, so
-    // nothing is fabricated for it. The cast still throws for a key that is
-    // present and is not a map, so a corrupt row reaches the `on TypeError`
-    // clause below and is named there.
-    final ingredientsJson = map['ingredientSnapshot'] as Map<String, Object?>?;
+    // always carries them and null is a value they may hold. This key is
+    // the other case: it may not be there at all, because a run stored
+    // before the ingredient snapshot existed has none, and reading that as
+    // no ingredient data is what the run held, so nothing is fabricated for
+    // it. Absence is the only pre-feature shape — `encodeRunPayload` always
+    // writes this key as a map, so neither an explicit null nor any other
+    // non-map value can have come from this codec. Both are corruption, and
+    // forcing the key once it is present sends both to the `on TypeError`
+    // clause below to be named as such, rather than opening the run with
+    // its ingredient names and unit choices silently discarded.
+    final ingredientsJson = map.containsKey('ingredientSnapshot')
+        ? map['ingredientSnapshot']! as Map<String, Object?>
+        : const <String, Object?>{};
     return RunPayload(
       recipe: _recipeFromJson(map['recipe']! as Map<String, Object?>),
       dependencySnapshot: <String, Recipe>{
@@ -124,7 +131,7 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
           entry.key: _recipeFromJson(entry.value! as Map<String, Object?>),
       },
       ingredientSnapshot: <String, Ingredient>{
-        for (final entry in (ingredientsJson ?? const {}).entries)
+        for (final entry in ingredientsJson.entries)
           entry.key: _ingredientFromJson(entry.value! as Map<String, Object?>),
       },
       result: _resultFromJson(

@@ -562,6 +562,36 @@ void main() {
     expect(decoded.result.components, hasLength(2));
   });
 
+  test('an ingredient snapshot stored as null is a corrupt row', () {
+    // An explicit null is not the pre-feature shape. `encodeRunPayload`
+    // always writes this key as a map, so a null value cannot have come
+    // from this codec, and there is no older run it could be describing —
+    // an older run has no key at all, which the test above covers. Reading
+    // null as an empty snapshot would open the run with every ingredient
+    // name and unit choice discarded and nothing said about it.
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients()))
+            as Map<String, Object?>;
+    encoded['ingredientSnapshot'] = null;
+    // The key is present and holds null, which is the case under test and
+    // not the absent one the test above builds. Asserted on the map rather
+    // than on the encoded text, so this does not depend on how `jsonEncode`
+    // spaces a null value.
+    expect(encoded.containsKey('ingredientSnapshot'), isTrue);
+    expect(encoded['ingredientSnapshot'], isNull);
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          contains(_rowLabel),
+        ),
+      ),
+    );
+  });
+
   test('an ingredient snapshot that is not a map is a corrupt row', () {
     // Tolerating an absent key is not tolerating a damaged one. A present
     // value of the wrong shape is corruption, and it has to be named as
