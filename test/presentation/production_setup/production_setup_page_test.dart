@@ -49,6 +49,7 @@ Widget _screenOver(
 }) => ProductionSetupPage(
   startProductionRun: StartProductionRun(
     storage,
+    FakeIngredientRepository(),
     ids ?? const FixedRunIdSource(),
     const FixedClock(),
   ),

@@ -314,6 +314,7 @@ ProductionSetupLauncher buildProductionLauncher(
 }) => ProductionSetupLauncher(
   StartProductionRun(
     recipes,
+    FakeIngredientRepository(),
     ids ?? const FixedRunIdSource(),
     const FixedClock(),
   ),
@@ -443,17 +444,62 @@ final class PendingRunRepository implements ProductionRunRepository {
 /// - and one recipe (`Starter`) reached twice by different routes, whose
 ///   `rye` line therefore appears twice under one override key with two
 ///   different calculated amounts.
-Future<ProductionRun> buildReviewableRun() {
+///
+/// [ingredients] is the library the calculation reads names and default
+/// units out of, and defaults to [buildReviewableIngredients]. A caller
+/// passes its own only to keep hold of it — a test that edits the library
+/// after the run is calculated is how the snapshot's whole reason for
+/// existing is checked.
+Future<ProductionRun> buildReviewableRun({
+  FakeIngredientRepository? ingredients,
+}) {
   final recipes = FakeRecipeRepository()
     ..seed(_starterRecipe())
     ..seed(_doughRecipe())
     ..seed(_bunRecipe());
   return StartProductionRun(
     recipes,
+    ingredients ?? buildReviewableIngredients(),
     const FixedRunIdSource(),
     const FixedClock(),
   ).call(recipeId: 'bun', targetYield: Quantity.parse('1000', Unit.gram));
 }
+
+/// The ingredient library [buildReviewableRun] is calculated against.
+///
+/// No name here is spelled by its own identifier, so a label taken from the
+/// run's ingredient snapshot is always distinguishable from the identifier
+/// the screen falls back to — which is the defect issue #20 filed, where an
+/// ingredient created as "Bread flour" reached the production sheet as its
+/// slug.
+///
+/// `rye`, the one ingredient of the `Starter` sub-recipe, is deliberately
+/// left out. Nothing validates a component's ingredient reference against
+/// storage, so a run can reference an ingredient the library does not hold,
+/// and that line is what keeps the identifier fallback exercised by the
+/// same fixture that exercises the names.
+FakeIngredientRepository buildReviewableIngredients() =>
+    FakeIngredientRepository()
+      ..stored['flour'] = Ingredient(
+        id: 'flour',
+        name: 'Bread flour',
+        defaultUnit: Unit.gram,
+      )
+      ..stored['salt'] = Ingredient(
+        id: 'salt',
+        name: 'Fine sea salt',
+        defaultUnit: Unit.gram,
+      )
+      ..stored['water'] = Ingredient(
+        id: 'water',
+        name: 'Filtered water',
+        defaultUnit: Unit.gram,
+      )
+      ..stored['liner'] = Ingredient(
+        id: 'liner',
+        name: 'Baking liner',
+        defaultUnit: sheetUnit,
+      );
 
 /// A run over an archived recipe, which raises the one warning
 /// [buildReviewableRun] does not.
@@ -468,6 +514,7 @@ Future<ProductionRun> buildArchivedRun() {
     );
   return StartProductionRun(
     recipes,
+    FakeIngredientRepository(),
     const FixedRunIdSource(),
     const FixedClock(),
   ).call(recipeId: 'shelved', targetYield: Quantity.parse('1000', Unit.gram));

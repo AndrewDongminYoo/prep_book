@@ -109,6 +109,7 @@ Future<ProductionRun> _buildChainedRun({required int depth}) {
   }
   return StartProductionRun(
     recipes,
+    FakeIngredientRepository(),
     const FixedRunIdSource(),
     const FixedClock(),
   ).call(recipeId: 'link-0', targetYield: Quantity.parse('1000', Unit.gram));
@@ -134,15 +135,19 @@ void main() {
     testWidgets('a sub-recipe is collapsed until it is opened', (tester) async {
       await _open(tester, await buildReviewableRun());
 
+      // The nested line reads by the name the run snapshotted for it, not
+      // by the `water` identifier its component references — a rendered
+      // sheet names a sub-recipe's ingredients the same way it names the
+      // root's.
       expect(find.text('Dough'), findsOneWidget);
-      expect(find.text('water'), findsNothing);
+      expect(find.text('Filtered water'), findsNothing);
 
       await _toggle(tester, '1');
-      expect(find.text('water'), findsOneWidget);
+      expect(find.text('Filtered water'), findsOneWidget);
       expect(find.text('60 g'), findsOneWidget);
 
       await _toggle(tester, '1');
-      expect(find.text('water'), findsNothing);
+      expect(find.text('Filtered water'), findsNothing);
     });
 
     testWidgets('an opened line shows its batches, grouped', (tester) async {
@@ -311,7 +316,9 @@ void main() {
       );
       expect(save.onPressed, isNull);
       expect(
-        find.text('Correct the amount entered for salt before saving.'),
+        find.text(
+          'Correct the amount entered for Fine sea salt before saving.',
+        ),
         findsOneWidget,
       );
       // The field the operator has to correct is still theirs to correct.
@@ -385,10 +392,13 @@ void main() {
       await _open(tester, run);
 
       expect(
-        find.text('flour in Bun was rounded for display.'),
+        find.text('Bread flour in Bun was rounded for display.'),
         findsOneWidget,
       );
-      expect(find.text('salt in Bun has no amount yet.'), findsOneWidget);
+      expect(
+        find.text('Fine sea salt in Bun has no amount yet.'),
+        findsOneWidget,
+      );
       expect(
         find.text(
           'One warning has not been acknowledged. Saving now stores a draft.',
@@ -407,7 +417,10 @@ void main() {
       // Still listed, now marked. And the run is finalizable although the
       // rounding warning has not been acknowledged, because it does not
       // block: the action's own label is where that shows.
-      expect(find.text('salt in Bun has no amount yet.'), findsOneWidget);
+      expect(
+        find.text('Fine sea salt in Bun has no amount yet.'),
+        findsOneWidget,
+      );
       expect(find.text('Acknowledged'), findsOneWidget);
       expect(
         find.widgetWithText(FilledButton, 'Save production run'),

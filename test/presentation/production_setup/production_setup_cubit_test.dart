@@ -44,7 +44,12 @@ Recipe _filled(String dependency) => buildRecipe(
 
 ProductionSetupCubit _setupOver(RecipeRepository storage, {Recipe? recipe}) =>
     ProductionSetupCubit(
-      StartProductionRun(storage, const FixedRunIdSource(), const FixedClock()),
+      StartProductionRun(
+        storage,
+        FakeIngredientRepository(),
+        const FixedRunIdSource(),
+        const FixedClock(),
+      ),
       recipe: recipe ?? _dough(),
       // Collapsed so a calculation resolves within one turn of the event queue,
       // the way the library screen's cubit tests collapse its search window.
