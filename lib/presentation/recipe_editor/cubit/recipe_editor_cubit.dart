@@ -3,6 +3,7 @@ import 'package:meta/meta.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/presentation/units/built_in_units.dart';
+import 'package:prep_book/presentation/units/readable_quantity.dart';
 
 part 'recipe_editor_state.dart';
 
@@ -520,8 +521,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
       [...components]..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
   /// [quantity]'s amount as the operator would type it.
-  static String _amountText(Quantity quantity) =>
-      quantity.toDecimal().toString();
+  static String _amountText(Quantity quantity) => readableAmountOf(quantity);
 
   /// The largest number [recipe] already uses in a generated component id.
   static int _highestGeneratedIndex(Recipe? recipe) =>
