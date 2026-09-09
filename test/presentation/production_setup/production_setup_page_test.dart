@@ -132,6 +132,25 @@ void main() {
       expect(find.text('× 0.3333'), findsOneWidget);
     });
 
+    testWidgets('shows a ratio four places would round away', (tester) async {
+      final bulk = buildRecipe(
+        id: 'dough',
+        name: 'Dough',
+        baseYield: Quantity.parse('30000', Unit.gram),
+      );
+      final storage = FakeRecipeRepository()..seed(bulk);
+
+      await tester.pumpApp(_screenOver(storage, recipe: bulk));
+      await _enterTarget(tester, '1');
+
+      // 1/30000 has no finite decimal form and its four-place decimal is
+      // `0`, so a screen that only rounded would put "× 0" over a 30000 g
+      // base yield and a 1 g target — both positive, and both on screen
+      // two rows above. The fraction is what the domain holds.
+      expect(find.text('× 1/30000'), findsOneWidget);
+      expect(find.text('× 0'), findsNothing);
+    });
+
     testWidgets('reports an amount that is not a number', (tester) async {
       final storage = FakeRecipeRepository()..seed(_sheeted());
 

@@ -344,14 +344,25 @@ class _ErrorText extends StatelessWidget {
 String _quantity(Quantity quantity) =>
     '${quantity.toDecimal()} ${quantity.unit.symbol}';
 
-/// The scale ratio as a decimal.
+/// The scale ratio as a decimal, or as the exact fraction where four
+/// places cannot hold it.
 ///
-/// The one approximated number on this screen: a run scaled to a third of
-/// its base yield has no finite decimal form, so it is shown to four
-/// places. Nothing is computed from it — the two yields above it are the
-/// exact comparison, and the domain keeps the ratio itself exact.
-String _ratio(Rational scaleRatio) =>
-    '${scaleRatio.toDecimal(scaleOnInfinitePrecision: 4)}';
+/// An approximated number: a run scaled to a third of its base yield has
+/// no finite decimal form, so it is shown to four places. Nothing is
+/// computed from it — the two yields above it are the exact comparison,
+/// and the domain keeps the ratio itself exact.
+///
+/// Four places round a small enough scale-down to nothing, though: a 1 g
+/// target against a 30 kg base recipe is `1/30000`, whose four-place
+/// decimal is `0`, and a row reading "× 0" over two positive yields is
+/// simply false. So a ratio the rounding flattens is written as the
+/// fraction the domain holds instead. Deepening the decimal would only
+/// move the threshold — every fixed number of places has a ratio below
+/// it — while the fraction is exact at any magnitude.
+String _ratio(Rational scaleRatio) {
+  final rounded = scaleRatio.toDecimal(scaleOnInfinitePrecision: 4);
+  return rounded == Decimal.zero ? '$scaleRatio' : '$rounded';
+}
 
 /// What a failed calculation says, carrying what the error itself names.
 ///
