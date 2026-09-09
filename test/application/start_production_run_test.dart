@@ -172,4 +172,34 @@ void main() {
       isEmpty,
     );
   });
+
+  test('the caller decides whether a batch bound applies', () async {
+    // 1000 g against a 100 g maximum is ten batches.
+    final batched = Recipe(
+      id: 'a',
+      revision: 1,
+      name: 'Batched',
+      baseYield: Quantity.parse('1000', Unit.gram),
+      maxBatchYield: Quantity.parse('100', Unit.gram),
+      modifiedAt: DateTime.utc(2026, 9, 8),
+      components: const [],
+    );
+    final recipes = FakeRecipeRepository()..seed(batched);
+    final target = Quantity.parse('1000', Unit.gram);
+
+    await expectLater(
+      _useCase(
+        recipes,
+      ).call(recipeId: 'a', targetYield: target, maxPlannedBatches: 5),
+      throwsA(isA<BatchLimitExceededError>()),
+    );
+
+    // The identical call without the bound. A use case that hard-coded one,
+    // or dropped the argument on the way to the calculator, fails one half
+    // of this test or the other.
+    final run = await _useCase(
+      recipes,
+    ).call(recipeId: 'a', targetYield: target);
+    expect(run.result.batchPlan.batchCount, 10);
+  });
 }

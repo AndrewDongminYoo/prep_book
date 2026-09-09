@@ -38,9 +38,18 @@ final class StartProductionRun {
   /// a cycle, and the domain's own yield errors for a target the recipe
   /// cannot take. None is rewrapped: each already names what the operator
   /// has to be told.
+  ///
+  /// [maxPlannedBatches] bounds how many batches any one recipe in the run
+  /// — the root, and every sub-recipe expanded under it — may be split
+  /// into, and a target that crosses it raises [BatchLimitExceededError].
+  /// A call argument rather than a constructor one, and unbounded by
+  /// default, because the bound belongs to the caller's situation rather
+  /// than to the run: a screen that blocks on the calculation has to cap
+  /// it, and a caller that can wait has no reason to.
   Future<ProductionRun> call({
     required String recipeId,
     required Quantity targetYield,
+    int? maxPlannedBatches,
   }) async {
     final root = await _recipes.findLatest(recipeId);
     // Both arguments match on purpose: `MissingDependencyError` renders
@@ -51,11 +60,9 @@ final class StartProductionRun {
     if (root == null) throw MissingDependencyError(recipeId, recipeId);
 
     final closure = await resolveDependencyClosure(_recipes, root);
-    final result = const ProductionCalculator().calculate(
-      recipe: root,
-      targetYield: targetYield,
-      recipeIndex: closure,
-    );
+    final result = ProductionCalculator(
+      maxPlannedBatches: maxPlannedBatches,
+    ).calculate(recipe: root, targetYield: targetYield, recipeIndex: closure);
 
     // `dependencySnapshot` documents every recipe the calculation depended
     // on, and `ProductionRun.recipe` already holds the root — so the root
