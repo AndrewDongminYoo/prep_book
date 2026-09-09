@@ -266,8 +266,7 @@ class _SubRecipePicker extends StatelessWidget {
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(recipe),
             child: Text(
-              '${recipe.name} · '
-              '${recipe.baseYield.toDecimal()} ${recipe.baseYield.unit.symbol}',
+              '${recipe.name} · ${readableQuantity(recipe.baseYield)}',
             ),
           ),
       ],

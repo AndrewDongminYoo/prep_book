@@ -26,29 +26,6 @@ final class SystemClock implements Clock {
   DateTime now() => DateTime.now();
 }
 
-/// The identifier a calculated production run carries while nothing stores
-/// one.
-///
-/// `StartProductionRun` needs a source to build its snapshot, and the
-/// production setup screen keeps that snapshot to itself: it shows the
-/// operator what today's target becomes and writes nothing, so this value
-/// is never stored, never shown, and never keyed on.
-///
-/// A constant rather than a generated identifier, because the change that
-/// first *stores* a run is the change that needs a durable one — and it is
-/// the change that picks the source, and the package for it, since
-/// `CLAUDE.md` asks for one package at a time in the change that first
-/// needs it. Until then, a run that did reach storage would collide with
-/// the one before it on the primary key, which is loud. A
-/// plausible-looking timestamp would have made the same mistake silent.
-final class PreviewRunIdSource implements RunIdSource {
-  /// Creates the source.
-  const PreviewRunIdSource();
-
-  @override
-  String next() => 'preview';
-}
-
 class AppBlocObserver extends BlocObserver {
   const AppBlocObserver();
 
@@ -80,13 +57,12 @@ Future<void>? _startupInFlight;
 
 /// Runs the flavor-independent setup, then the widget [builder] returns.
 ///
-/// [builder] receives the recipe and ingredient repositories rather than the
-/// open database or a bare path, because that is what every current caller
-/// needs: the app builds its use cases from them and the development
-/// entrypoint seeds through them. Opening the database here rather than in
-/// an entrypoint is what keeps the three flavors from each carrying a copy
-/// of that, and it is what keeps `sqflite` out of them. A later slice that
-/// needs the production-run repository widens this parameter again.
+/// [builder] receives the three repositories rather than the open database
+/// or a bare path, because that is what every current caller needs: the app
+/// builds its use cases from them and the development entrypoint seeds
+/// through them. Opening the database here rather than in an entrypoint is
+/// what keeps the three flavors from each carrying a copy of that, and it
+/// is what keeps `sqflite` out of them.
 ///
 /// Everything that can fail before a widget tree exists is caught here and
 /// answered with [StartupFailureApp]. `FlutterError.onError` does not cover
@@ -101,6 +77,7 @@ Future<void> bootstrap(
   FutureOr<Widget> Function(
     RecipeRepository recipes,
     IngredientRepository ingredients,
+    ProductionRunRepository runs,
   )
   builder,
 ) {
@@ -121,6 +98,7 @@ Future<void> _runStartup(
   FutureOr<Widget> Function(
     RecipeRepository recipes,
     IngredientRepository ingredients,
+    ProductionRunRepository runs,
   )
   builder,
 ) async {
@@ -151,6 +129,7 @@ Future<void> _runStartup(
     app = await builder(
       SqfliteRecipeRepository(db),
       SqfliteIngredientRepository(db),
+      SqfliteProductionRunRepository(db),
     );
   } on Object catch (error, stackTrace) {
     log('startup failed', error: error, stackTrace: stackTrace);

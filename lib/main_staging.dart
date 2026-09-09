@@ -5,7 +5,7 @@ import 'package:prep_book/presentation/presentation.dart';
 
 Future<void> main() async {
   await bootstrap(
-    (recipes, ingredients) => App(
+    (recipes, ingredients, runs) => App(
       listLibrary: ListLibrary(recipes),
       searchLibrary: SearchLibrary(recipes),
       editor: RecipeEditorLauncher(
@@ -15,10 +15,11 @@ Future<void> main() async {
         saveIngredient: SaveIngredient(ingredients),
       ),
       production: ProductionSetupLauncher(
-        StartProductionRun(
-          recipes,
-          const PreviewRunIdSource(),
-          const SystemClock(),
+        StartProductionRun(recipes, RandomRunIdSource(), const SystemClock()),
+        result: ProductionResultLauncher(
+          acknowledgeWarning: const AcknowledgeWarning(),
+          applyOverride: const ApplyOverride(),
+          saveProductionRun: SaveProductionRun(runs),
         ),
       ),
     ),

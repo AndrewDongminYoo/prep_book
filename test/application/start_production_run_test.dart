@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
@@ -7,6 +9,37 @@ import 'fakes.dart';
 final class _FixedIds implements RunIdSource {
   @override
   String next() => 'run-1';
+}
+
+/// A [Random] that hands out [_draws] in order, cycling when it runs out.
+///
+/// Only [nextInt] is implemented: an identifier has to be built out of whole
+/// draws, and a source reaching for [nextDouble] would be spelling one out of
+/// a float's mantissa instead. The throwing members are what says so.
+final class _ScriptedRandom implements Random {
+  _ScriptedRandom(this._draws);
+
+  final List<int> _draws;
+
+  /// Every bound [nextInt] was called with, so a test can assert each draw
+  /// is 32 bits wide rather than some narrower number that happens to
+  /// render the same for the small values a script hands out.
+  final List<int> bounds = [];
+
+  int _index = 0;
+
+  @override
+  int nextInt(int max) {
+    bounds.add(max);
+    return _draws[_index++ % _draws.length];
+  }
+
+  @override
+  bool nextBool() => throw UnsupportedError('a run id is drawn as integers');
+
+  @override
+  double nextDouble() =>
+      throw UnsupportedError('a run id is drawn as integers');
 }
 
 final class _FixedClock implements Clock {
@@ -201,5 +234,55 @@ void main() {
       recipes,
     ).call(recipeId: 'a', targetYield: target);
     expect(run.result.batchPlan.batchCount, 10);
+  });
+
+  group('RandomRunIdSource', () {
+    test('two sources built independently do not agree on an id', () {
+      // Two instances rather than two calls on one, which is the whole
+      // requirement: a run id is a primary key written by a bare insert, so
+      // it has to survive a relaunch. A per-instance counter, or anything
+      // seeded from a fixed value, passes "two calls differ" and collides on
+      // the first run of the next launch. Drawn from the default source, so
+      // this is the generator the app actually binds.
+      final first = RandomRunIdSource().next();
+      final second = RandomRunIdSource().next();
+
+      expect(first, isNot(second));
+    });
+
+    test('an id is 32 lowercase hexadecimal digits', () {
+      final id = RandomRunIdSource().next();
+
+      expect(id, matches(RegExp(r'^[0-9a-f]{32}$')));
+    });
+
+    test('a draw of zero is padded, and every draw is 32 bits wide', () {
+      // The one case a hand-written hexadecimal join gets wrong: zero
+      // renders as a single `0`, so an unpadded identifier is 25 digits
+      // rather than 32 — and, worse, two different pairs of draws can then
+      // spell the same string. Scripted rather than sampled because
+      // `Random.secure()` will not produce this in a test's lifetime.
+      final random = _ScriptedRandom([0]);
+
+      final id = RandomRunIdSource(random).next();
+
+      expect(id, '0' * 32);
+      // Four draws of the full 32-bit range. A source that asked for a
+      // narrower bound would still render `0` here, so the bound is
+      // asserted rather than inferred from the digits.
+      expect(random.bounds, [4294967296, 4294967296, 4294967296, 4294967296]);
+    });
+
+    test('an id is the draws in order, not a set or a sum of them', () {
+      // Ordered draws, each distinct and each needing its own padding
+      // width, so a source that reversed them, sorted them, or folded them
+      // together renders something else.
+      final random = _ScriptedRandom([0xdeadbeef, 0x1, 0x0, 0xffffffff]);
+
+      expect(
+        RandomRunIdSource(random).next(),
+        'deadbeef0000000100000000ffffffff',
+      );
+    });
   });
 }

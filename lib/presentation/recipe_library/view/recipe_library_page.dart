@@ -8,6 +8,7 @@ import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/production_setup/production_setup.dart';
 import 'package:prep_book/presentation/recipe_editor/recipe_editor.dart';
 import 'package:prep_book/presentation/recipe_library/recipe_library.dart';
+import 'package:prep_book/presentation/units/readable_quantity.dart';
 
 /// The recipe library: the screen the app opens on.
 ///
@@ -244,8 +245,7 @@ class _RecipeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final baseYield =
-        '${recipe.baseYield.toDecimal()} ${recipe.baseYield.unit.symbol}';
+    final baseYield = readableQuantity(recipe.baseYield);
     return ListTile(
       // Edit sits in `leading` rather than beside Production Run in
       // `trailing`, which is where it reads more naturally. `ListTile` lays

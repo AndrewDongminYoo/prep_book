@@ -417,5 +417,179 @@
     "productionSetupContinue": "Continue",
     "@productionSetupContinue": {
         "description": "Label of the action that carries the target yield through to the production result"
+    },
+    "productionResultTitle": "Production result",
+    "@productionResultTitle": {
+        "description": "Title of the production result screen"
+    },
+    "productionResultTarget": "Target",
+    "@productionResultTarget": {
+        "description": "Label of the yield this run was calculated for"
+    },
+    "productionResultBatches": "Batches",
+    "@productionResultBatches": {
+        "description": "Label of how many batches the run takes"
+    },
+    "productionResultWarnings": "Needs review",
+    "@productionResultWarnings": {
+        "description": "Heading of the section listing everything the operator must see"
+    },
+    "productionResultComponents": "Components",
+    "@productionResultComponents": {
+        "description": "Heading of the section listing the calculated lines"
+    },
+    "productionResultAcknowledge": "Acknowledge",
+    "@productionResultAcknowledge": {
+        "description": "Label of the action that marks one warning as seen"
+    },
+    "productionResultAcknowledged": "Acknowledged",
+    "@productionResultAcknowledged": {
+        "description": "Label of the mark shown in place of the action once a warning has been seen"
+    },
+    "productionResultManualWarning": "{component} in {recipe} has no amount yet.",
+    "@productionResultManualWarning": {
+        "description": "Warning that a free-form line needs an operator value; carries the component and the recipe it belongs to",
+        "placeholders": {
+            "component": {
+                "type": "String",
+                "example": "dusting-flour"
+            },
+            "recipe": {
+                "type": "String",
+                "example": "Croissant dough"
+            }
+        }
+    },
+    "productionResultRoundingWarning": "{component} in {recipe} was rounded for display.",
+    "@productionResultRoundingWarning": {
+        "description": "Warning that display rounding moved a line away from its calculated value; carries the component and its recipe",
+        "placeholders": {
+            "component": {
+                "type": "String",
+                "example": "flour"
+            },
+            "recipe": {
+                "type": "String",
+                "example": "Croissant dough"
+            }
+        }
+    },
+    "productionResultArchivedWarning": "{recipe} is archived.",
+    "@productionResultArchivedWarning": {
+        "description": "Warning that a recipe the run depends on is archived; carries its name",
+        "placeholders": {
+            "recipe": {
+                "type": "String",
+                "example": "Summer focaccia"
+            }
+        }
+    },
+    "productionResultManualAmount": "No calculated amount",
+    "@productionResultManualAmount": {
+        "description": "Shown in place of a quantity on a free-form line, which produces no number"
+    },
+    "productionResultExact": "exactly {amount}",
+    "@productionResultExact": {
+        "description": "Shown beside a rounded quantity, carrying the unrounded value the spec keeps visible",
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "333.333333 g"
+            }
+        }
+    },
+    "productionResultBatch": "Batch {number}",
+    "@productionResultBatch": {
+        "description": "Label of one batch's amount; carries the batch's position, counted from one",
+        "placeholders": {
+            "number": {
+                "type": "String",
+                "example": "1"
+            }
+        }
+    },
+    "productionResultBatchRange": "Batches {first}–{last}",
+    "@productionResultBatchRange": {
+        "description": "Label of consecutive batches that all take the same amount; carries the first and last of them",
+        "placeholders": {
+            "first": {
+                "type": "String",
+                "example": "1"
+            },
+            "last": {
+                "type": "String",
+                "example": "3"
+            }
+        }
+    },
+    "productionResultOverrideLabel": "Use instead",
+    "@productionResultOverrideLabel": {
+        "description": "Label of the field holding the amount the operator will actually use"
+    },
+    "productionResultOverrideUnit": "Unit",
+    "@productionResultOverrideUnit": {
+        "description": "Label of the override amount's unit picker"
+    },
+    "productionResultOverrideInvalid": "Enter an amount above zero.",
+    "@productionResultOverrideInvalid": {
+        "description": "Shown under the override amount when what was typed is not a positive number"
+    },
+    "productionResultOverrideApplied": "Using {amount}",
+    "@productionResultOverrideApplied": {
+        "description": "Shown on a line the operator has entered a value for; carries that value",
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "500 g"
+            }
+        }
+    },
+    "productionResultExpand": "Show detail",
+    "@productionResultExpand": {
+        "description": "Tooltip of the action that opens a line's batches, override control, and sub-recipe"
+    },
+    "productionResultCollapse": "Hide detail",
+    "@productionResultCollapse": {
+        "description": "Tooltip of the action that closes an opened line"
+    },
+    "productionResultSave": "Save production run",
+    "@productionResultSave": {
+        "description": "Label of the action that stores the snapshot, on a run with nothing outstanding"
+    },
+    "productionResultSaveDraft": "Save as draft",
+    "@productionResultSaveDraft": {
+        "description": "Label of the same action on a run whose blocking warnings are not all acknowledged"
+    },
+    "productionResultDraftNotice": "{count, plural, =1{One warning has not been acknowledged. Saving now stores a draft.} other{{count} warnings have not been acknowledged. Saving now stores a draft.}}",
+    "@productionResultDraftNotice": {
+        "description": "Shown above the save action while blocking warnings remain unacknowledged; carries how many",
+        "placeholders": {
+            "count": {
+                "type": "num",
+                "format": "decimalPattern"
+            }
+        }
+    },
+    "productionResultReady": "Saving now stores a finished production run.",
+    "@productionResultReady": {
+        "description": "Shown above the save action once nothing blocks the run; it claims nothing about warnings, because a run with no warnings at all and a run whose non-blocking warnings are still outstanding both read this"
+    },
+    "productionResultSaved": "This run is stored.",
+    "@productionResultSaved": {
+        "description": "Shown once the snapshot has been written"
+    },
+    "productionResultSaveFailed": "The production run could not be saved.",
+    "@productionResultSaveFailed": {
+        "description": "Shown when the write threw"
+    },
+    "productionResultOverrideBlocksSave": "Correct the amount entered for {components} before saving.",
+    "@productionResultOverrideBlocksSave": {
+        "description": "Shown above the save action while an override control holds something that is not an amount; names the lines it is on",
+        "placeholders": {
+            "components": {
+                "type": "String",
+                "example": "salt, flour"
+            }
+        }
     }
 }

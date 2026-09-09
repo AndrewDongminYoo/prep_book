@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
+import 'package:prep_book/presentation/production_result/view/production_result_launcher.dart';
 import 'package:prep_book/presentation/production_setup/cubit/production_setup_cubit.dart';
 import 'package:prep_book/presentation/units/readable_quantity.dart';
 
@@ -18,6 +19,7 @@ class ProductionSetupPage extends StatelessWidget {
   const ProductionSetupPage({
     required this.startProductionRun,
     required this.recipe,
+    required this.result,
     super.key,
   });
 
@@ -27,6 +29,10 @@ class ProductionSetupPage extends StatelessWidget {
   /// The recipe the operator chose.
   final Recipe recipe;
 
+  /// Where Continue goes: the production result screen, over the run this
+  /// one calculated.
+  final ProductionResultLauncher result;
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -35,7 +41,7 @@ class ProductionSetupPage extends StatelessWidget {
       // typed, and the recipe it lays the form out from arrived with the
       // route.
       create: (_) => ProductionSetupCubit(startProductionRun, recipe: recipe),
-      child: const ProductionSetupView(),
+      child: ProductionSetupView(result: result),
     );
   }
 }
@@ -43,8 +49,11 @@ class ProductionSetupPage extends StatelessWidget {
 /// The screen's rendering, split from [ProductionSetupPage] so the widget
 /// that provides the cubit is not also the widget that reads it.
 class ProductionSetupView extends StatelessWidget {
-  /// Creates the view.
-  const ProductionSetupView({super.key});
+  /// Creates the view over the launcher its Continue action opens.
+  const ProductionSetupView({required this.result, super.key});
+
+  /// Opens the production result screen over the calculated run.
+  final ProductionResultLauncher result;
 
   @override
   Widget build(BuildContext context) {
@@ -74,23 +83,62 @@ class ProductionSetupView extends StatelessWidget {
               const SizedBox(height: 24),
               _Outcome(state: state),
               const SizedBox(height: 24),
-              // Disabled, the way the library screen's Production Run
-              // action was rendered before this change and for the same
-              // reason: the production result screen this carries the
-              // target through to does not exist yet. What decides whether
-              // it may be pressed is already written down —
-              // `ProductionSetupState.canContinue` — so the slice that
-              // builds that screen wires a route rather than deriving the
-              // rule.
-              FilledButton(
-                onPressed: null,
-                child: Text(l10n.productionSetupContinue),
-              ),
+              // What decides whether it may be pressed was already
+              // written down when this screen was built:
+              // `ProductionSetupState.canContinue`, which
+              // `production_setup_cubit_test.dart` pins. This slice wires
+              // the route it gates rather than deriving the rule again.
+              _Continue(state: state, result: result),
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+/// The action that carries the calculated run through to the production
+/// result screen.
+class _Continue extends StatelessWidget {
+  const _Continue({required this.state, required this.result});
+
+  final ProductionSetupState state;
+  final ProductionResultLauncher result;
+
+  @override
+  Widget build(BuildContext context) {
+    // `canContinue` already requires a calculated run; reading it into a
+    // local is what lets the analyzer see that, so the run reaches the
+    // launcher without a null assertion.
+    final run = state.preview;
+    return FilledButton(
+      onPressed: run != null && state.canContinue
+          ? () => unawaited(_continue(context, run))
+          : null,
+      child: Text(context.l10n.productionSetupContinue),
+    );
+  }
+
+  /// Opens the result screen over [run], then calculates the target again.
+  ///
+  /// The second half is not a refresh for its own sake. A run carries the
+  /// identifier it was given when it was calculated, and a stored run may
+  /// not be stored a second time under it — the repository's write is a
+  /// bare insert against a primary key. So an operator who saves a run,
+  /// comes back and presses Continue again would otherwise be handed the
+  /// same run, and their next save would fail on a collision nothing on
+  /// screen explains. Recalculating mints a new identifier, and it also
+  /// picks up a recipe edited while the result screen was up.
+  ///
+  /// Through the cubit's own target entry point rather than a method added
+  /// for this: pressing Continue a second time is the same request as
+  /// typing the target was, and it goes through the same debounce and the
+  /// same intent counter. The cubit is read before the await, so no
+  /// context outlives an asynchronous gap.
+  Future<void> _continue(BuildContext context, ProductionRun run) async {
+    final cubit = context.read<ProductionSetupCubit>();
+    await result.open(context, run: run);
+    await cubit.targetAmountChanged(state.targetAmount);
   }
 }
 

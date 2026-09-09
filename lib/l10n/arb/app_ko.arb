@@ -417,5 +417,179 @@
     "productionSetupContinue": "계속",
     "@productionSetupContinue": {
         "description": "목표 생산량을 생산 결과 화면으로 넘기는 동작의 라벨"
+    },
+    "productionResultTitle": "생산 결과",
+    "@productionResultTitle": {
+        "description": "생산 결과 화면의 제목"
+    },
+    "productionResultTarget": "목표 생산량",
+    "@productionResultTarget": {
+        "description": "이번 생산 실행이 목표로 하는 생산량의 라벨"
+    },
+    "productionResultBatches": "배치 수",
+    "@productionResultBatches": {
+        "description": "이번 실행에 필요한 배치 수의 라벨"
+    },
+    "productionResultWarnings": "확인이 필요한 항목",
+    "@productionResultWarnings": {
+        "description": "작업자가 반드시 확인해야 하는 항목을 모아 둔 구역의 제목"
+    },
+    "productionResultComponents": "구성 항목",
+    "@productionResultComponents": {
+        "description": "계산된 구성 항목을 모아 둔 구역의 제목"
+    },
+    "productionResultAcknowledge": "확인",
+    "@productionResultAcknowledge": {
+        "description": "경고 하나를 확인 처리하는 동작의 라벨"
+    },
+    "productionResultAcknowledged": "확인함",
+    "@productionResultAcknowledged": {
+        "description": "이미 확인한 경고에서 동작 대신 보여 주는 표시의 라벨"
+    },
+    "productionResultManualWarning": "{recipe}의 {component}에 아직 수량이 없습니다.",
+    "@productionResultManualWarning": {
+        "description": "자유 입력 항목에 작업자가 수량을 넣어야 한다는 경고. 항목과 그 항목이 속한 레시피를 함께 보여 준다",
+        "placeholders": {
+            "component": {
+                "type": "String",
+                "example": "dusting-flour"
+            },
+            "recipe": {
+                "type": "String",
+                "example": "Croissant dough"
+            }
+        }
+    },
+    "productionResultRoundingWarning": "{recipe}의 {component}은(는) 표시를 위해 반올림했습니다.",
+    "@productionResultRoundingWarning": {
+        "description": "표시용 반올림이 계산값을 옮겼다는 경고. 항목과 그 항목이 속한 레시피를 함께 보여 준다",
+        "placeholders": {
+            "component": {
+                "type": "String",
+                "example": "flour"
+            },
+            "recipe": {
+                "type": "String",
+                "example": "Croissant dough"
+            }
+        }
+    },
+    "productionResultArchivedWarning": "{recipe}은(는) 보관 처리된 레시피입니다.",
+    "@productionResultArchivedWarning": {
+        "description": "이번 실행이 의존하는 레시피가 보관 처리되었다는 경고. 그 이름을 함께 보여 준다",
+        "placeholders": {
+            "recipe": {
+                "type": "String",
+                "example": "Summer focaccia"
+            }
+        }
+    },
+    "productionResultManualAmount": "계산된 수량 없음",
+    "@productionResultManualAmount": {
+        "description": "수량이 나오지 않는 자유 입력 항목에서 수량 대신 보여 주는 문구"
+    },
+    "productionResultExact": "정확히는 {amount}",
+    "@productionResultExact": {
+        "description": "반올림한 수량 옆에 함께 보여 주는, 반올림하지 않은 값",
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "333.333333 g"
+            }
+        }
+    },
+    "productionResultBatch": "{number}번째 배치",
+    "@productionResultBatch": {
+        "description": "배치 하나의 수량 라벨. 1부터 세는 배치 번호를 함께 보여 준다",
+        "placeholders": {
+            "number": {
+                "type": "String",
+                "example": "1"
+            }
+        }
+    },
+    "productionResultBatchRange": "{first}–{last}번째 배치",
+    "@productionResultBatchRange": {
+        "description": "같은 수량이 이어지는 배치들의 라벨. 첫 배치와 마지막 배치를 함께 보여 준다",
+        "placeholders": {
+            "first": {
+                "type": "String",
+                "example": "1"
+            },
+            "last": {
+                "type": "String",
+                "example": "3"
+            }
+        }
+    },
+    "productionResultOverrideLabel": "대신 사용할 수량",
+    "@productionResultOverrideLabel": {
+        "description": "작업자가 실제로 사용할 수량을 입력하는 입력란의 라벨"
+    },
+    "productionResultOverrideUnit": "단위",
+    "@productionResultOverrideUnit": {
+        "description": "대체 수량의 단위 선택기의 라벨"
+    },
+    "productionResultOverrideInvalid": "0보다 큰 수량을 입력하세요.",
+    "@productionResultOverrideInvalid": {
+        "description": "대체 수량이 양수가 아닐 때 입력란 아래에 보여 주는 문구"
+    },
+    "productionResultOverrideApplied": "{amount}을(를) 사용합니다",
+    "@productionResultOverrideApplied": {
+        "description": "작업자가 값을 입력한 항목에 보여 주는 문구. 그 값을 함께 보여 준다",
+        "placeholders": {
+            "amount": {
+                "type": "String",
+                "example": "500 g"
+            }
+        }
+    },
+    "productionResultExpand": "자세히 보기",
+    "@productionResultExpand": {
+        "description": "항목의 배치, 대체 수량 입력란, 하위 레시피를 펼치는 동작의 툴팁"
+    },
+    "productionResultCollapse": "접기",
+    "@productionResultCollapse": {
+        "description": "펼쳐 둔 항목을 접는 동작의 툴팁"
+    },
+    "productionResultSave": "생산 실행 저장",
+    "@productionResultSave": {
+        "description": "남은 항목이 없는 실행을 저장하는 동작의 라벨"
+    },
+    "productionResultSaveDraft": "초안으로 저장",
+    "@productionResultSaveDraft": {
+        "description": "확인하지 않은 차단 경고가 남은 실행에서 같은 동작에 쓰는 라벨"
+    },
+    "productionResultDraftNotice": "{count, plural, other{확인하지 않은 경고가 {count}건 있습니다. 지금 저장하면 초안으로 저장됩니다.}}",
+    "@productionResultDraftNotice": {
+        "description": "확인하지 않은 차단 경고가 남아 있는 동안 저장 동작 위에 보여 주는 문구. 그 개수를 함께 보여 준다",
+        "placeholders": {
+            "count": {
+                "type": "num",
+                "format": "decimalPattern"
+            }
+        }
+    },
+    "productionResultReady": "지금 저장하면 완료된 생산 실행으로 저장됩니다.",
+    "@productionResultReady": {
+        "description": "실행을 막는 것이 없을 때 저장 동작 위에 보여 주는 문구. 경고에 대해서는 아무것도 주장하지 않는다. 경고가 하나도 없는 실행과 막지 않는 경고가 남아 있는 실행이 모두 이 문구를 보여 주기 때문이다"
+    },
+    "productionResultSaved": "이 생산 실행을 저장했습니다.",
+    "@productionResultSaved": {
+        "description": "스냅숏을 저장한 뒤에 보여 주는 문구"
+    },
+    "productionResultSaveFailed": "생산 실행을 저장하지 못했습니다.",
+    "@productionResultSaveFailed": {
+        "description": "저장이 실패했을 때 보여 주는 문구"
+    },
+    "productionResultOverrideBlocksSave": "저장하기 전에 {components}에 입력한 수량을 고치세요.",
+    "@productionResultOverrideBlocksSave": {
+        "description": "대체 수량 입력란에 수량이 아닌 값이 들어 있는 동안 저장 동작 위에 보여 주는 문구. 그 항목의 이름을 함께 보여 준다",
+        "placeholders": {
+            "components": {
+                "type": "String",
+                "example": "salt, flour"
+            }
+        }
     }
 }

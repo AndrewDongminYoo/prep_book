@@ -8,14 +8,28 @@ import 'package:prep_book/domain/domain.dart';
 String readableAmount(Rational amount, {required int scale}) =>
     _approximated(amount, amount.toDecimal(scaleOnInfinitePrecision: scale));
 
+/// [quantity]'s amount alone, without the unit symbol [readableQuantity]
+/// writes after it.
+///
+/// For the places a screen needs the number on its own: a row that lays the
+/// amount and the symbol out as separate widgets, and a form field the
+/// operator types over. Both used to call `toDecimal()` themselves, which is
+/// the one call that turns a small positive amount into `0`.
+///
+/// A field seeded from this is still safe to save back: the recipe editor
+/// decides whether a line is still showing its stored value by comparing the
+/// field's text against this same function, so the two sides move together
+/// whatever it returns.
+String readableAmountOf(Quantity quantity) =>
+    _approximated(quantity.amount, quantity.toDecimal());
+
 /// [quantity] as the screens write it: an amount and the symbol of the unit
 /// it is measured in.
 ///
 /// Rounded at the domain's own display scale, which `Quantity.toDecimal`
 /// owns, so a quantity reads here the way it reads anywhere else.
 String readableQuantity(Quantity quantity) =>
-    '${_approximated(quantity.amount, quantity.toDecimal())} '
-    '${quantity.unit.symbol}';
+    '${readableAmountOf(quantity)} ${quantity.unit.symbol}';
 
 /// What a value looks like once its exact form has been approximated:
 /// [rounded], unless rounding has flattened it to nothing, in which case

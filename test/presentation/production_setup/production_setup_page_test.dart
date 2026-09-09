@@ -41,15 +41,20 @@ Recipe _filled(String dependency) => buildRecipe(
   components: [buildSubRecipeComponent(dependency)],
 );
 
-Widget _screenOver(RecipeRepository storage, {required Recipe recipe}) =>
-    ProductionSetupPage(
-      startProductionRun: StartProductionRun(
-        storage,
-        const FixedRunIdSource(),
-        const FixedClock(),
-      ),
-      recipe: recipe,
-    );
+Widget _screenOver(
+  RecipeRepository storage, {
+  required Recipe recipe,
+  ProductionRunRepository? runs,
+  RunIdSource? ids,
+}) => ProductionSetupPage(
+  startProductionRun: StartProductionRun(
+    storage,
+    ids ?? const FixedRunIdSource(),
+    const FixedClock(),
+  ),
+  recipe: recipe,
+  result: buildResultLauncher(runs ?? FakeProductionRunRepository()),
+);
 
 /// Types [amount] into the target field and waits the calculation out.
 Future<void> _enterTarget(WidgetTester tester, String amount) async {
@@ -432,18 +437,102 @@ void main() {
       );
     });
 
-    testWidgets('renders Continue with nowhere to go', (tester) async {
+    testWidgets('Continue carries the calculated run through', (tester) async {
       final storage = FakeRecipeRepository()..seed(_sheeted());
 
       await tester.pumpApp(_screenOver(storage, recipe: _sheeted()));
       await _enterTarget(tester, '1000');
+      await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+      await tester.pumpAndSettle();
 
-      // Pins the rendering this slice chose, not a validation rule: the
-      // production result screen does not exist, so the action is disabled
-      // whatever the target says — the way the library screen's Production
-      // Run action was rendered before it became live. What decides
-      // whether it may be pressed is `ProductionSetupState.canContinue`,
-      // which `production_setup_cubit_test.dart` pins.
+      // The result screen, over the run this screen calculated rather than
+      // over a second calculation of its own: 1000 g of a recipe whose
+      // maximum batch is 400 g is three batches, and the result screen
+      // reads that off the run it was handed.
+      expect(find.text('Production result'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+    });
+
+    testWidgets('a second Continue carries a newly calculated run', (
+      tester,
+    ) async {
+      final storage = FakeRecipeRepository()..seed(_sheeted());
+      final runs = FakeProductionRunRepository();
+
+      await tester.pumpApp(
+        _screenOver(
+          storage,
+          recipe: _sheeted(),
+          runs: runs,
+          ids: CountingRunIdSource(),
+        ),
+      );
+      await _enterTarget(tester, '1000');
+      await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Save production run'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Save production run'),
+      );
+      await tester.pumpAndSettle();
+
+      // Two runs, not one refused write. A run carries the identifier it
+      // was calculated with, and the repository's write is a bare insert
+      // against a primary key — so an operator who saves, comes back and
+      // presses Continue again would otherwise be handed the run they
+      // already stored, and be told only that the save failed.
+      expect(runs.stored.keys, ['run-1', 'run-2']);
+      expect(find.text('The production run could not be saved.'), findsNothing);
+    });
+
+    testWidgets('Continue is refused before a run exists', (tester) async {
+      final storage = FakeRecipeRepository()..seed(_sheeted());
+
+      await tester.pumpApp(_screenOver(storage, recipe: _sheeted()));
+
+      // Nothing typed, so nothing has been calculated and there is no run
+      // to carry anywhere.
+      final button = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Continue'),
+      );
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets('Continue is refused over an archived recipe', (tester) async {
+      final archived = Recipe(
+        id: 'dough',
+        revision: 1,
+        name: 'Dough',
+        baseYield: Quantity.parse('1000', Unit.gram),
+        modifiedAt: DateTime.utc(2026, 9, 8),
+        isArchived: true,
+        components: const [],
+      );
+      final storage = FakeRecipeRepository()..seed(archived);
+
+      await tester.pumpApp(_screenOver(storage, recipe: archived));
+      await _enterTarget(tester, '1000');
+
+      // A run exists — the calculation returned one, and its numbers are
+      // on screen — and the action is still refused. Which is the whole
+      // reason the button reads `canContinue` rather than "is there a
+      // run": an archived dependency blocks a new production run, and a
+      // wiring that gated on the run alone would let this one through.
+      expect(
+        find.text(
+          'Dough is archived. Restore it before running '
+          'production.',
+        ),
+        findsOneWidget,
+      );
       final button = tester.widget<FilledButton>(
         find.widgetWithText(FilledButton, 'Continue'),
       );

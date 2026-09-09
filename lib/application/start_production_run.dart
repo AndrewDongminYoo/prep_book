@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:prep_book/application/dependency_closure.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/repositories.dart';
@@ -5,10 +7,55 @@ import 'package:prep_book/persistence/repositories.dart';
 /// Supplies the identifier a new production run is stored under.
 ///
 /// Injected rather than generated inline so a test can assert an exact
-/// snapshot; the app binds it to a UUID source.
+/// snapshot; the app binds it to [RandomRunIdSource].
 abstract interface class RunIdSource {
   /// A new, unused run identifier.
   String next();
+}
+
+/// The [RunIdSource] the app runs on: 128 random bits, written as 32
+/// lowercase hexadecimal digits.
+///
+/// A stored run's identifier is a `TEXT PRIMARY KEY` written by a bare
+/// insert, so a repeated value throws rather than replacing the row. It
+/// therefore has to be unique across launches, across devices, and across a
+/// database restored from a backup onto a second device — which rules out
+/// anything counted, and rules out a timestamp, since two runs saved inside
+/// one millisecond are exactly what a busy morning produces.
+///
+/// No package was added for this. A version 4 UUID is 122 random bits and a
+/// dash layout; `dart:math`'s [Random.secure] supplies the bits, and the
+/// layout carries no meaning here because nothing outside this app ever
+/// parses a run identifier. The project's rule is to justify a dependency
+/// before taking it, and the standard library already answers this one.
+///
+/// The optional constructor argument exists so a test can drive an exact
+/// identifier out of a source it controls; nothing in the app passes one,
+/// and the default is the platform's cryptographic generator rather than
+/// a seeded one.
+final class RandomRunIdSource implements RunIdSource {
+  /// Creates the source, drawing from [random] when one is given.
+  RandomRunIdSource([Random? random]) : _random = random ?? Random.secure();
+
+  final Random _random;
+
+  /// How many 32-bit draws make one identifier.
+  static const _draws = 4;
+
+  /// The exclusive bound of one draw: `nextInt` accepts 2^32 itself.
+  static const int _drawBound = 1 << 32;
+
+  /// Hexadecimal digits one 32-bit draw is written in, so a small draw is
+  /// padded rather than shortening the identifier. Without the padding a
+  /// draw of zero would contribute one digit instead of eight, and two
+  /// different pairs of draws could then spell the same identifier.
+  static const _drawDigits = 8;
+
+  @override
+  String next() => [
+    for (var draw = 0; draw < _draws; draw++)
+      _random.nextInt(_drawBound).toRadixString(16).padLeft(_drawDigits, '0'),
+  ].join();
 }
 
 /// Supplies the current instant, for the same reason as [RunIdSource].
