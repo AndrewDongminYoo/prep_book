@@ -50,6 +50,7 @@ Widget _libraryOver(
     recipes,
     ingredients ?? FakeIngredientRepository(),
   ),
+  production: buildProductionLauncher(recipes),
 );
 
 /// The screen's own scroll position.
@@ -115,15 +116,56 @@ void main() {
       expect(find.text(_errorMessage), findsNothing);
     });
 
-    testWidgets('renders Production Run per row, disabled', (tester) async {
+    testWidgets('Production Run opens setup over that row', (tester) async {
       await tester.pumpApp(_libraryOver(recipes));
       await tester.pump();
 
-      final actions = tester.widgetList<FilledButton>(
-        find.widgetWithText(FilledButton, 'Production Run'),
+      final actions = find.widgetWithText(FilledButton, 'Production Run');
+      expect(actions, findsNWidgets(2));
+      await tester.tap(actions.first);
+      await tester.pumpAndSettle();
+
+      // The row's own recipe, not whichever the library happened to read
+      // first: the rows list newest first, so the top action is the
+      // croissant dough's.
+      expect(find.text('Production run'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ProductionSetupPage),
+          matching: find.text('Croissant dough'),
+        ),
+        findsOneWidget,
       );
-      expect(actions, hasLength(2));
-      expect(actions.every((button) => button.onPressed == null), isTrue);
+    });
+
+    testWidgets('an archived row keeps its Production Run action', (
+      tester,
+    ) async {
+      final archivedOnly = FakeRecipeRepository()
+        ..seed(
+          buildRecipe(id: 'r-c', name: 'Summer focaccia', isArchived: true),
+        );
+
+      await tester.pumpApp(_libraryOver(archivedOnly));
+      await tester.pump();
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pump();
+
+      // Live, not disabled. An archived recipe cannot be run, but the row
+      // is the wrong place to say so: the reason may be a sub-recipe no
+      // row ever showed, and the production screen is what names it. A row
+      // that disabled the action instead would dead-end the operator with
+      // nothing telling them why.
+      await tester.tap(find.widgetWithText(FilledButton, 'Production Run'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(ProductionSetupPage),
+          matching: find.text('Summer focaccia'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('typing filters the rows, then reports no matches', (

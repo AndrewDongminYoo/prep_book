@@ -16,6 +16,7 @@ void main() {
           listLibrary: ListLibrary(recipes),
           searchLibrary: SearchLibrary(recipes),
           editor: buildEditorLauncher(recipes, FakeIngredientRepository()),
+          production: buildProductionLauncher(recipes),
         ),
       );
       await tester.pump();

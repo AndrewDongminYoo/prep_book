@@ -26,6 +26,29 @@ final class SystemClock implements Clock {
   DateTime now() => DateTime.now();
 }
 
+/// The identifier a calculated production run carries while nothing stores
+/// one.
+///
+/// `StartProductionRun` needs a source to build its snapshot, and the
+/// production setup screen keeps that snapshot to itself: it shows the
+/// operator what today's target becomes and writes nothing, so this value
+/// is never stored, never shown, and never keyed on.
+///
+/// A constant rather than a generated identifier, because the change that
+/// first *stores* a run is the change that needs a durable one — and it is
+/// the change that picks the source, and the package for it, since
+/// `CLAUDE.md` asks for one package at a time in the change that first
+/// needs it. Until then, a run that did reach storage would collide with
+/// the one before it on the primary key, which is loud. A
+/// plausible-looking timestamp would have made the same mistake silent.
+final class PreviewRunIdSource implements RunIdSource {
+  /// Creates the source.
+  const PreviewRunIdSource();
+
+  @override
+  String next() => 'preview';
+}
+
 class AppBlocObserver extends BlocObserver {
   const AppBlocObserver();
 
