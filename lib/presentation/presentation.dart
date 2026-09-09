@@ -6,6 +6,7 @@
 /// reaches storage only through the application layer's use cases.
 library;
 
+export 'production_result/production_result.dart';
 export 'production_setup/production_setup.dart';
 export 'recipe_editor/recipe_editor.dart';
 export 'recipe_library/recipe_library.dart';

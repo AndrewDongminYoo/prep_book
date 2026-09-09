@@ -203,10 +203,10 @@ final class FixedClock implements Clock {
 
 /// A run identifier source that answers with the same value every time.
 ///
-/// Fixed rather than counted because nothing stores what the production
-/// setup screen calculates, so no test needs two runs to differ — and the
-/// entrypoints bind a constant source too, for the reason
-/// `PreviewRunIdSource` states.
+/// Fixed rather than random because a screen test asserting what was stored
+/// has to be able to name it. The app binds `RandomRunIdSource`, whose own
+/// behaviour is pinned in `test/application/start_production_run_test.dart`;
+/// nothing here is a claim about that.
 final class FixedRunIdSource implements RunIdSource {
   /// Creates the source.
   const FixedRunIdSource();
@@ -291,12 +291,42 @@ RecipeEditorLauncher buildEditorLauncher(
   saveIngredient: SaveIngredient(ingredients),
 );
 
+/// A run identifier source that answers with a new value every call.
+///
+/// The counted stand-in for `RandomRunIdSource`: a test that presses on
+/// past one stored run needs the next calculation to be a different run,
+/// and [FixedRunIdSource] would make every one of them collide.
+final class CountingRunIdSource implements RunIdSource {
+  int _issued = 0;
+
+  @override
+  String next() => 'run-${++_issued}';
+}
+
 /// A production setup launcher over in-memory storage, wired the way the
 /// entrypoints wire the real one, so a screen test opens the screen the app
-/// actually opens.
-ProductionSetupLauncher buildProductionLauncher(RecipeRepository recipes) =>
-    ProductionSetupLauncher(
-      StartProductionRun(recipes, const FixedRunIdSource(), const FixedClock()),
+/// actually opens — the production result screen it continues into
+/// included.
+ProductionSetupLauncher buildProductionLauncher(
+  RecipeRepository recipes, {
+  ProductionRunRepository? runs,
+  RunIdSource? ids,
+}) => ProductionSetupLauncher(
+  StartProductionRun(
+    recipes,
+    ids ?? const FixedRunIdSource(),
+    const FixedClock(),
+  ),
+  result: buildResultLauncher(runs ?? FakeProductionRunRepository()),
+);
+
+/// A production result launcher over in-memory storage, wired the way the
+/// entrypoints wire the real one.
+ProductionResultLauncher buildResultLauncher(ProductionRunRepository runs) =>
+    ProductionResultLauncher(
+      acknowledgeWarning: const AcknowledgeWarning(),
+      applyOverride: const ApplyOverride(),
+      saveProductionRun: SaveProductionRun(runs),
     );
 
 /// A sub-recipe produced one gram at a time.
@@ -320,6 +350,225 @@ Recipe buildGrainSubRecipe() => Recipe(
       id: 'grain-flour',
       target: const IngredientRef('flour'),
       baseQuantity: Quantity.parse('500', Unit.gram),
+      behavior: ScalingBehavior.proportional,
+      displayOrder: 0,
+    ),
+  ],
+);
+
+/// A run repository whose write always throws.
+///
+/// The result screen's failure branch needs a write that fails on its own
+/// terms; `FakeProductionRunRepository` only refuses a duplicate identifier,
+/// which is a different story and one the screen already prevents.
+final class UnwritableRunRepository implements ProductionRunRepository {
+  @override
+  Future<void> save(ProductionRun run) async =>
+      throw StateError('the database is unwritable');
+
+  @override
+  Future<List<ProductionRunSummary>> listSummaries() =>
+      throw UnsupportedError('the result screen never lists runs');
+
+  @override
+  Future<ProductionRun?> findById(String id) =>
+      throw UnsupportedError('the result screen never reopens a run');
+
+  @override
+  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
+      throw UnsupportedError('the result screen saves the whole run');
+
+  @override
+  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) =>
+      throw UnsupportedError('the result screen saves the whole run');
+}
+
+/// A run repository whose write stays in flight until it is released.
+///
+/// The state a completed write never sits in is the one the result
+/// screen's mutators are guarded against: the run is already on its way to
+/// storage and cannot take another change. Neither
+/// `FakeProductionRunRepository` nor [UnwritableRunRepository] can hold a
+/// suite there — both settle within the same call — so a suite reaching
+/// for that state needs a write it decides the end of.
+final class PendingRunRepository implements ProductionRunRepository {
+  final Completer<void> _write = Completer<void>();
+
+  /// The runs handed over, in the state they were handed over in.
+  final List<ProductionRun> received = [];
+
+  /// Lets the write return, so the cubit can finish.
+  void release() => _write.complete();
+
+  @override
+  Future<void> save(ProductionRun run) {
+    received.add(run);
+    return _write.future;
+  }
+
+  @override
+  Future<List<ProductionRunSummary>> listSummaries() =>
+      throw UnsupportedError('the result screen never lists runs');
+
+  @override
+  Future<ProductionRun?> findById(String id) =>
+      throw UnsupportedError('the result screen never reopens a run');
+
+  @override
+  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
+      throw UnsupportedError('the result screen saves the whole run');
+
+  @override
+  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) =>
+      throw UnsupportedError('the result screen saves the whole run');
+}
+
+/// The run the production result suites review.
+///
+/// One fixture rather than one per suite, because every number on that
+/// screen is derived and the derivations are what the suites assert: the
+/// cubit suite reads them off the state and the widget suite reads them off
+/// the screen, and two fixtures would let the two drift into asserting
+/// different arithmetic.
+///
+/// Scaled 1:1 against a 1000 g recipe whose 400 g maximum splits it into
+/// two full batches and a 200 g remainder, so the run carries:
+///
+/// - a rounded line (`flour`, rounded up to 30 g) whose displayed total
+///   differs from its exact one, and whose per-batch amounts fall into two
+///   groups rather than three lines,
+/// - a free-form line (`salt`) with no amount in either form,
+/// - two levels of sub-recipe, so a collapsed ancestor can hide a
+///   descendant,
+/// - and one recipe (`Starter`) reached twice by different routes, whose
+///   `rye` line therefore appears twice under one override key with two
+///   different calculated amounts.
+Future<ProductionRun> buildReviewableRun() {
+  final recipes = FakeRecipeRepository()
+    ..seed(_starterRecipe())
+    ..seed(_doughRecipe())
+    ..seed(_bunRecipe());
+  return StartProductionRun(
+    recipes,
+    const FixedRunIdSource(),
+    const FixedClock(),
+  ).call(recipeId: 'bun', targetYield: Quantity.parse('1000', Unit.gram));
+}
+
+/// A run over an archived recipe, which raises the one warning
+/// [buildReviewableRun] does not.
+///
+/// Reached directly rather than through the production setup screen, which
+/// refuses to continue over an archived dependency. A stored run reopened
+/// later can still carry one, and the result screen has to name it.
+Future<ProductionRun> buildArchivedRun() {
+  final recipes = FakeRecipeRepository()
+    ..seed(
+      buildRecipe(id: 'shelved', name: 'Summer focaccia', isArchived: true),
+    );
+  return StartProductionRun(
+    recipes,
+    const FixedRunIdSource(),
+    const FixedClock(),
+  ).call(recipeId: 'shelved', targetYield: Quantity.parse('1000', Unit.gram));
+}
+
+Recipe _bunRecipe() => Recipe(
+  id: 'bun',
+  revision: 1,
+  name: 'Bun',
+  baseYield: Quantity.parse('1000', Unit.gram),
+  maxBatchYield: Quantity.parse('400', Unit.gram),
+  modifiedAt: DateTime.utc(2026, 9, 8),
+  components: [
+    RecipeComponent(
+      id: 'flour',
+      target: const IngredientRef('flour'),
+      baseQuantity: Quantity.parse('500', Unit.gram),
+      behavior: ScalingBehavior.proportional,
+      // 200 g and 100 g per batch, neither a multiple of 30, so both
+      // batches and the total are moved by rounding.
+      rounding: RoundingRule.upToIncrement(Decimal.parse('30')),
+      // A note on a calculated line, which is what tells a screen showing
+      // notes only on an opened line from one that always shows them.
+      note: 'Sift before mixing.',
+      displayOrder: 0,
+    ),
+    RecipeComponent(
+      id: 'dough-line',
+      target: const SubRecipeRef('dough'),
+      baseQuantity: Quantity.parse('100', Unit.gram),
+      behavior: ScalingBehavior.proportional,
+      displayOrder: 1,
+    ),
+    RecipeComponent(
+      id: 'starter-line',
+      target: const SubRecipeRef('starter'),
+      baseQuantity: Quantity.parse('50', Unit.gram),
+      behavior: ScalingBehavior.proportional,
+      displayOrder: 2,
+    ),
+    RecipeComponent(
+      id: 'salt',
+      target: const IngredientRef('salt'),
+      baseQuantity: null,
+      behavior: ScalingBehavior.manual,
+      // The only thing on a free-form line that says what it is for.
+      note: 'Season to taste at the end.',
+      displayOrder: 3,
+    ),
+    // Two per batch whatever the run size, in a unit no built-in table
+    // holds: one group covering every batch, and a unit an override
+    // control has to offer because the line is measured in it.
+    RecipeComponent(
+      id: 'liner',
+      target: const IngredientRef('liner'),
+      baseQuantity: Quantity.parse('2', sheetUnit),
+      behavior: ScalingBehavior.perBatch,
+      displayOrder: 4,
+    ),
+  ],
+);
+
+/// A counted unit outside `builtInUnits`, so a suite can tell a picker that
+/// offers the line's own unit from one that offers only the fixed table.
+final sheetUnit = Unit.count('sheet');
+
+Recipe _doughRecipe() => Recipe(
+  id: 'dough',
+  revision: 1,
+  name: 'Dough',
+  baseYield: Quantity.parse('1000', Unit.gram),
+  modifiedAt: DateTime.utc(2026, 9, 8),
+  components: [
+    RecipeComponent(
+      id: 'water',
+      target: const IngredientRef('water'),
+      baseQuantity: Quantity.parse('600', Unit.gram),
+      behavior: ScalingBehavior.proportional,
+      displayOrder: 0,
+    ),
+    RecipeComponent(
+      id: 'starter-in-dough',
+      target: const SubRecipeRef('starter'),
+      baseQuantity: Quantity.parse('200', Unit.gram),
+      behavior: ScalingBehavior.proportional,
+      displayOrder: 1,
+    ),
+  ],
+);
+
+Recipe _starterRecipe() => Recipe(
+  id: 'starter',
+  revision: 1,
+  name: 'Starter',
+  baseYield: Quantity.parse('1000', Unit.gram),
+  modifiedAt: DateTime.utc(2026, 9, 8),
+  components: [
+    RecipeComponent(
+      id: 'rye',
+      target: const IngredientRef('rye'),
+      baseQuantity: Quantity.parse('800', Unit.gram),
       behavior: ScalingBehavior.proportional,
       displayOrder: 0,
     ),
