@@ -177,6 +177,34 @@ void main() {
       expect(cubit.state.allRows.length, 9);
     });
 
+    test('the tree is walked once per state, not once per read', () async {
+      final cubit = _cubit(await buildReviewableRun());
+      final state = cubit.state;
+
+      // Identity, not equality: two walks of the same run produce equal
+      // lists, so only the same instance coming back proves the recursion
+      // did not run again. Every override control on screen reaches it
+      // through unitChoicesFor.
+      expect(identical(state.allRows, state.allRows), isTrue);
+
+      // And the cache belongs to the instance, so the next state walks
+      // afresh rather than serving rows the run may have moved past.
+      cubit.expansionToggled('1');
+      expect(identical(cubit.state.allRows, state.allRows), isFalse);
+    });
+
+    test('the rows are not a list a caller can reorder', () async {
+      final cubit = _cubit(await buildReviewableRun());
+
+      // One walk now has many readers. Sorting the returned list in place
+      // used to spoil the caller's own copy and would now spoil the order
+      // every later reader sees, so the list refuses.
+      expect(
+        () => cubit.state.allRows.sort((a, b) => b.path.compareTo(a.path)),
+        throwsUnsupportedError,
+      );
+    });
+
     test('opening a line reveals the recipe under it, one level', () async {
       final cubit = _cubit(await buildReviewableRun())..expansionToggled('1');
 

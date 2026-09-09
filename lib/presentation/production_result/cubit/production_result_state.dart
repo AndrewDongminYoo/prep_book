@@ -181,7 +181,12 @@ final class ResultRow {
 @immutable
 final class ProductionResultState {
   /// Creates a state over the calculated [run].
-  const ProductionResultState({
+  ///
+  /// Not a `const` constructor: [allRows] holds its walk in a `late final`
+  /// field, and a class carrying one cannot have a const constructor.
+  /// Nothing lost a `const` in the trade — every construction of this
+  /// state in `lib/` and `test/` was already a plain call.
+  ProductionResultState({
     required this.run,
     this.status = ProductionResultStatus.reviewing,
     this.expandedPaths = const {},
@@ -221,11 +226,23 @@ final class ProductionResultState {
   /// Collapsed lines included: a warning names a component wherever it
   /// sits, and the screen has to be able to name that component whether or
   /// not the operator has opened the sub-recipe it lives in.
-  List<ResultRow> get allRows {
+  ///
+  /// Walked once per state instead of once per read. [visibleRows],
+  /// [_componentLabels] and [_runUnits] each read it, and [unitChoicesFor]
+  /// reaches [_runUnits] from every override control on screen, so one
+  /// build of a large expanded run re-ran the whole recursion once per
+  /// control. Caching on the instance rather than anywhere longer-lived is
+  /// what makes that safe: a new state is emitted whenever the run or the
+  /// expansion set moves, which is the only way these rows could differ.
+  ///
+  /// Unmodifiable because the walk now has one owner. A caller that sorted
+  /// or filtered the returned list in place used to spoil only its own
+  /// copy and would now spoil the row order every later reader sees.
+  late final List<ResultRow> allRows = () {
     final rows = <ResultRow>[];
     _collect(run.result, run.recipe.id, '', 0, rows);
-    return rows;
-  }
+    return List<ResultRow>.unmodifiable(rows);
+  }();
 
   /// The lines the operator can currently see.
   List<ResultRow> get visibleRows => [
