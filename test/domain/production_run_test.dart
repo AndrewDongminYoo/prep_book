@@ -105,6 +105,7 @@ ProductionRun buildRunFor(
   Recipe recipe,
   Quantity target, {
   String id = 'run-1',
+  Map<String, Ingredient> ingredientSnapshot = const {},
 }) {
   const calculator = ProductionCalculator();
   return ProductionRun(
@@ -112,13 +113,19 @@ ProductionRun buildRunFor(
     createdAt: DateTime.utc(2026, 9, 6, 9),
     recipe: recipe,
     dependencySnapshot: const {},
+    ingredientSnapshot: ingredientSnapshot,
     targetYield: target,
     result: calculator.calculate(recipe: recipe, targetYield: target),
   );
 }
 
-ProductionRun buildRun() =>
-    buildRunFor(soup(), Quantity.parse('20', Unit.portion));
+ProductionRun buildRun({
+  Map<String, Ingredient> ingredientSnapshot = const {},
+}) => buildRunFor(
+  soup(),
+  Quantity.parse('20', Unit.portion),
+  ingredientSnapshot: ingredientSnapshot,
+);
 
 void main() {
   group('ProductionRun', () {
@@ -349,6 +356,67 @@ void main() {
         () => run.dependencySnapshot['soup'] = run.recipe,
         throwsUnsupportedError,
       );
+      expect(
+        () => run.ingredientSnapshot['stock'] = Ingredient(
+          id: 'stock',
+          name: 'Stock',
+          defaultUnit: Unit.liter,
+        ),
+        throwsUnsupportedError,
+      );
+    });
+
+    test('an ingredient snapshot is copied, not aliased', () {
+      // The same defence `dependencySnapshot` gets above: a constructor
+      // that stored the caller's map would let an edit made after the run
+      // was built reach a snapshot that is supposed to be frozen.
+      final ingredients = <String, Ingredient>{
+        'stock': Ingredient(
+          id: 'stock',
+          name: 'Chicken stock',
+          defaultUnit: Unit.liter,
+        ),
+      };
+      final run = buildRun(ingredientSnapshot: ingredients);
+
+      ingredients['stock'] = Ingredient(
+        id: 'stock',
+        name: 'Renamed after the run',
+        defaultUnit: Unit.liter,
+      );
+      ingredients['extra'] = Ingredient(
+        id: 'extra',
+        name: 'Added after the run',
+        defaultUnit: Unit.liter,
+      );
+
+      expect(run.ingredientSnapshot['stock']!.name, 'Chicken stock');
+      expect(run.ingredientSnapshot.containsKey('extra'), isFalse);
+    });
+
+    test('an ingredient snapshot survives acknowledging and overriding', () {
+      // `_copyWith` rebuilds the whole run, so a field it forgets is
+      // silently dropped the first time the operator touches the screen —
+      // and nothing before that point would have shown it missing.
+      final run = buildRun(
+        ingredientSnapshot: {
+          'stock': Ingredient(
+            id: 'stock',
+            name: 'Chicken stock',
+            defaultUnit: Unit.liter,
+          ),
+        },
+      );
+
+      final moved = run
+          .acknowledge(const ManualComponentWarning('soup', 'pepper'))
+          .override(
+            recipeId: 'soup',
+            componentId: 'stock',
+            value: Quantity.parse('5', Unit.liter),
+          );
+
+      expect(moved.ingredientSnapshot['stock']!.name, 'Chicken stock');
     });
 
     test("a stored run's per-batch lists are unmodifiable, at the top level "
