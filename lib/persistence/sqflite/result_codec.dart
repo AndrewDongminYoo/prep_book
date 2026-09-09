@@ -6,17 +6,19 @@ import 'package:prep_book/persistence/sqflite/quantity_columns.dart';
 import 'package:prep_book/persistence/sqflite/timestamps.dart';
 
 /// The immutable part of a stored production run: the recipe revision it was
-/// computed from, every recipe it depended on, and the calculated result.
+/// computed from, every recipe it depended on, every ingredient those
+/// recipes referenced, and the calculated result.
 ///
 /// Acknowledgements and overrides are excluded on purpose. They live in
 /// their own tables because `ProductionRun._copyWith` is the only thing
 /// that ever replaces them — see `encodeRunPayload`.
 final class RunPayload {
-  /// Creates a payload from its three immutable parts.
+  /// Creates a payload from its four immutable parts.
   const RunPayload({
     required this.recipe,
     required this.dependencySnapshot,
     required this.result,
+    this.ingredientSnapshot = const {},
   });
 
   /// The recipe revision the run was computed from.
@@ -25,23 +27,41 @@ final class RunPayload {
   /// Every recipe the calculation depended on, as it was at that moment.
   final Map<String, Recipe> dependencySnapshot;
 
+  /// Every ingredient the calculation referenced, as it was at that moment.
+  ///
+  /// Defaulted rather than required, because a payload written before this
+  /// field existed carries no ingredient data and empty is what it had.
+  final Map<String, Ingredient> ingredientSnapshot;
+
   /// The calculated result.
   final ProductionResult result;
 }
 
 /// Encodes the immutable part of [run] — its recipe, dependency snapshot,
-/// and calculated result — as JSON.
+/// ingredient snapshot, and calculated result — as JSON.
 ///
 /// `run.id`, `run.createdAt`, and `run.targetYield` are not part of this
 /// payload; they are stored in their own columns. `run.overrides` and
 /// `run.acknowledgedWarnings` are not part of it either, because those are
 /// the only fields a run's `acknowledge` and `override` methods ever
 /// replace — they live in their own tables instead.
+///
+/// `ingredientSnapshot` was added to this payload after runs had already
+/// been stored, and the schema version did not move with it. `result_json`
+/// is an opaque payload column: the schema declares that a run has one, and
+/// what is inside it is this codec's contract rather than the schema's, so
+/// there is nothing for a migration to rewrite. [decodeRunPayload] absorbs
+/// the difference instead, by reading a payload without the key as a run
+/// that referenced no ingredient data — which is what such a run had.
 String encodeRunPayload(ProductionRun run) => jsonEncode(<String, Object?>{
   'recipe': _recipeToJson(run.recipe),
   'dependencySnapshot': <String, Object?>{
     for (final entry in run.dependencySnapshot.entries)
       entry.key: _recipeToJson(entry.value),
+  },
+  'ingredientSnapshot': <String, Object?>{
+    for (final entry in run.ingredientSnapshot.entries)
+      entry.key: _ingredientToJson(entry.value),
   },
   'result': _resultToJson(run.result),
 });
@@ -86,11 +106,33 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
   try {
     final map = decoded! as Map<String, Object?>;
     final snapshotJson = map['dependencySnapshot']! as Map<String, Object?>;
+    // Read through the key's presence rather than as a nullable cast, and
+    // for a different reason than the nullable casts here. `note` and
+    // `category` are nullable because the value may be null —
+    // `_recipeComponentToJson`, `_recipeToJson`, and `_ingredientToJson`
+    // write those keys unconditionally, so a payload this codec produced
+    // always carries them and null is a value they may hold. This key is
+    // the other case: it may not be there at all, because a run stored
+    // before the ingredient snapshot existed has none, and reading that as
+    // no ingredient data is what the run held, so nothing is fabricated for
+    // it. Absence is the only pre-feature shape — `encodeRunPayload` always
+    // writes this key as a map, so neither an explicit null nor any other
+    // non-map value can have come from this codec. Both are corruption, and
+    // forcing the key once it is present sends both to the `on TypeError`
+    // clause below to be named as such, rather than opening the run with
+    // its ingredient names and unit choices silently discarded.
+    final ingredientsJson = map.containsKey('ingredientSnapshot')
+        ? map['ingredientSnapshot']! as Map<String, Object?>
+        : const <String, Object?>{};
     return RunPayload(
       recipe: _recipeFromJson(map['recipe']! as Map<String, Object?>),
       dependencySnapshot: <String, Recipe>{
         for (final entry in snapshotJson.entries)
           entry.key: _recipeFromJson(entry.value! as Map<String, Object?>),
+      },
+      ingredientSnapshot: <String, Ingredient>{
+        for (final entry in ingredientsJson.entries)
+          entry.key: _ingredientFromJson(entry.value! as Map<String, Object?>),
       },
       result: _resultFromJson(
         map['result']! as Map<String, Object?>,
@@ -422,6 +464,42 @@ Recipe _recipeFromJson(Map<String, Object?> json) {
     isArchived: json['isArchived']! as bool,
   );
 }
+
+// --- Ingredient ---------------------------------------------------------
+
+/// Encodes [ingredient], mirroring the column set
+/// `SqfliteIngredientRepository.upsert` writes and `_fromRow` reads back.
+///
+/// Deliberately separate from that mapping, for the reason given on
+/// [_recipeComponentToJson]: this writes a value frozen inside a run
+/// snapshot while that writes an `ingredients` row the operator keeps
+/// editing, and an edit to the row shape must not be able to reach a
+/// payload already stored. A field added to `Ingredient` has to be added
+/// in both places.
+///
+/// The unit goes through [unitToStorage] rather than `Unit.symbol`, so an
+/// ingredient counted in sheets round-trips its kind along with its symbol
+/// — the same reason [_quantityToJson] gives.
+Map<String, Object?> _ingredientToJson(Ingredient ingredient) =>
+    <String, Object?>{
+      'id': ingredient.id,
+      'name': ingredient.name,
+      'defaultUnit': unitToStorage(ingredient.defaultUnit),
+      'category': ingredient.category,
+    };
+
+Ingredient _ingredientFromJson(Map<String, Object?> json) => Ingredient(
+  id: json['id']! as String,
+  name: json['name']! as String,
+  defaultUnit: unitFromStorage(
+    json['defaultUnit']! as String,
+    // Reads the raw id rather than the cast above, because the label has
+    // to survive the corruption it describes — the same reason
+    // `SqfliteIngredientRepository._fromRow` builds its label that way.
+    location: "a run payload's ingredient ${json['id']}",
+  ),
+  category: json['category'] as String?,
+);
 
 // --- ScaledComponent and ProductionResult ---------------------------------
 

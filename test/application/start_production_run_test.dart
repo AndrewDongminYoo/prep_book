@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
+import 'package:prep_book/persistence/errors.dart';
+import 'package:prep_book/persistence/repositories.dart';
 
 import 'fakes.dart';
 
@@ -47,8 +49,39 @@ final class _FixedClock implements Clock {
   DateTime now() => DateTime.utc(2026, 9, 8, 12);
 }
 
-StartProductionRun _useCase(FakeRecipeRepository recipes) =>
-    StartProductionRun(recipes, _FixedIds(), _FixedClock());
+/// An ingredient library whose reads fail the way a damaged row does.
+///
+/// `SqfliteIngredientRepository.findById` raises [CorruptDatabaseError] for
+/// a row whose stored unit symbol is unknown, or whose column holds the
+/// wrong type. Only `findById` is implemented, because the use case calls
+/// nothing else — the throwing members are what says so.
+final class _CorruptIngredientRepository implements IngredientRepository {
+  @override
+  Future<Ingredient?> findById(String id) async =>
+      throw CorruptDatabaseError('unknown unit symbol in ingredient $id: qq');
+
+  @override
+  Future<List<Ingredient>> listAll() =>
+      throw UnsupportedError('a run reads one ingredient at a time');
+
+  @override
+  Future<void> upsert(Ingredient ingredient) =>
+      throw UnsupportedError('a run never writes to the library');
+
+  @override
+  Future<void> delete(String id) =>
+      throw UnsupportedError('a run never writes to the library');
+}
+
+StartProductionRun _useCase(
+  FakeRecipeRepository recipes, [
+  IngredientRepository? ingredients,
+]) => StartProductionRun(
+  recipes,
+  ingredients ?? FakeIngredientRepository(),
+  _FixedIds(),
+  _FixedClock(),
+);
 
 void main() {
   test('a run carries the injected id and timestamp', () async {
@@ -145,6 +178,148 @@ void main() {
       expect(run.result.components.single.subRecipe, isNotNull);
     },
   );
+
+  test(
+    'the ingredient snapshot holds every referenced ingredient, root included',
+    () async {
+      // The root's own ingredient is the one `dependencySnapshot` cannot
+      // speak for — the root is exactly the recipe it drops — so a use case
+      // that gathered ingredients from the dependency map instead of the
+      // whole closure would snapshot `syrup-sugar` and miss `bread-flour`.
+      final recipes = FakeRecipeRepository()
+        ..seed(
+          buildRecipe(
+            id: 'syrup',
+            components: [
+              RecipeComponent(
+                id: 'sugar-line',
+                target: const IngredientRef('syrup-sugar'),
+                baseQuantity: Quantity.parse('100', Unit.gram),
+                behavior: ScalingBehavior.proportional,
+                displayOrder: 0,
+              ),
+            ],
+          ),
+        )
+        ..seed(
+          buildRecipe(
+            id: 'a',
+            components: [
+              RecipeComponent(
+                id: 'flour-line',
+                target: const IngredientRef('bread-flour'),
+                baseQuantity: Quantity.parse('500', Unit.gram),
+                behavior: ScalingBehavior.proportional,
+                displayOrder: 0,
+              ),
+              buildSubRecipeComponent('syrup'),
+            ],
+          ),
+        );
+      // Names no identifier spells, so a snapshot that stored the id under
+      // the name would read the same as one that stored nothing.
+      final ingredients = FakeIngredientRepository()
+        ..stored['bread-flour'] = buildIngredient(
+          id: 'bread-flour',
+          name: 'Bread flour',
+        )
+        ..stored['syrup-sugar'] = buildIngredient(
+          id: 'syrup-sugar',
+          name: 'Caster sugar',
+        );
+
+      final run = await _useCase(
+        recipes,
+        ingredients,
+      ).call(recipeId: 'a', targetYield: Quantity.parse('1000', Unit.gram));
+
+      expect(run.ingredientSnapshot['bread-flour']!.name, 'Bread flour');
+      expect(run.ingredientSnapshot['syrup-sugar']!.name, 'Caster sugar');
+    },
+  );
+
+  test('an ingredient the library does not hold gets no entry', () async {
+    // Nothing validates a component's ingredient reference against
+    // storage, so a recipe can outlive the ingredient it names. The run
+    // records that there was nothing to record rather than raising or
+    // inventing a placeholder — a use case that threw here would take the
+    // whole calculation down over a name.
+    final recipes = FakeRecipeRepository()
+      ..seed(
+        buildRecipe(
+          id: 'a',
+          components: [
+            RecipeComponent(
+              id: 'known-line',
+              target: const IngredientRef('bread-flour'),
+              baseQuantity: Quantity.parse('500', Unit.gram),
+              behavior: ScalingBehavior.proportional,
+              displayOrder: 0,
+            ),
+            RecipeComponent(
+              id: 'deleted-line',
+              target: const IngredientRef('gone'),
+              baseQuantity: Quantity.parse('10', Unit.gram),
+              behavior: ScalingBehavior.proportional,
+              displayOrder: 1,
+            ),
+          ],
+        ),
+      );
+    final ingredients = FakeIngredientRepository()
+      ..stored['bread-flour'] = buildIngredient(
+        id: 'bread-flour',
+        name: 'Bread flour',
+      );
+
+    final run = await _useCase(
+      recipes,
+      ingredients,
+    ).call(recipeId: 'a', targetYield: Quantity.parse('1000', Unit.gram));
+
+    expect(run.ingredientSnapshot.containsKey('gone'), isFalse);
+    // Its stocked sibling still arrives, so the absent one is one missing
+    // entry rather than a lookup that gave up on the first miss.
+    expect(run.ingredientSnapshot['bread-flour']!.name, 'Bread flour');
+  });
+
+  test('a run over no ingredients at all snapshots none', () async {
+    // The empty-map default, reached by a recipe whose only component is a
+    // sub-recipe reference. Nothing is fabricated for it.
+    final recipes = FakeRecipeRepository()
+      ..seed(buildRecipe(id: 'syrup', components: const []))
+      ..seed(
+        buildRecipe(id: 'a', components: [buildSubRecipeComponent('syrup')]),
+      );
+
+    final run = await _useCase(
+      recipes,
+    ).call(recipeId: 'a', targetYield: Quantity.parse('1000', Unit.gram));
+
+    expect(run.ingredientSnapshot, isEmpty);
+  });
+
+  test('a corrupt ingredient row is not read as an absent one', () async {
+    // The sibling test above proves a `null` read is tolerated. A read that
+    // throws is a damaged row rather than a missing one, and the use case
+    // lets it out: catching it would file the damage under the same empty
+    // entry a deleted ingredient produces, so a row nobody can decode would
+    // render as a line showing its identifier and nothing would say why.
+    // A `CorruptDatabaseError` names the row instead. The same error has
+    // always reached this caller from the recipe rows; the snapshot widens
+    // that path to the ingredient rows rather than opening it.
+    //
+    // Add the catch to `_ingredientsOf` and this test is what fails.
+    final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a'));
+
+    await expectLater(
+      _useCase(
+        recipes,
+        _CorruptIngredientRepository(),
+      ).call(recipeId: 'a', targetYield: Quantity.parse('1000', Unit.gram)),
+      throwsA(isA<CorruptDatabaseError>()),
+    );
+  });
 
   test('a recipe that is not stored throws', () async {
     final recipes = FakeRecipeRepository();

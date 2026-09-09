@@ -22,6 +22,7 @@ Future<ProductionRun> _buildRun() async {
   // rejects an `async` body that returns a future without awaiting it.
   return await StartProductionRun(
     recipes,
+    FakeIngredientRepository(),
     _FixedIds(),
     _FixedClock(),
   ).call(recipeId: 'a', targetYield: Quantity.parse('1000', Unit.gram));
@@ -76,6 +77,7 @@ void main() {
         ..seed(_recipeWithTwoManualComponents(id: 'a'));
       final run = await StartProductionRun(
         recipes,
+        FakeIngredientRepository(),
         _FixedIds(),
         _FixedClock(),
       ).call(recipeId: 'a', targetYield: Quantity.parse('1000', Unit.gram));

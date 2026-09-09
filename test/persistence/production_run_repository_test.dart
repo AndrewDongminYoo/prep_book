@@ -55,6 +55,27 @@ ProductionRun buildRun({
   );
 }
 
+/// [buildRun] with an ingredient snapshot on it, under a name no
+/// identifier spells.
+ProductionRun buildRunWithSnapshottedIngredient({required String id}) {
+  final run = buildRun(id: id);
+  return ProductionRun(
+    id: run.id,
+    createdAt: run.createdAt,
+    recipe: run.recipe,
+    dependencySnapshot: run.dependencySnapshot,
+    ingredientSnapshot: {
+      'bread-flour': Ingredient(
+        id: 'bread-flour',
+        name: 'Bread flour',
+        defaultUnit: Unit.gram,
+      ),
+    },
+    targetYield: run.targetYield,
+    result: run.result,
+  );
+}
+
 /// A recipe whose calculated result carries one warning of each of the
 /// three kinds. Mirrors `test/persistence/result_codec_test.dart`'s
 /// `buildRunWithAllWarningKinds`, built independently here for the same
@@ -190,6 +211,48 @@ void main() {
     expect(loaded.result.warnings, run.result.warnings);
     expect(loaded.acknowledgedWarnings, run.acknowledgedWarnings);
     expect(loaded.overrides, run.overrides);
+  });
+
+  // A codec round trip is not this: `findById` rebuilds the run field by
+  // field, so a payload that decodes its ingredient snapshot correctly can
+  // still be dropped on the way into the `ProductionRun` this returns.
+  test('a saved ingredient snapshot round-trips', () async {
+    final run = buildRunWithSnapshottedIngredient(id: 'run-1');
+    await repository.save(run);
+
+    final loaded = await repository.findById('run-1');
+
+    // `Ingredient` has no `operator ==`, for the reason the comment above
+    // the round-trip test gives about `Recipe`.
+    expect(loaded!.ingredientSnapshot.keys, ['bread-flour']);
+    expect(loaded.ingredientSnapshot['bread-flour']!.name, 'Bread flour');
+    expect(loaded.ingredientSnapshot['bread-flour']!.defaultUnit, Unit.gram);
+  });
+
+  // The property the snapshot exists for, at the layer that stores it.
+  // `production_runs` has no foreign key into `ingredients`, and this is
+  // what says the stored payload is a copy rather than a reference.
+  test('renaming the ingredient does not change the stored run', () async {
+    await db.insert('ingredients', <String, Object?>{
+      'id': 'bread-flour',
+      'name': 'Bread flour',
+      'default_unit': 'g',
+    });
+    await repository.save(buildRunWithSnapshottedIngredient(id: 'run-1'));
+
+    await db.update(
+      'ingredients',
+      <String, Object?>{'name': 'Renamed after the run'},
+      where: 'id = ?',
+      whereArgs: ['bread-flour'],
+    );
+    // The edit landed, so a pass below is the run refusing to follow it
+    // rather than an update that never happened.
+    final rows = await db.query('ingredients', where: "id = 'bread-flour'");
+    expect(rows.single['name'], 'Renamed after the run');
+
+    final loaded = await repository.findById('run-1');
+    expect(loaded!.ingredientSnapshot['bread-flour']!.name, 'Bread flour');
   });
 
   // A run must not seed the `recipes` table for this test to mean anything:

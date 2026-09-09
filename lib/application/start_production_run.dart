@@ -72,9 +72,15 @@ abstract interface class Clock {
 /// passes it to `SaveProductionRun`.
 final class StartProductionRun {
   /// Creates the use case.
-  const StartProductionRun(this._recipes, this._ids, this._clock);
+  const StartProductionRun(
+    this._recipes,
+    this._ingredients,
+    this._ids,
+    this._clock,
+  );
 
   final RecipeRepository _recipes;
+  final IngredientRepository _ingredients;
   final RunIdSource _ids;
   final Clock _clock;
 
@@ -85,6 +91,20 @@ final class StartProductionRun {
   /// a cycle, and the domain's own yield errors for a target the recipe
   /// cannot take. None is rewrapped: each already names what the operator
   /// has to be told.
+  ///
+  /// A storage read that fails instead of answering is not caught either,
+  /// and the ingredient snapshot widens that path rather than opening it.
+  /// `SqfliteRecipeRepository` already raised `CorruptDatabaseError` for a
+  /// damaged recipe row under [_recipes], and `SqfliteIngredientRepository`
+  /// now raises it for a damaged ingredient row under [_ingredients] — an
+  /// unknown unit symbol, or a wrong-typed column — so a run whose
+  /// arithmetic is computable can still fail on a row it only reads for a
+  /// name. That is the deliberate reading: the error names the damaged row,
+  /// and catching it here would make a corrupt ingredient indistinguishable
+  /// from an absent one, which is the distinction `_ingredientsOf` exists to
+  /// keep. The application suite's "a corrupt ingredient row is not read as
+  /// an absent one" pins the choice, so adding the catch fails a test rather
+  /// than passing quietly.
   ///
   /// [maxPlannedBatches] bounds how many batches any one recipe in the run
   /// — the root, and every sub-recipe expanded under it — may be split
@@ -125,6 +145,46 @@ final class StartProductionRun {
       dependencySnapshot: dependencies,
       targetYield: targetYield,
       result: result,
+      ingredientSnapshot: await _ingredientsOf(closure.values),
     );
+  }
+
+  /// Every ingredient [recipes] reference, as the library holds it now.
+  ///
+  /// Read from `closure` rather than from `dependencies`, so the root's own
+  /// components are included: the root is the one recipe whose ingredients
+  /// a run always shows, and it is exactly the recipe `dependencies` drops.
+  ///
+  /// An id the library does not hold is left out of the map instead of
+  /// raising. Nothing validates a component's ingredient reference against
+  /// storage — a recipe keeps referencing an ingredient the operator has
+  /// since deleted — and a run that recorded no name for it is a truthful
+  /// record of what there was to record. `ProductionResultState.labelOf`
+  /// falls back to the identifier for exactly this case.
+  ///
+  /// Absence is the whole of what is tolerated. A read that throws rather
+  /// than answering `null` is a damaged row, not a missing one, and it
+  /// propagates out of [call] — which documents why.
+  ///
+  /// Looked up one id at a time rather than by listing the whole library:
+  /// a run references a handful of ingredients out of a library that has
+  /// no stated bound, and the ids are collected into a set first so a
+  /// component repeated across recipes costs one read.
+  Future<Map<String, Ingredient>> _ingredientsOf(
+    Iterable<Recipe> recipes,
+  ) async {
+    final ids = <String>{
+      for (final recipe in recipes)
+        for (final component in recipe.components)
+          if (component.target case IngredientRef(:final ingredientId))
+            ingredientId,
+    };
+
+    final snapshot = <String, Ingredient>{};
+    for (final id in ids) {
+      final ingredient = await _ingredients.findById(id);
+      if (ingredient != null) snapshot[id] = ingredient;
+    }
+    return snapshot;
   }
 }

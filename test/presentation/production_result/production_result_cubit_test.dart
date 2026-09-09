@@ -68,9 +68,57 @@ Future<ProductionRun> _runWithNestedCountUnit() {
     );
   return StartProductionRun(
     recipes,
+    FakeIngredientRepository(),
     const FixedRunIdSource(),
     const FixedClock(),
   ).call(recipeId: 'tart', targetYield: Quantity.parse('1000', Unit.gram));
+}
+
+/// A count unit that reaches the screen through the ingredient snapshot and
+/// through nothing else.
+final _gelatinSheet = Unit.count('gelatin sheet');
+
+/// A run measured in grams from end to end, whose one free-form line
+/// references an ingredient the library records in [_gelatinSheet].
+///
+/// Issue #19: a manual component has no calculated total, so it contributes
+/// no unit of its own, and the fixed table holds no count unit at all.
+/// Every other source this screen has is grams here — the target yield, the
+/// root's base yield, the sub-recipe's base yield, and every calculated
+/// line — so the ingredient's own default unit is the only place the word
+/// survives. A fixture that let `gelatin sheet` in through a row or through
+/// the dependency snapshot would pass whether or not the ingredient
+/// snapshot were read at all.
+Future<ProductionRun> _runWithCountUnitOnlyOnAnIngredient() {
+  final recipes = FakeRecipeRepository()
+    ..seed(buildRecipe(id: 'glaze'))
+    ..seed(
+      buildRecipe(
+        id: 'mousse',
+        components: [
+          RecipeComponent(
+            id: 'gelatin-line',
+            target: const IngredientRef('gelatin'),
+            baseQuantity: null,
+            behavior: ScalingBehavior.manual,
+            displayOrder: 0,
+          ),
+          buildSubRecipeComponent('glaze'),
+        ],
+      ),
+    );
+  final ingredients = FakeIngredientRepository()
+    ..stored['gelatin'] = Ingredient(
+      id: 'gelatin',
+      name: 'Leaf gelatin',
+      defaultUnit: _gelatinSheet,
+    );
+  return StartProductionRun(
+    recipes,
+    ingredients,
+    const FixedRunIdSource(),
+    const FixedClock(),
+  ).call(recipeId: 'mousse', targetYield: Quantity.parse('1000', Unit.gram));
 }
 
 /// A yield-only unit that reaches the screen through the dependency
@@ -104,6 +152,7 @@ Future<ProductionRun> _runWithManualSubRecipe() {
     );
   return StartProductionRun(
     recipes,
+    FakeIngredientRepository(),
     const FixedRunIdSource(),
     const FixedClock(),
   ).call(recipeId: 'crumble', targetYield: Quantity.parse('1000', Unit.gram));
@@ -266,18 +315,94 @@ void main() {
     test('a line is named out of the run own snapshot', () async {
       final state = _cubit(await buildReviewableRun()).state;
 
-      // A sub-recipe by the name the snapshot holds, an ingredient by its
-      // identifier — the snapshot stores no ingredient names, and reading
-      // today's library would put a name on a stored run that was never
-      // part of it.
+      // Both kinds of line by the name the run's own snapshots hold,
+      // never by anything read from today's library — that would put a
+      // name on a stored run that was never part of it.
       expect(state.labelOf(_row(state, '1')), 'Dough');
-      expect(state.labelOf(_row(state, '0')), 'flour');
+      // The ingredient's own name, not the identifier `flour` the
+      // component references. Issue #20: an ingredient created as "Bread
+      // flour" reached the production sheet as its slug, on the same list
+      // where a sub-recipe row read "Dough".
+      expect(state.labelOf(_row(state, '0')), 'Bread flour');
       expect(state.recipeNameOf('bun'), 'Bun');
       expect(state.recipeNameOf('starter'), 'Starter');
-      expect(state.componentLabelOf(('bun', 'flour')), 'flour');
+      expect(state.componentLabelOf(('bun', 'flour')), 'Bread flour');
       // A key naming nothing in the tree falls back to the component id
       // rather than rendering blank.
       expect(state.componentLabelOf(('bun', 'nothing')), 'nothing');
+    });
+
+    test(
+      'a line whose ingredient the library never held keeps its id',
+      () async {
+        // `rye`, in the `Starter` sub-recipe, is the one ingredient
+        // `buildReviewableIngredients` deliberately does not stock. Nothing
+        // validates a component's ingredient reference against storage, so
+        // a run can reference an ingredient the library does not hold, and
+        // the screen has to render that line rather than break on it.
+        expect(
+          buildReviewableIngredients().stored.containsKey('rye'),
+          isFalse,
+          reason: 'the fixture must leave this one ingredient unstocked',
+        );
+
+        final state = _cubit(await buildReviewableRun()).state;
+
+        expect(state.labelOf(_row(state, '2/0')), 'rye');
+        // Its named sibling on the same run, so a state that lost every
+        // name would not pass this test by passing the line above.
+        expect(state.labelOf(_row(state, '0')), 'Bread flour');
+      },
+    );
+
+    test('a run stored before the snapshot renders by identifier', () async {
+      // What a run decoded out of a payload written before the ingredient
+      // snapshot existed carries: an empty map. The screen renders the
+      // identifier for every line of it, which is what it did for every
+      // ingredient before this change — an implementation that raised, or
+      // that rendered blank, would take an older stored run off the
+      // screen entirely.
+      final calculated = await buildReviewableRun();
+      final older = ProductionRun(
+        id: calculated.id,
+        createdAt: calculated.createdAt,
+        recipe: calculated.recipe,
+        dependencySnapshot: calculated.dependencySnapshot,
+        targetYield: calculated.targetYield,
+        result: calculated.result,
+      );
+
+      final state = _cubit(older).state;
+
+      expect(older.ingredientSnapshot, isEmpty);
+      expect(state.labelOf(_row(state, '0')), 'flour');
+      expect(state.labelOf(_row(state, '3')), 'salt');
+      // The sub-recipe half is unaffected, which is what says the fallback
+      // is the ingredient path alone and not a screen that stopped
+      // reading its snapshots.
+      expect(state.labelOf(_row(state, '1')), 'Dough');
+    });
+
+    test('a renamed ingredient does not reach a run already made', () async {
+      // The property snapshotting exists for. The library moves on; the
+      // run does not. An implementation reading the library at render
+      // time would show "Rye flour" here — and would also have to invent
+      // a load state on a screen that has none, since the run arrives
+      // already calculated.
+      final library = buildReviewableIngredients();
+      final run = await buildReviewableRun(ingredients: library);
+
+      await library.upsert(
+        Ingredient(
+          id: 'flour',
+          name: 'Renamed after the run',
+          defaultUnit: Unit.gram,
+        ),
+      );
+
+      final state = _cubit(run).state;
+
+      expect(state.labelOf(_row(state, '0')), 'Bread flour');
     });
 
     test('an override offers the unit its line is measured in', () async {
@@ -324,6 +449,33 @@ void main() {
         expect(state.unitChoicesFor(manual), contains(_bagUnit));
       },
     );
+
+    test("a free-form line offers its own ingredient's count unit", () async {
+      final state = _cubit(await _runWithCountUnitOnlyOnAnIngredient()).state;
+
+      final manual = _row(state, '0');
+      expect(manual.isManual, isTrue);
+      // Nothing else in this run is measured in anything but grams, so a
+      // state that read only the target yield, the dependency snapshot,
+      // and the calculated rows would leave the operator recording
+      // sheets of gelatin in grams — into a snapshot no screen can amend
+      // afterwards. That is issue #19.
+      expect(state.unitChoicesFor(manual), contains(_gelatinSheet));
+      // The seed is unchanged: a free-form line still has no calculated
+      // unit to start from, so the control opens on grams and the wider
+      // choice is what the operator reaches for.
+      expect(state.draftFor(manual).unit, Unit.gram);
+      // And the run really is grams everywhere else, so the assertion
+      // above cannot be satisfied by any other source.
+      expect(
+        state.unitChoicesFor(manual).where((unit) => unit == _gelatinSheet),
+        hasLength(1),
+      );
+      expect(
+        state.allRows.map((row) => row.total?.displayed.unit).toSet(),
+        isNot(contains(_gelatinSheet)),
+      );
+    });
 
     test('a free-form sub-recipe line offers the yield it takes', () async {
       final state = _cubit(await _runWithManualSubRecipe()).state;
@@ -566,7 +718,7 @@ void main() {
       expect(runs.stored, isEmpty);
       expect(cubit.state.status, ProductionResultStatus.reviewing);
       expect(cubit.state.canSave, isFalse);
-      expect(cubit.state.invalidOverrideLabels, 'flour');
+      expect(cubit.state.invalidOverrideLabels, 'Bread flour');
       // And the controls stay live, which is why this is a second
       // predicate rather than a narrower `isEditable`: the field the
       // operator has to correct is the field this would otherwise

@@ -285,20 +285,32 @@ final class ProductionResultState {
 
   /// What the component on [row] is called.
   ///
-  /// A sub-recipe is named from the run's own dependency snapshot, so it
-  /// reads as the recipe was named when the run was calculated rather than
-  /// as it is named now. An ingredient has only its identifier here: the
-  /// snapshot stores no ingredient names, and reading today's library
-  /// would put a name on a stored run that was never part of it.
+  /// Both kinds of target are named from the run's own snapshots, so each
+  /// reads as it was named when the run was calculated rather than as it is
+  /// named now. Nothing here reads today's library: that would put a name
+  /// on a stored run that was never part of it, and a run is a record of
+  /// what happened.
   String labelOf(ResultRow row) => switch (row.component.source.target) {
     SubRecipeRef(:final recipeId) => recipeNameOf(recipeId),
-    IngredientRef(:final ingredientId) => ingredientId,
+    IngredientRef(:final ingredientId) => ingredientNameOf(ingredientId),
   };
 
   /// What the recipe [recipeId] is called, taken from the run's snapshot.
   String recipeNameOf(String recipeId) => recipeId == run.recipe.id
       ? run.recipe.name
       : run.dependencySnapshot[recipeId]?.name ?? recipeId;
+
+  /// What the ingredient [ingredientId] is called, taken from the run's
+  /// snapshot.
+  ///
+  /// Falls back to the identifier, which is what a run stored before the
+  /// snapshot carried ingredients holds for every one of its lines, and
+  /// what any run holds for an ingredient that was already out of the
+  /// library when it was calculated. Rendering the identifier is worse than
+  /// rendering a name and better than rendering nothing, and it is what
+  /// this screen did for every ingredient before the snapshot existed.
+  String ingredientNameOf(String ingredientId) =>
+      run.ingredientSnapshot[ingredientId]?.name ?? ingredientId;
 
   /// What the component a component-level warning names is called.
   String componentLabelOf(OverrideKey key) => _componentLabels[key] ?? key.$2;
@@ -413,6 +425,15 @@ final class ProductionResultState {
   /// quantity, so the calculator never expands it and no row names its
   /// unit, and the snapshot is where the word for it survives.
   ///
+  /// The ingredient snapshot answers the same question for the other kind
+  /// of free-form line. An ingredient measured in a count unit the run
+  /// mentions nowhere else — gelatin in sheets, on a line the operator has
+  /// to write themselves — has no calculated total to contribute one, and
+  /// its default unit is the word the run recorded for it. Read off the
+  /// run, not off the library: the run is what this screen shows, and a
+  /// unit an ingredient acquired after the run was calculated was never
+  /// part of it.
+  ///
   /// The root recipe's own base yield is not read. A target yield must
   /// convert to it, and outside mass and volume converting means the same
   /// symbol, so it is either [ProductionRun.targetYield]'s unit or one of
@@ -420,6 +441,8 @@ final class ProductionResultState {
   Set<Unit> get _runUnits => {
     run.targetYield.unit,
     for (final recipe in run.dependencySnapshot.values) recipe.baseYield.unit,
+    for (final ingredient in run.ingredientSnapshot.values)
+      ingredient.defaultUnit,
     for (final row in allRows) ?row.total?.displayed.unit,
   };
 
@@ -438,9 +461,11 @@ final class ProductionResultState {
   /// holds no count unit at all: an operator recording two sheets of
   /// gelatin against such a line could otherwise only measure them in
   /// grams. What the run is written in is the vocabulary this screen has
-  /// for that. A count unit the run mentions nowhere is still out of
-  /// reach — naming one inline is a capability no screen has, and the
-  /// snapshot carries no ingredient data to take it from.
+  /// for that, and the run's ingredient snapshot is the third source of it:
+  /// a free-form line's own ingredient contributes its default unit even
+  /// when nothing in the run is measured in one. A unit named neither by a
+  /// recipe, a calculated line, nor a referenced ingredient is still out of
+  /// reach — naming one inline is a capability no screen has.
   ///
   /// The draft's own unit is added on top, whether or not either list
   /// holds it, because a dropdown whose value is missing from its items

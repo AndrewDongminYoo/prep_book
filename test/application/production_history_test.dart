@@ -66,6 +66,7 @@ void main() {
     final runs = FakeProductionRunRepository();
     final start = StartProductionRun(
       recipes,
+      FakeIngredientRepository(),
       _Ids(['older', 'newer']),
       _Clock([DateTime.utc(2026, 9, 8, 10), DateTime.utc(2026, 9, 8, 11)]),
     );
@@ -107,6 +108,7 @@ void main() {
     final runs = FakeProductionRunRepository();
     final run = await StartProductionRun(
       recipes,
+      FakeIngredientRepository(),
       _Ids(['run-1']),
       _Clock([DateTime.utc(2026, 9, 8, 10)]),
     ).call(recipeId: 'a', targetYield: Quantity.parse('1000', Unit.gram));
@@ -129,6 +131,7 @@ void main() {
       final runs = FakeProductionRunRepository();
       final start = StartProductionRun(
         recipes,
+        FakeIngredientRepository(),
         _Ids(['first', 'second']),
         _Clock([DateTime.utc(2026, 9, 8, 10), DateTime.utc(2026, 9, 8, 11)]),
       );
@@ -165,6 +168,7 @@ void main() {
     final runs = FakeProductionRunRepository();
     final run = await StartProductionRun(
       recipes,
+      FakeIngredientRepository(),
       _Ids(['run-1']),
       _Clock([DateTime.utc(2026, 9, 8, 10)]),
     ).call(recipeId: 'a', targetYield: Quantity.parse('1000', Unit.gram));

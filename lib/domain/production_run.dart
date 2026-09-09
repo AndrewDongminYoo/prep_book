@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'package:prep_book/domain/recipe/ingredient.dart';
 import 'package:prep_book/domain/recipe/recipe.dart';
 import 'package:prep_book/domain/scaling/scaled_component.dart';
 import 'package:prep_book/domain/units/quantity.dart';
@@ -15,8 +16,8 @@ typedef OverrideKey = (String recipeId, String componentId);
 /// A finished calculation, frozen at the moment it was computed.
 ///
 /// Editing, archiving, or deleting the source recipe never changes a stored
-/// run: the run holds its own copy of the recipe revision and every recipe it
-/// depended on.
+/// run: the run holds its own copy of the recipe revision, of every recipe it
+/// depended on, and of every ingredient those recipes referenced.
 @immutable
 final class ProductionRun {
   /// Creates a run snapshot.
@@ -27,9 +28,11 @@ final class ProductionRun {
     required Map<String, Recipe> dependencySnapshot,
     required this.targetYield,
     required this.result,
+    Map<String, Ingredient> ingredientSnapshot = const {},
     Map<OverrideKey, Quantity> overrides = const {},
     Set<ProductionWarning> acknowledgedWarnings = const {},
   }) : dependencySnapshot = Map.unmodifiable(dependencySnapshot),
+       ingredientSnapshot = Map.unmodifiable(ingredientSnapshot),
        overrides = Map.unmodifiable(overrides),
        acknowledgedWarnings = Set.unmodifiable(acknowledgedWarnings);
 
@@ -44,6 +47,34 @@ final class ProductionRun {
 
   /// Every recipe the calculation depended on, as it was at that moment.
   final Map<String, Recipe> dependencySnapshot;
+
+  /// Every ingredient the calculation referenced, as it was at that moment,
+  /// keyed by identifier.
+  ///
+  /// The counterpart of [dependencySnapshot] for the other kind of
+  /// component target. Without it a stored run can name a sub-recipe but
+  /// not an ingredient, so one production sheet reads a recipe's display
+  /// name on one line and a bare identifier on the next — and renaming an
+  /// ingredient afterwards must no more rewrite a stored run than renaming
+  /// a recipe does.
+  ///
+  /// Whole [Ingredient] values, the way [dependencySnapshot] holds whole
+  /// recipes. The type carries an id, a name, a default unit, and an
+  /// optional category and nothing else, so a narrower record would drop
+  /// only the category and an id this map's own key already spells, in
+  /// exchange for a second shape to keep in step with this one.
+  ///
+  /// Optional where [dependencySnapshot] is required, which is the one way
+  /// this field's shape diverges from it. An empty map is the truthful
+  /// value for a run whose components are all sub-recipes, and for a
+  /// snapshot stored before this field existed; [overrides] and
+  /// [acknowledgedWarnings] are optional for the same reason.
+  ///
+  /// A referenced ingredient that is not in the library simply has no
+  /// entry. Nothing validates a component's ingredient reference against
+  /// storage, so an absent entry records what the run actually had rather
+  /// than inventing a placeholder for it.
+  final Map<String, Ingredient> ingredientSnapshot;
 
   /// The yield the operator asked for.
   final Quantity targetYield;
@@ -110,6 +141,7 @@ final class ProductionRun {
       dependencySnapshot: dependencySnapshot,
       targetYield: targetYield,
       result: result,
+      ingredientSnapshot: ingredientSnapshot,
       overrides: overrides ?? this.overrides,
       acknowledgedWarnings: acknowledgedWarnings ?? this.acknowledgedWarnings,
     );

@@ -230,6 +230,65 @@ ProductionRun buildRunModifiedAt(DateTime modifiedAt) {
   );
 }
 
+/// A run carrying an ingredient snapshot: one ingredient in a fixed unit
+/// with a category, one counted in a unit no fixed table holds and with no
+/// category.
+///
+/// The second is what makes the payload's unit encoding assertable. A count
+/// unit and a named-yield unit print the same symbol, so an encoder writing
+/// `Unit.symbol` instead of the storage form would round-trip `sheet` into
+/// the wrong kind and nothing about the printed value would say so.
+ProductionRun buildRunWithSnapshottedIngredients() {
+  final recipe = Recipe(
+    id: 'tart',
+    revision: 1,
+    name: 'Tart',
+    baseYield: Quantity.parse('1', Unit.kilogram),
+    modifiedAt: DateTime.utc(2026, 9, 7),
+    components: [
+      RecipeComponent(
+        id: 'flour-line',
+        target: const IngredientRef('bread-flour'),
+        baseQuantity: Quantity.parse('500', Unit.gram),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: 0,
+      ),
+      RecipeComponent(
+        id: 'gelatin-line',
+        target: const IngredientRef('gelatin'),
+        baseQuantity: null,
+        behavior: ScalingBehavior.manual,
+        displayOrder: 1,
+      ),
+    ],
+  );
+  final targetYield = recipe.baseYield;
+  return ProductionRun(
+    id: 'run-6',
+    createdAt: DateTime.utc(2026, 9, 7),
+    recipe: recipe,
+    dependencySnapshot: const {},
+    ingredientSnapshot: {
+      'bread-flour': Ingredient(
+        id: 'bread-flour',
+        name: 'Bread flour',
+        defaultUnit: Unit.gram,
+        category: 'Dry goods',
+      ),
+      'gelatin': Ingredient(
+        id: 'gelatin',
+        name: 'Leaf gelatin',
+        defaultUnit: Unit.count('sheet'),
+      ),
+    },
+    targetYield: targetYield,
+    result: const ProductionCalculator().calculate(
+      recipe: recipe,
+      targetYield: targetYield,
+    ),
+  );
+}
+
 // None of Recipe, RecipeComponent, BatchPlan, ScaledComponent,
 // ProductionResult, or ScaledQuantity override `==`, so `expect(a, b)` on
 // any of them falls back to identity — always false for a freshly decoded
@@ -447,6 +506,130 @@ void main() {
     final decoded = decodeRunPayload(json, rowLabel: _rowLabel);
     expect(decoded.recipe.modifiedAt.isUtc, isTrue);
     expect(decoded.recipe.modifiedAt.isAtSameMomentAs(local), isTrue);
+  });
+
+  test('the ingredient snapshot round-trips, dynamic units included', () {
+    final run = buildRunWithSnapshottedIngredients();
+
+    final decoded = decodeRunPayload(
+      encodeRunPayload(run),
+      rowLabel: _rowLabel,
+    );
+
+    // `Ingredient` does not override `==`, so each field is read
+    // separately — the same reason the helpers above walk a `Recipe`.
+    expect(decoded.ingredientSnapshot.keys, ['bread-flour', 'gelatin']);
+    final flour = decoded.ingredientSnapshot['bread-flour']!;
+    expect(flour.id, 'bread-flour');
+    // A name no identifier spells, so a decoder that fell back to the key
+    // would not read the same as one that stored the name.
+    expect(flour.name, 'Bread flour');
+    expect(flour.defaultUnit, Unit.gram);
+    expect(flour.category, 'Dry goods');
+    final gelatin = decoded.ingredientSnapshot['gelatin']!;
+    // The unit goes through the storage form rather than through
+    // `Unit.symbol`, so a count unit comes back counted rather than as a
+    // named yield that happens to print the same word.
+    expect(gelatin.defaultUnit, Unit.count('sheet'));
+    expect(gelatin.defaultUnit, isNot(Unit.namedYield('sheet')));
+    // An optional field left unset stays unset rather than becoming the
+    // empty string.
+    expect(gelatin.category, isNull);
+  });
+
+  test('a payload stored before the ingredient snapshot decodes', () {
+    // The exact shape of a `result_json` written before this key existed:
+    // the key is absent, not null. The schema version did not move for it
+    // — `result_json` is an opaque payload column — so this decode is the
+    // only thing standing between an older stored run and a screen that
+    // cannot open it.
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients()))
+            as Map<String, Object?>;
+    expect(
+      (encoded..remove('ingredientSnapshot')).containsKey('ingredientSnapshot'),
+      isFalse,
+    );
+
+    final decoded = decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel);
+
+    // Nothing is fabricated for it: an older run held no ingredient data,
+    // and reads as holding none.
+    expect(decoded.ingredientSnapshot, isEmpty);
+    // And the rest of the payload still arrives, so the tolerance is one
+    // absent key rather than a decoder that gave up on the run.
+    expect(decoded.recipe.id, 'tart');
+    expect(decoded.result.components, hasLength(2));
+  });
+
+  test('an ingredient snapshot stored as null is a corrupt row', () {
+    // An explicit null is not the pre-feature shape. `encodeRunPayload`
+    // always writes this key as a map, so a null value cannot have come
+    // from this codec, and there is no older run it could be describing —
+    // an older run has no key at all, which the test above covers. Reading
+    // null as an empty snapshot would open the run with every ingredient
+    // name and unit choice discarded and nothing said about it.
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients()))
+            as Map<String, Object?>;
+    encoded['ingredientSnapshot'] = null;
+    // The key is present and holds null, which is the case under test and
+    // not the absent one the test above builds. Asserted on the map rather
+    // than on the encoded text, so this does not depend on how `jsonEncode`
+    // spaces a null value.
+    expect(encoded.containsKey('ingredientSnapshot'), isTrue);
+    expect(encoded['ingredientSnapshot'], isNull);
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          contains(_rowLabel),
+        ),
+      ),
+    );
+  });
+
+  test('an ingredient snapshot that is not a map is a corrupt row', () {
+    // Tolerating an absent key is not tolerating a damaged one. A present
+    // value of the wrong shape is corruption, and it has to be named as
+    // such rather than read as "this run had no ingredients".
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients()))
+            as Map<String, Object?>;
+    encoded['ingredientSnapshot'] = 'not a map';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          contains(_rowLabel),
+        ),
+      ),
+    );
+  });
+
+  test("an ingredient's stored unit is checked, and names the row", () {
+    final encoded =
+        jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients()))
+            as Map<String, Object?>;
+    final snapshot = encoded['ingredientSnapshot']! as Map<String, Object?>;
+    (snapshot['gelatin']! as Map<String, Object?>)['defaultUnit'] = 'nonsense';
+
+    expect(
+      () => decodeRunPayload(jsonEncode(encoded), rowLabel: _rowLabel),
+      throwsA(
+        isA<CorruptDatabaseError>().having(
+          (error) => error.message,
+          'message',
+          allOf(contains(_rowLabel), contains('gelatin')),
+        ),
+      ),
+    );
   });
 
   // Both of the codec's row-naming failures are asserted on their message,

@@ -15,7 +15,12 @@ Future<void> main() async {
         saveIngredient: SaveIngredient(ingredients),
       ),
       production: ProductionSetupLauncher(
-        StartProductionRun(recipes, RandomRunIdSource(), const SystemClock()),
+        StartProductionRun(
+          recipes,
+          ingredients,
+          RandomRunIdSource(),
+          const SystemClock(),
+        ),
         result: ProductionResultLauncher(
           acknowledgeWarning: const AcknowledgeWarning(),
           applyOverride: const ApplyOverride(),

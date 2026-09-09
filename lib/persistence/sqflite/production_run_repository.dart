@@ -24,10 +24,11 @@ const _summaryColumns = <String>[
 /// `run_acknowledgements`, and `run_overrides` tables.
 ///
 /// [save] writes a run's immutable snapshot — its recipe, dependency
-/// snapshot, and calculated result, encoded by [encodeRunPayload] — together
-/// with the acknowledgement and override state it carries at that moment,
-/// all in one transaction. `production_runs` carries no foreign key into
-/// `recipes`, so editing, archiving, or deleting the source recipe
+/// snapshot, ingredient snapshot, and calculated result, encoded by
+/// [encodeRunPayload] — together with the acknowledgement and override state
+/// it carries at that moment, all in one transaction. `production_runs`
+/// carries no foreign key into `recipes` or `ingredients`, so editing,
+/// archiving, or deleting the source recipe or one of its ingredients
 /// afterwards can never reach a row already saved here.
 final class SqfliteProductionRunRepository implements ProductionRunRepository {
   /// Creates a repository over the already-open database [_db].
@@ -161,6 +162,7 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
       createdAt: createdAt,
       recipe: payload.recipe,
       dependencySnapshot: payload.dependencySnapshot,
+      ingredientSnapshot: payload.ingredientSnapshot,
       targetYield: quantityFromColumns(
         row,
         'target',
