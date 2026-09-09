@@ -116,3 +116,26 @@ final class InvalidTargetYieldError extends DomainError {
   InvalidTargetYieldError()
     : super('a production run needs a positive target yield');
 }
+
+/// Raised when a recipe in a run splits into more batches than the caller
+/// allowed.
+///
+/// Not a product rule about how large a run may be: the bound is optional,
+/// the caller sets it, and a caller that sets none scales to any target.
+/// It exists so a caller that cannot afford an unbounded calculation — an
+/// interactive screen, which blocks until one returns — can have it refused
+/// rather than performed.
+final class BatchLimitExceededError extends DomainError {
+  BatchLimitExceededError(this.recipeId, this.maxPlannedBatches)
+    : super('recipe $recipeId needs more than $maxPlannedBatches batches');
+
+  /// The recipe whose own batch plan crossed the bound.
+  ///
+  /// Not necessarily the run's root. A sub-recipe is scaled to whatever
+  /// its parent's component total demands, against its own maximum batch
+  /// yield, so it can cross a bound the root stays far inside.
+  final String recipeId;
+
+  /// The bound the caller set.
+  final int maxPlannedBatches;
+}

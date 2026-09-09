@@ -8,6 +8,7 @@ class App extends StatelessWidget {
     required this.listLibrary,
     required this.searchLibrary,
     required this.editor,
+    required this.production,
     super.key,
   });
 
@@ -20,6 +21,10 @@ class App extends StatelessWidget {
   /// Opens the recipe editor, from the library's create action and from
   /// each row.
   final RecipeEditorLauncher editor;
+
+  /// Opens production setup, from each library row's Production Run
+  /// action.
+  final ProductionSetupLauncher production;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +41,7 @@ class App extends StatelessWidget {
         listLibrary: listLibrary,
         searchLibrary: searchLibrary,
         editor: editor,
+        production: production,
       ),
     );
   }

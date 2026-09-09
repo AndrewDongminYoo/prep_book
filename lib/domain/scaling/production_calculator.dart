@@ -12,8 +12,24 @@ import 'package:rational/rational.dart';
 
 /// Turns a recipe and a target yield into an exact production result.
 final class ProductionCalculator {
-  /// Creates a calculator. It holds no state.
-  const ProductionCalculator();
+  /// Creates a calculator. It holds no state beyond [maxPlannedBatches].
+  const ProductionCalculator({this.maxPlannedBatches});
+
+  /// The largest number of batches any one recipe in a run may be split
+  /// into, or `null` — the default — for no bound at all.
+  ///
+  /// The bound is what a caller spends to keep a calculation's cost
+  /// knowable, and it applies to every batch plan the run builds rather
+  /// than to the root's alone: a sub-recipe is scaled to whatever its
+  /// parent's component total demands, against its own maximum batch
+  /// yield, so it is where an unbounded plan actually appears. The check
+  /// runs immediately after each plan is decomposed and before anything is
+  /// allocated against it, so a refused plan costs one comparison rather
+  /// than one entry per batch per component.
+  ///
+  /// Positive by contract. A caller that passes zero or less refuses every
+  /// run, which is not a state worth a guard of its own.
+  final int? maxPlannedBatches;
 
   /// Scales [recipe] to [targetYield].
   ///
@@ -31,6 +47,10 @@ final class ProductionCalculator {
   /// applies to [recipe] itself, not only to a sub-recipe it references —
   /// a run computed straight from an archived recipe raises the warning
   /// too.
+  ///
+  /// Throws [BatchLimitExceededError] when [maxPlannedBatches] is set and
+  /// this recipe, or any sub-recipe expanded under it, splits into more
+  /// batches than that.
   ProductionResult calculate({
     required Recipe recipe,
     required Quantity targetYield,
@@ -51,6 +71,18 @@ final class ProductionCalculator {
       target: target,
       maxBatchYield: recipe.maxBatchYield,
     );
+    final limit = maxPlannedBatches;
+    // `fullBatchCount` is compared first rather than folded into a single
+    // test on `batchCount`, and the order is load-bearing: `BatchPlan`
+    // derives the full count from a `BigInt` through `toInt`, which clamps
+    // to the largest int instead of failing, so a target large enough to
+    // clamp it leaves `batchCount` — that value plus a remainder batch —
+    // wrapped to a negative number that no upper bound rejects. Once the
+    // full count is known to be inside the limit, the sum cannot wrap.
+    if (limit != null &&
+        (plan.fullBatchCount > limit || plan.batchCount > limit)) {
+      throw BatchLimitExceededError(recipe.id, limit);
+    }
 
     final warnings = <ProductionWarning>[];
     if (recipe.isArchived) {
@@ -148,6 +180,12 @@ final class ProductionCalculator {
   /// warnings into the parent's [warnings], de-duplicating a warning that is
   /// already present — a sub-recipe referenced more than once by the same
   /// parent must not report the same problem twice.
+  ///
+  /// Recurses through `calculate` on this same calculator, so
+  /// [maxPlannedBatches] bounds the expanded plan exactly as it bounds the
+  /// root's. That is the whole point of holding the bound on the calculator
+  /// rather than passing it to one call: a nested plan is where a target
+  /// the root absorbs in a single batch turns into millions.
   ProductionResult _expand(
     String recipeId,
     Quantity requiredYield,

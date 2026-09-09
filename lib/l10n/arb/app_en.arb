@@ -273,5 +273,149 @@
                 "example": "seed-croissant-dough"
             }
         }
+    },
+    "productionSetupTitle": "Production run",
+    "@productionSetupTitle": {
+        "description": "Title of the production setup screen"
+    },
+    "productionSetupTargetLabel": "Target yield",
+    "@productionSetupTargetLabel": {
+        "description": "Label of the field holding today's target amount"
+    },
+    "productionSetupUnitLabel": "Unit",
+    "@productionSetupUnitLabel": {
+        "description": "Label of the target yield's unit picker"
+    },
+    "productionSetupAmountInvalid": "Enter an amount above zero.",
+    "@productionSetupAmountInvalid": {
+        "description": "Shown under the target amount when what was typed is not a positive number"
+    },
+    "productionSetupUnitIncompatible": "This recipe is measured in {unit}. Choose a unit that converts to it.",
+    "@productionSetupUnitIncompatible": {
+        "description": "Shown under the unit picker when the chosen unit cannot convert to the recipe's base yield unit; carries that unit's symbol",
+        "placeholders": {
+            "unit": {
+                "type": "String",
+                "example": "g"
+            }
+        }
+    },
+    "productionSetupPrompt": "Enter a target yield to see the batches it takes.",
+    "@productionSetupPrompt": {
+        "description": "Shown in place of the prediction while no usable target has been entered"
+    },
+    "productionSetupTargetTooLarge": "That target would take more than {count} batches. Enter a smaller amount.",
+    "@productionSetupTargetTooLarge": {
+        "description": "Shown in place of the prediction when the target would take more batches than the screen calculates; carries that limit",
+        "placeholders": {
+            "count": {
+                "type": "String",
+                "example": "1000"
+            }
+        }
+    },
+    "productionSetupBaseYield": "Base recipe",
+    "@productionSetupBaseYield": {
+        "description": "Label of the yield the recipe produces as written"
+    },
+    "productionSetupTargetYield": "This run",
+    "@productionSetupTargetYield": {
+        "description": "Label of the yield this run produces"
+    },
+    "productionSetupScale": "Scale",
+    "@productionSetupScale": {
+        "description": "Label of the ratio between this run and the base recipe"
+    },
+    "productionSetupScaleValue": "× {ratio}",
+    "@productionSetupScaleValue": {
+        "description": "The scale ratio as it is shown, multiplication sign included",
+        "placeholders": {
+            "ratio": {
+                "type": "String",
+                "example": "2.5"
+            }
+        }
+    },
+    "productionSetupBatches": "Batches",
+    "@productionSetupBatches": {
+        "description": "Label of how many batches the run takes"
+    },
+    "productionSetupFullBatches": "Full batches",
+    "@productionSetupFullBatches": {
+        "description": "Label of the batches that each produce a full batch yield"
+    },
+    "productionSetupFullBatchesValue": "{count} × {size}",
+    "@productionSetupFullBatchesValue": {
+        "description": "How many full batches of what size, as it is shown",
+        "placeholders": {
+            "count": {
+                "type": "String",
+                "example": "3"
+            },
+            "size": {
+                "type": "String",
+                "example": "12 piece"
+            }
+        }
+    },
+    "productionSetupRemainder": "Last batch",
+    "@productionSetupRemainder": {
+        "description": "Label of the trailing partial batch, shown only when the run has one"
+    },
+    "productionSetupArchived": "{recipe} is archived. Restore it before running production.",
+    "@productionSetupArchived": {
+        "description": "Shown when the recipe or one it depends on is archived; carries that recipe's name",
+        "placeholders": {
+            "recipe": {
+                "type": "String",
+                "example": "Summer focaccia"
+            }
+        }
+    },
+    "productionSetupMissingRecipe": "This recipe is no longer in the library.",
+    "@productionSetupMissingRecipe": {
+        "description": "Shown when the recipe the screen was opened over is not stored any more"
+    },
+    "productionSetupMissingDependency": "The sub-recipe \"{recipeId}\" is not in the library.",
+    "@productionSetupMissingDependency": {
+        "description": "Shown when a referenced sub-recipe is not stored; carries its identifier",
+        "placeholders": {
+            "recipeId": {
+                "type": "String",
+                "example": "seed-croissant-dough"
+            }
+        }
+    },
+    "productionSetupCycleError": "A recipe cannot depend on itself: {path}",
+    "@productionSetupCycleError": {
+        "description": "Shown when the stored dependency graph has a cycle; carries the path the domain found",
+        "placeholders": {
+            "path": {
+                "type": "String",
+                "example": "cake -> syrup -> cake"
+            }
+        }
+    },
+    "productionSetupIncompatibleStoredYield": "The saved recipe is measured in {expected}, not {actual}.",
+    "@productionSetupIncompatibleStoredYield": {
+        "description": "Shown when the stored recipe turned out to use a yield unit the chosen target cannot convert to; carries both symbols",
+        "placeholders": {
+            "expected": {
+                "type": "String",
+                "example": "g"
+            },
+            "actual": {
+                "type": "String",
+                "example": "piece"
+            }
+        }
+    },
+    "productionSetupFailed": "The production run could not be calculated.",
+    "@productionSetupFailed": {
+        "description": "Shown when the calculation failed for a reason the operator cannot act on"
+    },
+    "productionSetupContinue": "Continue",
+    "@productionSetupContinue": {
+        "description": "Label of the action that carries the target yield through to the production result"
     }
 }

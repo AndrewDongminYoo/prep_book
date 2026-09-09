@@ -19,24 +19,6 @@ enum RecipeEditorStatus {
   loadFailure,
 }
 
-/// Every unit the domain declares as a fixed instance.
-///
-/// `lib/domain/units/unit.dart` owns this set; the domain exposes no list of
-/// its own static fields, so the picker restates them and
-/// `recipe_editor_cubit_test.dart` reads that file to fail if the two ever
-/// diverge. Nothing else here is a copy: every other unit an operator can
-/// pick is discovered from the data — see [RecipeEditorState.unitChoices].
-final _builtInUnits = <Unit>[
-  Unit.milligram,
-  Unit.gram,
-  Unit.kilogram,
-  Unit.milliliter,
-  Unit.liter,
-  Unit.teaspoon,
-  Unit.tablespoon,
-  Unit.portion,
-];
-
 /// One component as the operator is typing it.
 ///
 /// Amounts stay text rather than becoming a [Quantity], because half-typed
@@ -366,7 +348,7 @@ final class RecipeEditorState {
   /// `Unit` compares by symbol and dimension, so a set literal deduplicates
   /// without reordering.
   List<Unit> get unitChoices => <Unit>{
-    ..._builtInUnits,
+    ...builtInUnits,
     baseYieldUnit,
     maxBatchUnit,
     for (final draft in components) draft.unit,

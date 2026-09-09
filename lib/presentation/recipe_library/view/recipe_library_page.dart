@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
+import 'package:prep_book/presentation/production_setup/production_setup.dart';
 import 'package:prep_book/presentation/recipe_editor/recipe_editor.dart';
 import 'package:prep_book/presentation/recipe_library/recipe_library.dart';
 
@@ -18,6 +19,7 @@ class RecipeLibraryPage extends StatelessWidget {
     required this.listLibrary,
     required this.searchLibrary,
     required this.editor,
+    required this.production,
     super.key,
   });
 
@@ -31,6 +33,10 @@ class RecipeLibraryPage extends StatelessWidget {
   /// action go through.
   final RecipeEditorLauncher editor;
 
+  /// Opens production setup, which each row's Production Run action goes
+  /// through.
+  final ProductionSetupLauncher production;
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -41,7 +47,7 @@ class RecipeLibraryPage extends StatelessWidget {
         unawaited(cubit.load());
         return cubit;
       },
-      child: RecipeLibraryView(editor: editor),
+      child: RecipeLibraryView(editor: editor, production: production),
     );
   }
 }
@@ -50,10 +56,17 @@ class RecipeLibraryPage extends StatelessWidget {
 /// that provides the cubit is not also the widget that reads it.
 class RecipeLibraryView extends StatelessWidget {
   /// Creates the view.
-  const RecipeLibraryView({required this.editor, super.key});
+  const RecipeLibraryView({
+    required this.editor,
+    required this.production,
+    super.key,
+  });
 
   /// Opens the editor for the create action and for each row.
   final RecipeEditorLauncher editor;
+
+  /// Opens production setup for a row's Production Run action.
+  final ProductionSetupLauncher production;
 
   @override
   Widget build(BuildContext context) {
@@ -123,8 +136,11 @@ class RecipeLibraryView extends StatelessWidget {
             ),
             const SliverToBoxAdapter(child: Divider(height: 1)),
             BlocBuilder<RecipeLibraryCubit, RecipeLibraryState>(
-              builder: (context, state) =>
-                  _LibraryBody(state: state, editor: editor),
+              builder: (context, state) => _LibraryBody(
+                state: state,
+                editor: editor,
+                production: production,
+              ),
             ),
           ],
         ),
@@ -140,10 +156,15 @@ class RecipeLibraryView extends StatelessWidget {
 /// a message still centres on a tall screen, and shrink to their own height
 /// when the filter row above has already used the space up.
 class _LibraryBody extends StatelessWidget {
-  const _LibraryBody({required this.state, required this.editor});
+  const _LibraryBody({
+    required this.state,
+    required this.editor,
+    required this.production,
+  });
 
   final RecipeLibraryState state;
   final RecipeEditorLauncher editor;
+  final ProductionSetupLauncher production;
 
   @override
   Widget build(BuildContext context) => switch (state.status) {
@@ -155,17 +176,26 @@ class _LibraryBody extends StatelessWidget {
       hasScrollBody: false,
       child: _ErrorBody(),
     ),
-    RecipeLibraryStatus.loaded => _LoadedBody(state: state, editor: editor),
+    RecipeLibraryStatus.loaded => _LoadedBody(
+      state: state,
+      editor: editor,
+      production: production,
+    ),
   };
 }
 
 /// The list of rows, or the empty state when nothing is visible. A sliver
 /// either way, because the whole screen is one scroll view.
 class _LoadedBody extends StatelessWidget {
-  const _LoadedBody({required this.state, required this.editor});
+  const _LoadedBody({
+    required this.state,
+    required this.editor,
+    required this.production,
+  });
 
   final RecipeLibraryState state;
   final RecipeEditorLauncher editor;
+  final ProductionSetupLauncher production;
 
   @override
   Widget build(BuildContext context) {
@@ -178,8 +208,11 @@ class _LoadedBody extends StatelessWidget {
     }
     return SliverList.builder(
       itemCount: recipes.length,
-      itemBuilder: (context, index) =>
-          _RecipeRow(recipe: recipes[index], editor: editor),
+      itemBuilder: (context, index) => _RecipeRow(
+        recipe: recipes[index],
+        editor: editor,
+        production: production,
+      ),
     );
   }
 
@@ -198,10 +231,15 @@ class _LoadedBody extends StatelessWidget {
 
 /// One recipe: its name, its base yield, and the run action.
 class _RecipeRow extends StatelessWidget {
-  const _RecipeRow({required this.recipe, required this.editor});
+  const _RecipeRow({
+    required this.recipe,
+    required this.editor,
+    required this.production,
+  });
 
   final Recipe recipe;
   final RecipeEditorLauncher editor;
+  final ProductionSetupLauncher production;
 
   @override
   Widget build(BuildContext context) {
@@ -229,13 +267,13 @@ class _RecipeRow extends StatelessWidget {
             ? '$baseYield · ${l10n.recipeLibraryArchived}'
             : baseYield,
       ),
-      // Disabled rather than omitted: the design document makes Production
-      // Run the dominant action per row, and no production screen exists to
-      // route to yet. Rendering it keeps the row's shape settled; omitting
-      // it would let the next slice redesign the row instead of wiring a
-      // callback.
+      // Live on every row, archived ones included. An archived recipe
+      // cannot be run, but the reason is the production screen's to give:
+      // the row would have to say it in the space a button occupies, and
+      // the screen says which recipe is archived — this one, or something
+      // it depends on, which no row could have known.
       trailing: FilledButton(
-        onPressed: null,
+        onPressed: () => production.open(context, recipe: recipe),
         child: Text(l10n.recipeLibraryProductionRun),
       ),
     );

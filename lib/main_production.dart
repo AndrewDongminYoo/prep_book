@@ -14,6 +14,13 @@ Future<void> main() async {
         saveRecipeRevision: SaveRecipeRevision(recipes, const SystemClock()),
         saveIngredient: SaveIngredient(ingredients),
       ),
+      production: ProductionSetupLauncher(
+        StartProductionRun(
+          recipes,
+          const PreviewRunIdSource(),
+          const SystemClock(),
+        ),
+      ),
     ),
   );
 }

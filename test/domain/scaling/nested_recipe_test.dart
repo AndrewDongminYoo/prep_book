@@ -209,6 +209,49 @@ Recipe twiceManualDoughPie() {
   );
 }
 
+/// A root recipe with no maximum batch yield, so its own plan is a single
+/// batch at any target, consuming a tenth of its yield from [hugeRunSub].
+Recipe hugeRunRoot() {
+  return Recipe(
+    id: 'root',
+    revision: 1,
+    name: 'Root',
+    baseYield: Quantity.parse('1000', Unit.gram),
+    components: [
+      RecipeComponent(
+        id: 'root-sub',
+        target: const SubRecipeRef('sub'),
+        baseQuantity: Quantity.parse('100', Unit.gram),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: 0,
+      ),
+    ],
+    modifiedAt: DateTime.utc(2026, 9, 6),
+  );
+}
+
+/// A sub-recipe produced one gram at a time, so the batch count of the plan
+/// expanded under [hugeRunRoot] is the target divided by one.
+Recipe hugeRunSub() {
+  return Recipe(
+    id: 'sub',
+    revision: 1,
+    name: 'Sub',
+    baseYield: Quantity.parse('1000', Unit.gram),
+    maxBatchYield: Quantity.parse('1', Unit.gram),
+    components: [
+      RecipeComponent(
+        id: 'sub-flour',
+        target: const IngredientRef('flour'),
+        baseQuantity: Quantity.parse('500', Unit.gram),
+        behavior: ScalingBehavior.proportional,
+        displayOrder: 0,
+      ),
+    ],
+    modifiedAt: DateTime.utc(2026, 9, 6),
+  );
+}
+
 void main() {
   const calculator = ProductionCalculator();
 
@@ -491,6 +534,53 @@ void main() {
         ),
         throwsA(isA<MissingDependencyError>()),
       );
+    });
+  });
+
+  group('the planned-batch bound under expansion', () {
+    // The root states no maximum, so its own plan is one batch at every
+    // target; the sub-recipe states a one-gram maximum, so the plan that
+    // actually grows is the one no caller can see before the closure is
+    // loaded. This is the shape the bound exists for.
+    final index = {'root': hugeRunRoot(), 'sub': hugeRunSub()};
+    const bounded = ProductionCalculator(maxPlannedBatches: 1000);
+
+    test('refuses a sub-recipe plan past the bound, naming the sub-recipe', () {
+      // The root takes this target in a single batch, so a bound applied
+      // to the root alone finds nothing wrong with it. The sub-recipe is
+      // asked for ten million grams at one gram a batch: unbounded, this
+      // allocates ten million entries per component and returns after
+      // tens of seconds. The timeout, not the matcher, is what fails if
+      // the bound stops reaching the expansion — a run this size finishing
+      // at all is the evidence.
+      expect(
+        () => bounded.calculate(
+          recipe: hugeRunRoot(),
+          targetYield: Quantity.parse('100000000', Unit.gram),
+          recipeIndex: index,
+        ),
+        throwsA(
+          isA<BatchLimitExceededError>().having(
+            (error) => error.recipeId,
+            'recipeId',
+            'sub',
+          ),
+        ),
+      );
+    }, timeout: const Timeout(Duration(seconds: 5)));
+
+    test('admits a run whose every plan fits, counting each on its own', () {
+      // The sub-recipe lands exactly on the bound and the root adds a
+      // batch of its own on top. A bound spent as one budget across the
+      // whole run would refuse this at 1001; the bound is per recipe.
+      final result = bounded.calculate(
+        recipe: hugeRunRoot(),
+        targetYield: Quantity.parse('10000', Unit.gram),
+        recipeIndex: index,
+      );
+
+      expect(result.batchPlan.batchCount, 1);
+      expect(result.components.single.subRecipe!.batchPlan.batchCount, 1000);
     });
   });
 }

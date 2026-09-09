@@ -201,6 +201,84 @@ final class FixedClock implements Clock {
   DateTime now() => DateTime.utc(2026, 9, 8, 12);
 }
 
+/// A run identifier source that answers with the same value every time.
+///
+/// Fixed rather than counted because nothing stores what the production
+/// setup screen calculates, so no test needs two runs to differ — and the
+/// entrypoints bind a constant source too, for the reason
+/// `PreviewRunIdSource` states.
+final class FixedRunIdSource implements RunIdSource {
+  /// Creates the source.
+  const FixedRunIdSource();
+
+  @override
+  String next() => 'run-1';
+}
+
+/// A recipe repository that reads through [FakeRecipeRepository] and holds
+/// every single-recipe lookup open until the test answers it.
+///
+/// The production setup screen's timing cases are all on that lookup: the
+/// spinner while a calculation runs, a slower calculation overtaken by a
+/// newer target, a target cleared while one is in flight, and one that
+/// lands after the cubit closed. [DeferredRecipeRepository] expresses none
+/// of them — it defers the whole list and refuses to look one recipe up —
+/// and [FakeRecipeRepository] answers before there is a window to look at.
+///
+/// Every lookup is deferred, sub-recipes included: a run over a recipe that
+/// references another asks for each of them in turn, so a fake holding only
+/// the first would let the rest resolve while the test thought nothing had.
+final class DeferredLookupRecipeRepository implements RecipeRepository {
+  /// Creates a repository answering out of [reads].
+  DeferredLookupRecipeRepository(this.reads);
+
+  /// The in-memory library [complete] answers from.
+  final FakeRecipeRepository reads;
+
+  /// One entry per [findLatest] call that has not been answered, in call
+  /// order.
+  final List<Completer<Recipe?>> pending = [];
+
+  /// The identifiers [findLatest] was called with, in call order.
+  final List<String> lookups = [];
+
+  /// Answers the lookup at [index] out of [reads].
+  Future<void> complete(int index) async =>
+      pending[index].complete(await reads.findLatest(lookups[index]));
+
+  /// Fails the lookup at [index].
+  void fail(int index, [Object error = 'the database is unreadable']) =>
+      pending[index].completeError(error);
+
+  @override
+  Future<Recipe?> findLatest(String id) {
+    lookups.add(id);
+    final completer = Completer<Recipe?>();
+    pending.add(completer);
+    return completer.future;
+  }
+
+  @override
+  Future<List<Recipe>> listLatestRevisions() => reads.listLatestRevisions();
+
+  @override
+  Future<Recipe?> findRevision(String id, int revision) =>
+      throw UnsupportedError('production setup never reads one revision');
+
+  @override
+  Future<void> saveRevision(Recipe recipe) =>
+      throw UnsupportedError('production setup never writes');
+
+  @override
+  Future<void> setArchived(String id, {required bool isArchived}) =>
+      throw UnsupportedError('production setup never archives');
+
+  @override
+  Future<List<Recipe>> listLatestRevisionsUsingIngredient(
+    String ingredientId,
+  ) => throw UnsupportedError('production setup never reads by ingredient');
+}
+
 /// A launcher over in-memory storage, wired exactly as the entrypoints wire
 /// the real one, so a screen test opens the editor the app actually opens.
 RecipeEditorLauncher buildEditorLauncher(
@@ -211,4 +289,39 @@ RecipeEditorLauncher buildEditorLauncher(
   listIngredients: ListIngredients(ingredients),
   saveRecipeRevision: SaveRecipeRevision(recipes, const FixedClock()),
   saveIngredient: SaveIngredient(ingredients),
+);
+
+/// A production setup launcher over in-memory storage, wired the way the
+/// entrypoints wire the real one, so a screen test opens the screen the app
+/// actually opens.
+ProductionSetupLauncher buildProductionLauncher(RecipeRepository recipes) =>
+    ProductionSetupLauncher(
+      StartProductionRun(recipes, const FixedRunIdSource(), const FixedClock()),
+    );
+
+/// A sub-recipe produced one gram at a time.
+///
+/// Referenced from a parent that states no maximum of its own — a
+/// `buildSubRecipeComponent` line consumes a tenth of the parent's yield —
+/// it is how a target the parent absorbs in a single batch still expands
+/// into a batch per gram underneath. Both the cubit suite and the widget
+/// suite scale it against `ProductionSetupState.maxPlannedBatches`, so the
+/// one-gram maximum and the parent's tenth are two halves of one number and
+/// live here rather than once per suite.
+Recipe buildGrainSubRecipe() => Recipe(
+  id: 'grain',
+  revision: 1,
+  name: 'Grain',
+  baseYield: Quantity.parse('1000', Unit.gram),
+  maxBatchYield: Quantity.parse('1', Unit.gram),
+  modifiedAt: DateTime.utc(2026, 9, 8),
+  components: [
+    RecipeComponent(
+      id: 'grain-flour',
+      target: const IngredientRef('flour'),
+      baseQuantity: Quantity.parse('500', Unit.gram),
+      behavior: ScalingBehavior.proportional,
+      displayOrder: 0,
+    ),
+  ],
 );

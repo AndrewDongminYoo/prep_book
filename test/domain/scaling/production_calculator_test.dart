@@ -398,4 +398,86 @@ void main() {
       );
     });
   });
+
+  group('the planned-batch bound', () {
+    final oneAtATime = bread(maxBatchYield: Quantity.parse('1', Unit.portion));
+    const bounded = ProductionCalculator(maxPlannedBatches: 5);
+
+    test('is absent unless the caller sets one', () {
+      // The same recipe and the same target the bounded calculator refuses
+      // two tests below. An implementation that made the bound a rule of
+      // the domain rather than a choice of the caller would throw here.
+      final result = calculator.calculate(
+        recipe: oneAtATime,
+        targetYield: Quantity.parse('6', Unit.portion),
+      );
+
+      expect(result.batchPlan.batchCount, 6);
+    });
+
+    test('admits the largest plan that fits inside it', () {
+      final result = bounded.calculate(
+        recipe: oneAtATime,
+        targetYield: Quantity.parse('5', Unit.portion),
+      );
+
+      // Exactly at the bound, so it calculates. A guard written with `>=`,
+      // or one off by a batch, refuses this.
+      expect(result.batchPlan.batchCount, 5);
+    });
+
+    test('refuses a plan one batch past it, naming the recipe', () {
+      expect(
+        () => bounded.calculate(
+          recipe: oneAtATime,
+          targetYield: Quantity.parse('6', Unit.portion),
+        ),
+        throwsA(
+          isA<BatchLimitExceededError>()
+              .having((error) => error.recipeId, 'recipeId', 'bread')
+              .having(
+                (error) => error.maxPlannedBatches,
+                'maxPlannedBatches',
+                5,
+              ),
+        ),
+      );
+    });
+
+    test('refuses a plan whose batch count has overflowed', () {
+      final target = Quantity.parse('100000000000000000000.5', Unit.portion);
+      // Component-free on purpose. Under a guard that tested `batchCount`
+      // alone this target reaches the scaling below it, and that scaling
+      // walks `fullBatchCount` — the largest int — once per proportional
+      // component, which never returns: this test would then hang the
+      // whole suite instead of failing. With no component to scale it
+      // fails as an assertion, and the calculation it is guarding against
+      // is the one the nested-recipe suite times out on.
+      final overflowing = Recipe(
+        id: 'overflowing',
+        revision: 1,
+        name: 'Overflowing',
+        baseYield: Quantity.parse('10', Unit.portion),
+        maxBatchYield: Quantity.parse('1', Unit.portion),
+        modifiedAt: DateTime.utc(2026, 9, 6),
+        components: const [],
+      );
+
+      // Not a hypothetical. `BatchPlan` takes its full-batch count from a
+      // `BigInt` through `toInt`, which clamps to the largest int rather
+      // than failing, and the remainder batch then pushes the sum past it
+      // and around to a negative number — asserted here so the reason the
+      // guard tests the full count first is visible rather than folklore.
+      final plan = BatchPlan.decompose(
+        target: target,
+        maxBatchYield: Quantity.parse('1', Unit.portion),
+      );
+      expect(plan.batchCount, lessThan(0));
+
+      expect(
+        () => bounded.calculate(recipe: overflowing, targetYield: target),
+        throwsA(isA<BatchLimitExceededError>()),
+      );
+    });
+  });
 }
