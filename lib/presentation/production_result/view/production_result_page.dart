@@ -108,6 +108,25 @@ class ProductionResultView extends StatelessWidget {
   }
 }
 
+/// The deepest nesting level the indent still steps for.
+///
+/// Past it every line sits at the same offset. The step below is 16 logical
+/// pixels a level and the domain caps nesting nowhere, so without a bound
+/// the indent eventually takes the whole row. What is left of the row will
+/// not absorb that: the two `Expanded` halves collapse to nothing, and what
+/// sits between and after them does not shrink at all — a 12-pixel gap and
+/// an `IconButton` at its 48-pixel minimum. On the narrowest supported
+/// window, 320 pixels less the list's own 16 on each side, that irreducible
+/// 60 stops fitting at depth 15: the `Row` overflows by 12 pixels and clips
+/// the button the operator opens the rest of the tree with, on the lines
+/// where opening it is the only way to see any of them. Which makes the
+/// bound this screen's to draw, not the domain's.
+///
+/// Six levels is 96 pixels, leaving 192 of that window for the row itself,
+/// more than three times that 60. Deeper than that the indent has stopped
+/// being readable as a depth anyway, and the line still names what it is.
+const _maxIndentedDepth = 6;
+
 /// One line of the run: what it is, what it takes, and — once opened — its
 /// batches and the amount the operator will actually use.
 class _ComponentRow extends StatelessWidget {
@@ -124,8 +143,13 @@ class _ComponentRow extends StatelessWidget {
     final applied = state.overrideFor(row);
     return Padding(
       // Indented by depth, which is the only thing on screen that says a
-      // line belongs to the sub-recipe above it rather than to the run.
-      padding: EdgeInsets.only(left: 16.0 * row.depth, top: 4, bottom: 4),
+      // line belongs to the sub-recipe above it rather than to the run —
+      // and capped, for the reason `_maxIndentedDepth` gives.
+      padding: EdgeInsets.only(
+        left: 16.0 * row.depth.clamp(0, _maxIndentedDepth),
+        top: 4,
+        bottom: 4,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

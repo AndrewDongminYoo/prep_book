@@ -64,6 +64,56 @@ TextFormField _amountField(WidgetTester tester, String path) =>
       ),
     );
 
+/// The path of the chained run's line at [depth].
+///
+/// Every link holds one component, so the line at each level is index zero
+/// of the level above it.
+String _chainPath(int depth) => List.filled(depth + 1, '0').join('/');
+
+/// A run whose sub-recipes chain [depth] levels below the root.
+///
+/// Local to this suite rather than in `fakes.dart`, which is the fixture
+/// both result suites share: this one has a single caller, and nothing
+/// about it is arithmetic worth asserting twice.
+///
+/// Each link is one recipe holding one component that references the next
+/// link, until the last, whose component is an ingredient. The line at
+/// depth [depth] is therefore the deepest the screen can show, and it takes
+/// opening every line above it to reach.
+///
+/// Every link asks for exactly its own yield and states no maximum, so each
+/// scales 1:1 into a single batch and nothing decays down the chain.
+Future<ProductionRun> _buildChainedRun({required int depth}) {
+  final recipes = FakeRecipeRepository();
+  for (var level = 0; level <= depth; level++) {
+    recipes.seed(
+      Recipe(
+        id: 'link-$level',
+        revision: 1,
+        name: 'Link $level',
+        baseYield: Quantity.parse('1000', Unit.gram),
+        modifiedAt: DateTime.utc(2026, 9, 8),
+        components: [
+          RecipeComponent(
+            id: 'line-$level',
+            target: level == depth
+                ? const IngredientRef('flour')
+                : SubRecipeRef('link-${level + 1}'),
+            baseQuantity: Quantity.parse('1000', Unit.gram),
+            behavior: ScalingBehavior.proportional,
+            displayOrder: 0,
+          ),
+        ],
+      ),
+    );
+  }
+  return StartProductionRun(
+    recipes,
+    const FixedRunIdSource(),
+    const FixedClock(),
+  ).call(recipeId: 'link-0', targetYield: Quantity.parse('1000', Unit.gram));
+}
+
 void main() {
   group('ProductionResultPage', () {
     testWidgets('names the run and what each line takes', (tester) async {
@@ -474,6 +524,38 @@ void main() {
         find.byKey(const ValueKey('override-amount-1/1/0')),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a deeply nested line keeps its expand control', (
+      tester,
+    ) async {
+      // Fifteen sub-recipes deep on the narrowest supported window, which
+      // is where an indent that stepped once per level stopped leaving the
+      // row anything: 15 levels of 16 pixels is 240 of the 288 the list's
+      // padding leaves of 320, and the 12-pixel gap and 48-pixel button
+      // that follow no longer fit. A `RenderFlex` that overflows throws
+      // here, which is what this asserts — the button on the deepest line
+      // is how the operator would open whatever is under it.
+      //
+      // No text scale set, unlike the depth-3 case above, and deliberately:
+      // the depth this breaks at does not move with it. Both `Expanded`
+      // halves grow taller rather than wider, and `IconButton`'s 48-pixel
+      // minimum is not scaled by text at all.
+      await _open(
+        tester,
+        await _buildChainedRun(depth: 15),
+        // Tall enough to build every opened line. A `ListView` lays out
+        // nothing past its viewport and cache extent, and a row that was
+        // never built cannot overflow — on a short viewport this would
+        // pass against either version of the padding.
+        viewport: const Size(320, 20000),
+      );
+
+      for (var depth = 0; depth < 15; depth++) {
+        await _toggle(tester, _chainPath(depth));
+      }
+
+      expect(find.byKey(ValueKey('expand-${_chainPath(15)}')), findsOneWidget);
     });
 
     testWidgets('a typed amount survives the field scrolling away', (
