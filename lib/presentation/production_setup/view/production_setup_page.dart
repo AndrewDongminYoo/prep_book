@@ -6,6 +6,7 @@ import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/production_setup/cubit/production_setup_cubit.dart';
+import 'package:prep_book/presentation/units/readable_quantity.dart';
 
 /// The production setup screen: today's target yield, and what it becomes.
 ///
@@ -252,13 +253,13 @@ class _Calculated extends StatelessWidget {
             label: l10n.productionSetupFullBatches,
             value: l10n.productionSetupFullBatchesValue(
               '${plan.fullBatchCount}',
-              _quantity(plan.fullBatchYield),
+              readableQuantity(plan.fullBatchYield),
             ),
           ),
         if (remainder != null)
           _Fact(
             label: l10n.productionSetupRemainder,
-            value: _quantity(remainder),
+            value: readableQuantity(remainder),
           ),
         const Divider(height: 32),
         // The comparison against the base recipe. Both yields are read off
@@ -267,7 +268,7 @@ class _Calculated extends StatelessWidget {
         // against the revision the calculation actually used.
         _Fact(
           label: l10n.productionSetupBaseYield,
-          value: _quantity(run.recipe.baseYield),
+          value: readableQuantity(run.recipe.baseYield),
         ),
         _Fact(
           label: l10n.productionSetupTargetYield,
@@ -279,7 +280,7 @@ class _Calculated extends StatelessWidget {
           // conversion is the one the calculation already made — it
           // refuses a target its base yield cannot convert to, so a run
           // exists only when this direction is defined too.
-          value: _quantity(
+          value: readableQuantity(
             run.targetYield.convertTo(run.recipe.baseYield.unit),
           ),
         ),
@@ -339,30 +340,15 @@ class _ErrorText extends StatelessWidget {
   );
 }
 
-/// A quantity as the screen writes it, the same way the library screen
-/// writes a recipe's base yield.
-String _quantity(Quantity quantity) =>
-    '${quantity.toDecimal()} ${quantity.unit.symbol}';
-
-/// The scale ratio as a decimal, or as the exact fraction where four
-/// places cannot hold it.
+/// The scale ratio as this screen writes it.
 ///
-/// An approximated number: a run scaled to a third of its base yield has
-/// no finite decimal form, so it is shown to four places. Nothing is
-/// computed from it — the two yields above it are the exact comparison,
-/// and the domain keeps the ratio itself exact.
-///
-/// Four places round a small enough scale-down to nothing, though: a 1 g
-/// target against a 30 kg base recipe is `1/30000`, whose four-place
-/// decimal is `0`, and a row reading "× 0" over two positive yields is
-/// simply false. So a ratio the rounding flattens is written as the
-/// fraction the domain holds instead. Deepening the decimal would only
-/// move the threshold — every fixed number of places has a ratio below
-/// it — while the fraction is exact at any magnitude.
-String _ratio(Rational scaleRatio) {
-  final rounded = scaleRatio.toDecimal(scaleOnInfinitePrecision: 4);
-  return rounded == Decimal.zero ? '$scaleRatio' : '$rounded';
-}
+/// Four places rather than the six a quantity gets: nothing is computed
+/// from this number — the two yields above it are the exact comparison,
+/// and the domain keeps the ratio itself exact — so it is here to be read
+/// at a glance rather than to be measured against. What happens when four
+/// places cannot hold the ratio is `readableAmount`'s decision, and it is
+/// the same decision a quantity gets.
+String _ratio(Rational scaleRatio) => readableAmount(scaleRatio, scale: 4);
 
 /// What a failed calculation says, carrying what the error itself names.
 ///

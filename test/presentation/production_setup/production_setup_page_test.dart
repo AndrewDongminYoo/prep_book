@@ -151,6 +151,43 @@ void main() {
       expect(find.text('× 0'), findsNothing);
     });
 
+    testWidgets('shows a run six places would round away', (tester) async {
+      final glaze = Recipe(
+        id: 'glaze',
+        revision: 1,
+        name: 'Glaze',
+        baseYield: Quantity.parse('1', Unit.tablespoon),
+        modifiedAt: DateTime.utc(2026, 9, 8),
+        components: const [],
+      );
+      final storage = FakeRecipeRepository()..seed(glaze);
+
+      await tester.pumpApp(_screenOver(storage, recipe: glaze));
+      await _enterTarget(tester, '0.000001');
+
+      // First, the contrast. A millionth of a tablespoon has a finite
+      // decimal form, so it is written out exactly however small it is —
+      // a screen that fell back to a fraction on smallness rather than on
+      // the rounding losing the value would write `1/1000000` here.
+      expect(find.text('0.000001 tbsp'), findsOneWidget);
+      expect(find.text('1 × 0.000001 tbsp'), findsOneWidget);
+
+      await tester.tap(find.byType(DropdownButtonFormField<Unit>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ml').last);
+      await tester.pump(_pastTheDebounce);
+      await tester.pump();
+
+      // The same amount in millilitres is a fifteenth of it, which has no
+      // finite decimal form and whose six-place decimal is `0`. Both the
+      // run and the batch it takes are positive, and a screen that only
+      // rounded wrote "0 tbsp" over a 1 tbsp base recipe for both.
+      expect(find.text('1/15000000 tbsp'), findsOneWidget);
+      expect(find.text('1 × 1/15000000 tbsp'), findsOneWidget);
+      expect(find.text('0 tbsp'), findsNothing);
+      expect(find.text('1 × 0 tbsp'), findsNothing);
+    });
+
     testWidgets('reports an amount that is not a number', (tester) async {
       final storage = FakeRecipeRepository()..seed(_sheeted());
 
