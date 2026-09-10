@@ -90,31 +90,53 @@ void main() {
         ),
         throwsA(
           isA<BatchCountOverflowError>().having(
-            (error) => error.fullBatchCount,
-            'fullBatchCount',
-            BigInt.parse('1000000000000000000000000000000'),
+            (error) => error.batchCount,
+            'batchCount',
+            BigInt.parse('1000000000000000000000000000001'),
           ),
         ),
       );
     });
 
     test('admits the largest count a batch count can hold', () {
-      // One less than the largest `int`, so the full count and the
-      // remainder batch after it both fit. A refusal written one off — on
-      // the count alone rather than on the count plus its remainder —
-      // either rejects this plan or lets the wrap back in.
+      // Exactly the largest `int` full batches and nothing over, which is
+      // a plan a batch count can hold and answer. A refusal that reserved
+      // the remainder batch's slot before knowing there was one would
+      // refuse this.
       final largest = BigInt.parse('9223372036854775807');
+
       final plan = BatchPlan.decompose(
-        target: Quantity.parse('9223372036854775806.5', Unit.gram),
+        target: Quantity.parse('9223372036854775807', Unit.gram),
         maxBatchYield: Quantity.parse('1', Unit.gram),
       );
 
       // Read off `largest` rather than written out, because a literal this
       // size is one the analyzer refuses on a target that compiles to
       // JavaScript.
-      expect(plan.fullBatchCount, (largest - BigInt.one).toInt());
-      expect(plan.remainderYield, Quantity.parse('0.5', Unit.gram));
+      expect(plan.fullBatchCount, largest.toInt());
+      expect(plan.remainderYield, isNull);
       expect(plan.batchCount, largest.toInt());
+    });
+
+    test('refuses the same count once a remainder is added to it', () {
+      // Half a gram more than the test above, which is the whole
+      // difference: the full count is unchanged and still fits, and the
+      // remainder batch after it does not. The pair is what pins the
+      // boundary — a refusal on the full count alone passes the test above
+      // and fails this one.
+      expect(
+        () => BatchPlan.decompose(
+          target: Quantity.parse('9223372036854775807.5', Unit.gram),
+          maxBatchYield: Quantity.parse('1', Unit.gram),
+        ),
+        throwsA(
+          isA<BatchCountOverflowError>().having(
+            (error) => error.batchCount,
+            'batchCount',
+            BigInt.parse('9223372036854775808'),
+          ),
+        ),
+      );
     });
   });
 }

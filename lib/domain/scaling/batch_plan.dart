@@ -28,25 +28,25 @@ final class BatchPlan {
 
     final max = maxBatchYield.convertTo(target.unit);
     final full = (target.amount / max.amount).floor();
-    // Refused before the conversion below narrows it, because that
-    // conversion cannot fail: `BigInt.toInt` clamps to the largest `int`
-    // rather than throwing, and a clamped full count then makes
-    // [batchCount] — one more than it, whenever there is a remainder —
-    // wrap to the most negative `int` instead. Measured on a target of
-    // 10^30 grams in one-gram batches: the count came back as
-    // 9223372036854775807 and the batch count as -9223372036854775808.
-    //
-    // One is added before the test rather than after, so that the count
-    // and the remainder batch that may follow it are both representable
-    // and no later sum can wrap.
-    if (!(full + BigInt.one).isValidInt) {
-      throw BatchCountOverflowError(full);
-    }
     final consumed = max.scaleBy(Decimal.fromBigInt(full).toRational());
     final remainder = Quantity.fromRational(
       target.amount - consumed.amount,
       target.unit,
     );
+
+    // Refused before `toInt` below narrows the count, because that
+    // narrowing cannot fail: it clamps to the largest `int` rather than
+    // throwing, and a clamped count then makes [batchCount] wrap to the
+    // most negative `int` instead. Measured on a target of 10^30 grams in
+    // one-gram batches: the count came back as 9223372036854775807 and the
+    // batch count as -9223372036854775808.
+    //
+    // The remainder batch is counted only when there is one. Reserving its
+    // slot unconditionally would refuse a run of exactly the largest `int`
+    // full batches and no remainder, which is a plan this can represent
+    // and answer.
+    final batches = remainder.isZero ? full : full + BigInt.one;
+    if (!batches.isValidInt) throw BatchCountOverflowError(batches);
 
     return BatchPlan._(
       fullBatchCount: full.toInt(),

@@ -126,14 +126,17 @@ final class InvalidTargetYieldError extends DomainError {
 /// derived exactly and then kept as an `int`, and past the largest one
 /// there is no truthful answer left to give.
 final class BatchCountOverflowError extends DomainError {
-  BatchCountOverflowError(this.fullBatchCount)
-    : super('a run of $fullBatchCount full batches cannot be counted');
+  BatchCountOverflowError(this.batchCount)
+    : super('a run of $batchCount batches cannot be counted');
 
-  /// How many full batches the target actually needs, exactly.
+  /// How many batches the target actually needs, exactly, counting a
+  /// remainder batch when there is one.
   ///
-  /// Kept as it was derived rather than narrowed, since narrowing it is
-  /// the thing this exists to refuse.
-  final BigInt fullBatchCount;
+  /// The whole count rather than the full-batch count alone, because the
+  /// remainder batch is what carries a plan of exactly the largest `int`
+  /// full batches past what a count can hold. Kept as it was derived
+  /// rather than narrowed, since narrowing it is the thing this refuses.
+  final BigInt batchCount;
 }
 
 /// Raised when a recipe in a run splits into more batches than the caller

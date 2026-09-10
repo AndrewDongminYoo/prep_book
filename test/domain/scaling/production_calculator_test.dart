@@ -502,9 +502,9 @@ void main() {
         ),
         throwsA(
           isA<BatchCountOverflowError>().having(
-            (error) => error.fullBatchCount,
-            'fullBatchCount',
-            BigInt.parse('100000000000000000000'),
+            (error) => error.batchCount,
+            'batchCount',
+            BigInt.parse('100000000000000000001'),
           ),
         ),
       );
