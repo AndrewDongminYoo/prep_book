@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:meta/meta.dart';
+import 'package:prep_book/domain/errors.dart';
 import 'package:prep_book/domain/units/quantity.dart';
 
 /// How a production run is split into batches.
@@ -8,6 +9,14 @@ final class BatchPlan {
   /// Splits [target] into full batches of [maxBatchYield] plus a remainder.
   ///
   /// Without a maximum the run is a single batch producing the whole target.
+  ///
+  /// Throws [BatchCountOverflowError] when the target needs more batches
+  /// than [batchCount] can hold — the full ones plus the remainder batch
+  /// when there is a remainder, so a plan of exactly the largest `int` full
+  /// batches is admitted with nothing left over and refused with something.
+  /// No caller can ask for that deliberately at any plausible scale, and
+  /// the refusal is here rather than in a caller's bound because a caller
+  /// may set no bound at all.
   factory BatchPlan.decompose({
     required Quantity target,
     Quantity? maxBatchYield,
@@ -27,6 +36,20 @@ final class BatchPlan {
       target.amount - consumed.amount,
       target.unit,
     );
+
+    // Refused before `toInt` below narrows the count, because that
+    // narrowing cannot fail: it clamps to the largest `int` rather than
+    // throwing, and a clamped count then makes [batchCount] wrap to the
+    // most negative `int` instead. Measured on a target of 10^30 grams in
+    // one-gram batches: the count came back as 9223372036854775807 and the
+    // batch count as -9223372036854775808.
+    //
+    // The remainder batch is counted only when there is one. Reserving its
+    // slot unconditionally would refuse a run of exactly the largest `int`
+    // full batches and no remainder, which is a plan this can represent
+    // and answer.
+    final batches = remainder.isZero ? full : full + BigInt.one;
+    if (!batches.isValidInt) throw BatchCountOverflowError(batches);
 
     return BatchPlan._(
       fullBatchCount: full.toInt(),

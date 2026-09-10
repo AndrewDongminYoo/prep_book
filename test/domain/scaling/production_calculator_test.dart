@@ -444,15 +444,14 @@ void main() {
       );
     });
 
-    test('refuses a plan whose batch count has overflowed', () {
+    test('reports a count too large to hold as past the bound', () {
       final target = Quantity.parse('100000000000000000000.5', Unit.portion);
-      // Component-free on purpose. Under a guard that tested `batchCount`
-      // alone this target reaches the scaling below it, and that scaling
-      // walks `fullBatchCount` — the largest int — once per proportional
-      // component, which never returns: this test would then hang the
-      // whole suite instead of failing. With no component to scale it
-      // fails as an assertion, and the calculation it is guarding against
-      // is the one the nested-recipe suite times out on.
+      // Component-free on purpose. A target this size once reached the
+      // scaling below the guard, and that scaling walks `fullBatchCount`
+      // once per proportional component, which never returns: the test
+      // would hang the whole suite rather than fail. `BatchPlan` refuses
+      // the count now, before any of that, but the fixture stays as it was
+      // so a regression fails here instead of timing out.
       final overflowing = Recipe(
         id: 'overflowing',
         revision: 1,
@@ -463,20 +462,51 @@ void main() {
         components: const [],
       );
 
-      // Not a hypothetical. `BatchPlan` takes its full-batch count from a
-      // `BigInt` through `toInt`, which clamps to the largest int rather
-      // than failing, and the remainder batch then pushes the sum past it
-      // and around to a negative number — asserted here so the reason the
-      // guard tests the full count first is visible rather than folklore.
-      final plan = BatchPlan.decompose(
-        target: target,
-        maxBatchYield: Quantity.parse('1', Unit.portion),
-      );
-      expect(plan.batchCount, lessThan(0));
-
+      // The bounded caller is told what it asked to be told. A count that
+      // cannot be represented is past every bound an `int` can express, so
+      // reporting it as the arithmetic's own failure would leave this
+      // screen's "enter a smaller amount" sentence unreachable for the one
+      // target that most needs it.
       expect(
         () => bounded.calculate(recipe: overflowing, targetYield: target),
-        throwsA(isA<BatchLimitExceededError>()),
+        throwsA(
+          isA<BatchLimitExceededError>().having(
+            (error) => error.maxPlannedBatches,
+            'maxPlannedBatches',
+            5,
+          ),
+        ),
+      );
+    });
+
+    test('reports the same count as arithmetic when no bound is set', () {
+      final overflowing = Recipe(
+        id: 'overflowing',
+        revision: 1,
+        name: 'Overflowing',
+        baseYield: Quantity.parse('10', Unit.portion),
+        maxBatchYield: Quantity.parse('1', Unit.portion),
+        modifiedAt: DateTime.utc(2026, 9, 6),
+        components: const [],
+      );
+
+      // Without a bound there is no bound to report it against, and an
+      // unbounded caller is not asking to be protected from large runs —
+      // it is being told this particular one has no answer. The count it
+      // carries is the true one, which no `int` in the plan could have
+      // held.
+      expect(
+        () => calculator.calculate(
+          recipe: overflowing,
+          targetYield: Quantity.parse('100000000000000000000.5', Unit.portion),
+        ),
+        throwsA(
+          isA<BatchCountOverflowError>().having(
+            (error) => error.batchCount,
+            'batchCount',
+            BigInt.parse('100000000000000000001'),
+          ),
+        ),
       );
     });
   });

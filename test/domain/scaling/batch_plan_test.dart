@@ -72,5 +72,71 @@ void main() {
       expect(plan.remainderYield, Quantity.parse('1.5', Unit.kilogram));
       expect(plan.batchCount, 4);
     });
+
+    test('refuses a count no batch count could hold', () {
+      // The count is derived as a `BigInt` and kept as an `int`, and
+      // `BigInt.toInt` clamps rather than throwing. Measured on this
+      // decomposition before the refusal existed: the full count came back
+      // as 9223372036854775807 and, with the remainder batch added,
+      // `batchCount` as -9223372036854775808. Both are answers, and both
+      // are wrong.
+      expect(
+        () => BatchPlan.decompose(
+          target: Quantity.parse(
+            '1000000000000000000000000000000.5',
+            Unit.gram,
+          ),
+          maxBatchYield: Quantity.parse('1', Unit.gram),
+        ),
+        throwsA(
+          isA<BatchCountOverflowError>().having(
+            (error) => error.batchCount,
+            'batchCount',
+            BigInt.parse('1000000000000000000000000000001'),
+          ),
+        ),
+      );
+    });
+
+    test('admits the largest count a batch count can hold', () {
+      // Exactly the largest `int` full batches and nothing over, which is
+      // a plan a batch count can hold and answer. A refusal that reserved
+      // the remainder batch's slot before knowing there was one would
+      // refuse this.
+      final largest = BigInt.parse('9223372036854775807');
+
+      final plan = BatchPlan.decompose(
+        target: Quantity.parse('9223372036854775807', Unit.gram),
+        maxBatchYield: Quantity.parse('1', Unit.gram),
+      );
+
+      // Read off `largest` rather than written out, because a literal this
+      // size is one the analyzer refuses on a target that compiles to
+      // JavaScript.
+      expect(plan.fullBatchCount, largest.toInt());
+      expect(plan.remainderYield, isNull);
+      expect(plan.batchCount, largest.toInt());
+    });
+
+    test('refuses the same count once a remainder is added to it', () {
+      // Half a gram more than the test above, which is the whole
+      // difference: the full count is unchanged and still fits, and the
+      // remainder batch after it does not. The pair is what pins the
+      // boundary — a refusal on the full count alone passes the test above
+      // and fails this one.
+      expect(
+        () => BatchPlan.decompose(
+          target: Quantity.parse('9223372036854775807.5', Unit.gram),
+          maxBatchYield: Quantity.parse('1', Unit.gram),
+        ),
+        throwsA(
+          isA<BatchCountOverflowError>().having(
+            (error) => error.batchCount,
+            'batchCount',
+            BigInt.parse('9223372036854775808'),
+          ),
+        ),
+      );
+    });
   });
 }
