@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+// `ScrollCacheExtent` is a rendering type that `material.dart` does not
+// re-export, and it is what `ListView.scrollCacheExtent` takes.
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
@@ -53,9 +56,69 @@ class ProductionResultPage extends StatelessWidget {
 
 /// The screen's rendering, split from [ProductionResultPage] so the widget
 /// that provides the cubit is not also the widget that reads it.
-class ProductionResultView extends StatelessWidget {
+class ProductionResultView extends StatefulWidget {
   /// Creates the view.
   const ProductionResultView({super.key});
+
+  @override
+  State<ProductionResultView> createState() => _ProductionResultViewState();
+}
+
+class _ProductionResultViewState extends State<ProductionResultView> {
+  /// One key per line the screen has rendered, so a reveal has something to
+  /// scroll to. Keyed on the path, which is what expansion is keyed on and
+  /// is unique across the tree.
+  final _rowKeys = <String, GlobalKey>{};
+
+  /// The line a reveal is on its way to, held from the tap until the scroll
+  /// runs one frame later.
+  String? _revealing;
+
+  /// Opens the sub-recipes hiding the component [key] names, then brings
+  /// its line on screen.
+  ///
+  /// The scroll waits a frame because the line it is aimed at may not exist
+  /// yet: expanding is a state change, and the row for a component two
+  /// sub-recipes down is built by the rebuild that change causes.
+  void _reveal(OverrideKey key) {
+    final cubit = context.read<ProductionResultCubit>();
+    final path = cubit.state.pathOf(key);
+    if (path == null) return;
+    setState(() => _revealing = path);
+    cubit.componentRevealed(key);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_scrollTo(path));
+    });
+  }
+
+  /// Scrolls the line at [path] into view, then puts the list's cache
+  /// extent back.
+  ///
+  /// The key holds no context when the line is not on screen to be scrolled
+  /// to, which is what the first test skips on — a reveal cannot outlive
+  /// the route it was tapped in, but the callback it scheduled can.
+  ///
+  /// The reset waits for the animation rather than firing beside it, so the
+  /// lines it travels past stay built for the length of it, and it is a
+  /// `setState`: without one the widened extent stays on the list for as
+  /// long as nothing else rebuilds the screen. Measured before that was
+  /// corrected — after a settled reveal the viewport still reported
+  /// `cacheExtent=100000.0`, and a warning that needs no edit afterwards
+  /// leaves nothing behind to rebuild it.
+  Future<void> _scrollTo(String path) async {
+    final target = _rowKeys[path]?.currentContext;
+    if (target != null) {
+      await Scrollable.ensureVisible(
+        target,
+        // A little below the top edge rather than flush against it, so the
+        // line reads as one of a list rather than as the first of one.
+        alignment: 0.1,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
+    if (mounted) setState(() => _revealing = null);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +133,23 @@ class ProductionResultView extends StatelessWidget {
         child: BlocBuilder<ProductionResultCubit, ProductionResultState>(
           builder: (context, state) => ListView(
             padding: const EdgeInsets.all(16),
+            // Every line built, but only until the reveal's scroll has
+            // landed. The list is lazy the rest of the time, and a lazy
+            // list has not built the row a reveal is aimed at: measured at
+            // 80 lines in a 600-pixel viewport, rows 0 to 11 existed and
+            // row 60 had no context at all, so `ensureVisible` had nothing
+            // to scroll to. Widening is what puts it in reach.
+            //
+            // A hundred thousand pixels rather than an infinite extent,
+            // which is not usable: the semantics layer asserts on the
+            // non-finite rect it computes from one, and the frame throws
+            // before anything scrolls. This is roughly a thousand lines at
+            // the height a line renders at, past which a reveal opens the
+            // tree without scrolling — which is what it did before this
+            // existed, not a new way to fail.
+            scrollCacheExtent: _revealing == null
+                ? null
+                : const ScrollCacheExtent.pixels(100000),
             children: [
               Text(
                 state.run.recipe.name,
@@ -88,7 +168,11 @@ class ProductionResultView extends StatelessWidget {
                 const Divider(height: 32),
                 _Heading(text: l10n.productionResultWarnings),
                 for (final warning in state.warnings)
-                  _WarningTile(state: state, warning: warning),
+                  _WarningTile(
+                    state: state,
+                    warning: warning,
+                    onReveal: _reveal,
+                  ),
               ],
               const Divider(height: 32),
               _Heading(text: l10n.productionResultComponents),
@@ -97,7 +181,11 @@ class ProductionResultView extends StatelessWidget {
               // widget, so however deep the run expands the screen stays
               // one scrollable column.
               for (final row in state.visibleRows)
-                _ComponentRow(state: state, row: row),
+                _ComponentRow(
+                  key: _rowKeys.putIfAbsent(row.path, GlobalKey.new),
+                  state: state,
+                  row: row,
+                ),
               const Divider(height: 32),
               _SaveSection(state: state),
             ],
@@ -130,7 +218,7 @@ const _maxIndentedDepth = 6;
 /// One line of the run: what it is, what it takes, and — once opened — its
 /// batches and the amount the operator will actually use.
 class _ComponentRow extends StatelessWidget {
-  const _ComponentRow({required this.state, required this.row});
+  const _ComponentRow({required this.state, required this.row, super.key});
 
   final ProductionResultState state;
   final ResultRow row;
@@ -388,12 +476,20 @@ class _OverrideAmountFieldState extends State<_OverrideAmountField> {
   }
 }
 
-/// One warning, and the action that marks it seen.
+/// One warning, the action that finds the line it names, and the action
+/// that marks it seen.
 class _WarningTile extends StatelessWidget {
-  const _WarningTile({required this.state, required this.warning});
+  const _WarningTile({
+    required this.state,
+    required this.warning,
+    required this.onReveal,
+  });
 
   final ProductionResultState state;
   final ProductionWarning warning;
+
+  /// Asks the screen to open and scroll to the line a warning names.
+  final ValueChanged<OverrideKey> onReveal;
 
   @override
   Widget build(BuildContext context) {
@@ -424,6 +520,18 @@ class _WarningTile extends StatelessWidget {
                 ? null
                 : TextStyle(color: Theme.of(context).colorScheme.error),
           ),
+          // Offered whether or not the warning has been seen, and whether
+          // or not the run is still editable: this opens the tree and
+          // scrolls, and a stored run stays reviewable. A warning naming a
+          // recipe rather than a component gets no such action, because
+          // the line it would scroll to is the whole sub-recipe the
+          // operator can already see.
+          if (_componentOf(warning) case final component?)
+            TextButton(
+              key: ValueKey('reveal-${warning.hashCode}'),
+              onPressed: () => onReveal(component),
+              child: Text(l10n.productionResultShowLine),
+            ),
           if (acknowledged)
             Text(l10n.productionResultAcknowledged)
           else
@@ -537,6 +645,24 @@ String _amountText(AppLocalizations l10n, ScaledQuantity? amount) {
   return '$displayed · '
       '${l10n.productionResultExact(readableQuantity(amount.exact))}';
 }
+
+/// The component a warning is raised against, or `null` when it is raised
+/// against a whole recipe instead.
+///
+/// The pair, never the component id alone, for the reason
+/// `ProductionRun.overrides` gives: a component id is unique inside its own
+/// recipe and nowhere wider.
+OverrideKey? _componentOf(ProductionWarning warning) => switch (warning) {
+  ManualComponentWarning(:final recipeId, :final componentId) => (
+    recipeId,
+    componentId,
+  ),
+  RoundingAdjustedWarning(:final recipeId, :final componentId) => (
+    recipeId,
+    componentId,
+  ),
+  ArchivedDependencyWarning() => null,
+};
 
 /// What one warning says, naming the component and the recipe it belongs
 /// to out of the run's own snapshot.

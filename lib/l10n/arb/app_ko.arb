@@ -438,6 +438,10 @@
     "@productionResultComponents": {
         "description": "계산된 구성 항목을 모아 둔 구역의 제목"
     },
+    "productionResultShowLine": "해당 항목 보기",
+    "@productionResultShowLine": {
+        "description": "경고가 가리키는 항목을 감추고 있는 하위 레시피를 모두 펼치고 그 항목으로 스크롤하는 동작의 라벨"
+    },
     "productionResultAcknowledge": "확인",
     "@productionResultAcknowledge": {
         "description": "경고 하나를 확인 처리하는 동작의 라벨"

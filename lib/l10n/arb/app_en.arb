@@ -438,6 +438,10 @@
     "@productionResultComponents": {
         "description": "Heading of the section listing the calculated lines"
     },
+    "productionResultShowLine": "Show the line",
+    "@productionResultShowLine": {
+        "description": "Label of the action that opens the sub-recipes hiding the line a warning names and scrolls to it"
+    },
     "productionResultAcknowledge": "Acknowledge",
     "@productionResultAcknowledge": {
         "description": "Label of the action that marks one warning as seen"
