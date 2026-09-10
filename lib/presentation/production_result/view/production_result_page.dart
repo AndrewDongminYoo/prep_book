@@ -86,19 +86,29 @@ class _ProductionResultViewState extends State<ProductionResultView> {
     if (path == null) return;
     setState(() => _revealing = path);
     cubit.componentRevealed(key);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollTo(path));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_scrollTo(path));
+    });
   }
 
-  /// Scrolls the line at [path] into view, if it is still on screen to be
-  /// scrolled to.
+  /// Scrolls the line at [path] into view, then puts the list's cache
+  /// extent back.
   ///
-  /// The key holds no context once the screen is gone, which is the case
-  /// this returns on — a reveal cannot outlive the route it was tapped in,
-  /// but the callback it scheduled can.
-  void _scrollTo(String path) {
+  /// The key holds no context when the line is not on screen to be scrolled
+  /// to, which is what the first test skips on — a reveal cannot outlive
+  /// the route it was tapped in, but the callback it scheduled can.
+  ///
+  /// The reset waits for the animation rather than firing beside it, so the
+  /// lines it travels past stay built for the length of it, and it is a
+  /// `setState`: without one the widened extent stays on the list for as
+  /// long as nothing else rebuilds the screen. Measured before that was
+  /// corrected — after a settled reveal the viewport still reported
+  /// `cacheExtent=100000.0`, and a warning that needs no edit afterwards
+  /// leaves nothing behind to rebuild it.
+  Future<void> _scrollTo(String path) async {
     final target = _rowKeys[path]?.currentContext;
     if (target != null) {
-      Scrollable.ensureVisible(
+      await Scrollable.ensureVisible(
         target,
         // A little below the top edge rather than flush against it, so the
         // line reads as one of a list rather than as the first of one.
@@ -107,11 +117,7 @@ class _ProductionResultViewState extends State<ProductionResultView> {
         curve: Curves.easeOut,
       );
     }
-    // Plain, not `setState`: the wide cache extent below is wanted only
-    // for the frame the scroll runs in, and the next build narrows it
-    // again. Asking for a rebuild here would be asking for one for nothing,
-    // and would throw if the screen had gone in the meantime.
-    _revealing = null;
+    if (mounted) setState(() => _revealing = null);
   }
 
   @override
@@ -127,12 +133,12 @@ class _ProductionResultViewState extends State<ProductionResultView> {
         child: BlocBuilder<ProductionResultCubit, ProductionResultState>(
           builder: (context, state) => ListView(
             padding: const EdgeInsets.all(16),
-            // Every line built, but only while a reveal is in flight. The
-            // list is lazy the rest of the time, and a lazy list has not
-            // built the row a reveal is aimed at: measured at 80 lines in a
-            // 600-pixel viewport, rows 0 to 11 existed and row 60 had no
-            // context at all, so `ensureVisible` had nothing to scroll to.
-            // Widening for the one frame is what puts it in reach.
+            // Every line built, but only until the reveal's scroll has
+            // landed. The list is lazy the rest of the time, and a lazy
+            // list has not built the row a reveal is aimed at: measured at
+            // 80 lines in a 600-pixel viewport, rows 0 to 11 existed and
+            // row 60 had no context at all, so `ensureVisible` had nothing
+            // to scroll to. Widening is what puts it in reach.
             //
             // A hundred thousand pixels rather than an infinite extent,
             // which is not usable: the semantics layer asserts on the

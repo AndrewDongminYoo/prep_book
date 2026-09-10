@@ -539,6 +539,30 @@ void main() {
       expect(row.bottom, lessThanOrEqualTo(list.bottom));
     });
 
+    testWidgets('the widened cache extent is put back once it lands', (
+      tester,
+    ) async {
+      final run = await _buildChainedRun(depth: 8, warnAtTheDeepest: true);
+      await _open(tester, run, viewport: const Size(800, 600));
+
+      await tester.tap(
+        find.byKey(
+          ValueKey('reveal-${_warning<ManualComponentWarning>(run).hashCode}'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Nothing else rebuilds this screen after a reveal — a warning the
+      // operator only wanted to look at leaves no edit behind — so an
+      // extent that is not put back here is not put back at all. Measured
+      // at `cacheExtent=100000.0` on the settled viewport before the reset
+      // existed.
+      expect(
+        tester.widget<ListView>(find.byType(ListView)).scrollCacheExtent,
+        isNull,
+      );
+    });
+
     testWidgets('saving stores the run and closes the controls', (
       tester,
     ) async {
