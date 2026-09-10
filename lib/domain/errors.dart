@@ -117,6 +117,25 @@ final class InvalidTargetYieldError extends DomainError {
     : super('a production run needs a positive target yield');
 }
 
+/// Raised when a target needs more full batches than a batch count can
+/// hold.
+///
+/// Not a bound on how large a run may be — that is
+/// [BatchLimitExceededError], which is the caller's to set or to leave
+/// unset. This one is the arithmetic refusing to answer: the count is
+/// derived exactly and then kept as an `int`, and past the largest one
+/// there is no truthful answer left to give.
+final class BatchCountOverflowError extends DomainError {
+  BatchCountOverflowError(this.fullBatchCount)
+    : super('a run of $fullBatchCount full batches cannot be counted');
+
+  /// How many full batches the target actually needs, exactly.
+  ///
+  /// Kept as it was derived rather than narrowed, since narrowing it is
+  /// the thing this exists to refuse.
+  final BigInt fullBatchCount;
+}
+
 /// Raised when a recipe in a run splits into more batches than the caller
 /// allowed.
 ///

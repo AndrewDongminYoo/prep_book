@@ -50,7 +50,12 @@ final class ProductionCalculator {
   ///
   /// Throws [BatchLimitExceededError] when [maxPlannedBatches] is set and
   /// this recipe, or any sub-recipe expanded under it, splits into more
-  /// batches than that.
+  /// batches than that — including the case where the count is too large
+  /// to be represented at all, which is past every bound and is reported
+  /// as one.
+  ///
+  /// Throws [BatchCountOverflowError] for that same case when no bound is
+  /// set, since there is then no bound to report it against.
   ProductionResult calculate({
     required Recipe recipe,
     required Quantity targetYield,
@@ -67,20 +72,33 @@ final class ProductionCalculator {
 
     final target = targetYield.convertTo(recipe.baseYield.unit);
     final ratio = target.amount / recipe.baseYield.amount;
-    final plan = BatchPlan.decompose(
-      target: target,
-      maxBatchYield: recipe.maxBatchYield,
-    );
     final limit = maxPlannedBatches;
-    // `fullBatchCount` is compared first rather than folded into a single
-    // test on `batchCount`, and the order is load-bearing: `BatchPlan`
-    // derives the full count from a `BigInt` through `toInt`, which clamps
-    // to the largest int instead of failing, so a target large enough to
-    // clamp it leaves `batchCount` — that value plus a remainder batch —
-    // wrapped to a negative number that no upper bound rejects. Once the
-    // full count is known to be inside the limit, the sum cannot wrap.
-    if (limit != null &&
-        (plan.fullBatchCount > limit || plan.batchCount > limit)) {
+    final BatchPlan plan;
+    try {
+      plan = BatchPlan.decompose(
+        target: target,
+        maxBatchYield: recipe.maxBatchYield,
+      );
+    } on BatchCountOverflowError {
+      // A count too large to be represented is past every bound an `int`
+      // can express, so a caller that set one is told the thing it asked
+      // to be told, in the words the screen already has a sentence for.
+      // A caller that set none has nothing to be told instead, and the
+      // arithmetic's own refusal stands.
+      if (limit == null) rethrow;
+      throw BatchLimitExceededError(recipe.id, limit);
+    }
+    // One comparison, on the count that includes the remainder batch.
+    //
+    // This used to test `fullBatchCount` first as well, and that order was
+    // load-bearing: `BatchPlan` narrowed the full count with `toInt`, which
+    // clamps rather than throwing, so a target large enough to clamp it
+    // left `batchCount` wrapped negative and inside every upper bound. The
+    // guard routed around the clamp because the clamp was still there.
+    // `BatchPlan.decompose` now refuses a count it cannot represent, so
+    // both values that reach here are exact and the second test was
+    // checking a state that can no longer arrive.
+    if (limit != null && plan.batchCount > limit) {
       throw BatchLimitExceededError(recipe.id, limit);
     }
 

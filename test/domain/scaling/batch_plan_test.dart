@@ -72,5 +72,49 @@ void main() {
       expect(plan.remainderYield, Quantity.parse('1.5', Unit.kilogram));
       expect(plan.batchCount, 4);
     });
+
+    test('refuses a count no batch count could hold', () {
+      // The count is derived as a `BigInt` and kept as an `int`, and
+      // `BigInt.toInt` clamps rather than throwing. Measured on this
+      // decomposition before the refusal existed: the full count came back
+      // as 9223372036854775807 and, with the remainder batch added,
+      // `batchCount` as -9223372036854775808. Both are answers, and both
+      // are wrong.
+      expect(
+        () => BatchPlan.decompose(
+          target: Quantity.parse(
+            '1000000000000000000000000000000.5',
+            Unit.gram,
+          ),
+          maxBatchYield: Quantity.parse('1', Unit.gram),
+        ),
+        throwsA(
+          isA<BatchCountOverflowError>().having(
+            (error) => error.fullBatchCount,
+            'fullBatchCount',
+            BigInt.parse('1000000000000000000000000000000'),
+          ),
+        ),
+      );
+    });
+
+    test('admits the largest count a batch count can hold', () {
+      // One less than the largest `int`, so the full count and the
+      // remainder batch after it both fit. A refusal written one off — on
+      // the count alone rather than on the count plus its remainder —
+      // either rejects this plan or lets the wrap back in.
+      final largest = BigInt.parse('9223372036854775807');
+      final plan = BatchPlan.decompose(
+        target: Quantity.parse('9223372036854775806.5', Unit.gram),
+        maxBatchYield: Quantity.parse('1', Unit.gram),
+      );
+
+      // Read off `largest` rather than written out, because a literal this
+      // size is one the analyzer refuses on a target that compiles to
+      // JavaScript.
+      expect(plan.fullBatchCount, (largest - BigInt.one).toInt());
+      expect(plan.remainderYield, Quantity.parse('0.5', Unit.gram));
+      expect(plan.batchCount, largest.toInt());
+    });
   });
 }
