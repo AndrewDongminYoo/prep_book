@@ -117,8 +117,11 @@ final class InvalidTargetYieldError extends DomainError {
     : super('a production run needs a positive target yield');
 }
 
-/// Raised when a target needs more full batches than a batch count can
-/// hold.
+/// Raised when a target needs more batches than a batch count can hold.
+///
+/// The whole count, remainder batch included. A plan of exactly the largest
+/// `int` full batches is representable when nothing is left over and is not
+/// when something is, so the full count alone does not decide this.
 ///
 /// Not a bound on how large a run may be — that is
 /// [BatchLimitExceededError], which is the caller's to set or to leave

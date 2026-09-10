@@ -10,10 +10,13 @@ final class BatchPlan {
   ///
   /// Without a maximum the run is a single batch producing the whole target.
   ///
-  /// Throws [BatchCountOverflowError] when the target needs more full
-  /// batches than [batchCount] can hold. No caller can ask for that
-  /// deliberately at any plausible scale, and the refusal is here rather
-  /// than in a caller's bound because a caller may set no bound at all.
+  /// Throws [BatchCountOverflowError] when the target needs more batches
+  /// than [batchCount] can hold — the full ones plus the remainder batch
+  /// when there is a remainder, so a plan of exactly the largest `int` full
+  /// batches is admitted with nothing left over and refused with something.
+  /// No caller can ask for that deliberately at any plausible scale, and
+  /// the refusal is here rather than in a caller's bound because a caller
+  /// may set no bound at all.
   factory BatchPlan.decompose({
     required Quantity target,
     Quantity? maxBatchYield,
