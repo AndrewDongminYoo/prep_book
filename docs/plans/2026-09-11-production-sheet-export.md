@@ -248,6 +248,7 @@ The immutable model uses these fields:
 final class ProductionSheet {
   final ProductionSheetOrganization organization;
   final ProductionSheetLabels labels;
+  final String runId;
   final String recipeName;
   final int recipeRevision;
   final String targetYield;
@@ -501,7 +502,8 @@ Use one `pw.MultiPage`.
 Build the draft watermark in `PageTheme.buildBackground` so it appears on every page.
 Build the footer from `context.pageNumber` and `context.pagesCount`.
 Replace `{current}` and `{total}` in the stored page pattern.
-Keep the footer recipe name and page label on one bounded row.
+Keep the footer recipe name, complete saved run ID, and page label on one bounded row.
+Allow only the recipe name to use the remaining width so every page keeps the stable run identifier.
 
 - [ ] **Step 5: Implement keep-together-first blocks**
 

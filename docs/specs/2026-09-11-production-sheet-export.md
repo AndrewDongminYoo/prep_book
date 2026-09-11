@@ -173,7 +173,8 @@ Each production section contains these values:
 - Ordered preparation notes.
 - Ordered component rows.
 
-Every page footer contains the root recipe name and `current page / total pages`.
+Every page footer contains the root recipe name, the complete saved run ID, and `current page / total pages`.
+The run ID remains visible when an unbounded recipe name is clipped to the footer's fixed line.
 The PDF metadata title uses the root recipe name.
 The PDF metadata creator and producer use `PrepBook`.
 No metadata value may read the current clock.
@@ -320,7 +321,7 @@ Renderer tests must verify these properties:
 - The file starts with the PDF signature and uses A4 portrait pages.
 - Korean and English strings are embedded without a font error.
 - Every draft page contains the watermark.
-- Every footer contains the root recipe and correct page numbers.
+- Every footer contains the root recipe, complete run ID, and correct page numbers.
 - A section moves intact when it fits on a fresh page.
 - Warning and section spacing does not create a footer-only page.
 - An oversized section splits only at row boundaries and repeats its headers.

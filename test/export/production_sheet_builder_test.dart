@@ -68,6 +68,7 @@ void main() {
       );
 
       expect(sheet.organization, ProductionSheetOrganization.batch);
+      expect(sheet.runId, 'run-export');
       expect(sheet.rootBatchCount, 3);
       expect(sheet.sections.first.tables, hasLength(2));
       expect(sheet.sections.first.tables.first.heading, 'Batches 1–2');

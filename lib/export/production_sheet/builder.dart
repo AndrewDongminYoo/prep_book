@@ -34,6 +34,7 @@ class ProductionSheetBuilder {
     return ProductionSheet(
       organization: organization,
       labels: localizations.labels,
+      runId: run.id,
       recipeName: run.recipe.name,
       recipeRevision: run.recipeRevision,
       targetYield: localizations.formatQuantity(run.targetYield),

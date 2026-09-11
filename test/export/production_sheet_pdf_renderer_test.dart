@@ -49,6 +49,7 @@ ProductionSheet _sheet({
   return ProductionSheet(
     organization: organization,
     labels: _labels,
+    runId: '0123456789abcdef0123456789abcdef',
     recipeName: recipeName ?? (isDraft ? '긴 한국어 반죽' : 'Bun dough'),
     recipeRevision: 4,
     targetYield: '120 kg',
@@ -213,6 +214,23 @@ void main() {
         page,
         containsAllInOrder(['Page', '${index + 1}', 'of', '${pages.length}']),
       );
+    }
+  });
+
+  test('identifies every page when the recipe name is clipped', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [80],
+        recipeName: 'shared-prefix-${'가' * 500}',
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(1)));
+    for (final page in pages) {
+      expect(page.join(), contains('0123456789abcdef0123456789abcdef'));
     }
   });
 

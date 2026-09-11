@@ -49,6 +49,7 @@ final class _RecordingBuilder extends ProductionSheetBuilder {
     return ProductionSheet(
       organization: organization,
       labels: _labels,
+      runId: run.id,
       recipeName: run.recipe.name,
       recipeRevision: run.recipeRevision,
       targetYield: '1000 g',

@@ -9,6 +9,7 @@ final class ProductionSheet {
   ProductionSheet({
     required this.organization,
     required this.labels,
+    required this.runId,
     required this.recipeName,
     required this.recipeRevision,
     required this.targetYield,
@@ -24,6 +25,7 @@ final class ProductionSheet {
 
   final ProductionSheetOrganization organization;
   final ProductionSheetLabels labels;
+  final String runId;
   final String recipeName;
   final int recipeRevision;
   final String targetYield;
