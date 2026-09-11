@@ -39,6 +39,9 @@ ProductionSheet _sheet({
   List<String> preparationNotes = const ['Mix slowly and check the dough.'],
   String? componentLabel,
   String? componentNote,
+  String? calculatedAmount,
+  String? sectionRecipeName,
+  List<ProductionSheetWarning>? outstandingWarnings,
 }) {
   return ProductionSheet(
     organization: organization,
@@ -49,9 +52,11 @@ ProductionSheet _sheet({
     createdAt: '2026-09-11 04:05 UTC',
     rootBatchCount: 3,
     isDraft: isDraft,
-    outstandingWarnings: isDraft
-        ? const [ProductionSheetWarning(message: '소금 양을 입력하세요.')]
-        : const [],
+    outstandingWarnings:
+        outstandingWarnings ??
+        (isDraft
+            ? const [ProductionSheetWarning(message: '소금 양을 입력하세요.')]
+            : const []),
     acknowledgedWarnings: const [
       ProductionSheetWarning(message: '반올림 값을 확인했습니다.'),
     ],
@@ -64,7 +69,9 @@ ProductionSheet _sheet({
         ProductionSheetSection(
           path: sectionIndex == 0 ? 'root' : 'root/$sectionIndex',
           depth: sectionIndex,
-          recipeName: 'Section ${sectionIndex + 1} dough',
+          recipeName: sectionIndex == 0 && sectionRecipeName != null
+              ? sectionRecipeName
+              : 'Section ${sectionIndex + 1} dough',
           targetYield: '${sectionIndex + 1} kg',
           batchCount: 3,
           preparationNotes: preparationNotes,
@@ -87,7 +94,9 @@ ProductionSheet _sheet({
                         : rowIndex.isEven
                         ? 'Preparation note'
                         : null,
-                    calculated: 'calc-${sectionIndex + 1}-${rowIndex + 1}',
+                    calculated: rowIndex == 0 && calculatedAmount != null
+                        ? calculatedAmount
+                        : 'calc-${sectionIndex + 1}-${rowIndex + 1}',
                     exact: rowIndex.isEven
                         ? 'exact-${sectionIndex + 1}-${rowIndex + 1}'
                         : null,
@@ -271,7 +280,10 @@ void main() {
 
     final pages = _drawnStringsByPage(bytes);
     expect(pages, hasLength(greaterThan(1)));
-    final renderedText = pages.expand((page) => page).join(' ');
+    final renderedText = pages
+        .expand((page) => page)
+        .join()
+        .replaceAll(RegExp(r'\s'), '');
     expect(renderedText, contains('component-start-'));
     expect(renderedText, contains('-component-end'));
   });
@@ -291,6 +303,78 @@ void main() {
     final renderedText = pages.expand((page) => page).join(' ');
     expect(renderedText, contains('label-start-'));
     expect(renderedText, contains('-label-end'));
+  });
+
+  test('splits oversized summary recipe names across pages', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [1],
+        recipeName: 'summary-start-${'가' * 5000}-summary-end',
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(1)));
+    final renderedText = pages.expand((page) => page).join(' ');
+    expect(renderedText, contains('summary-start-'));
+    expect(renderedText, contains('-summary-end'));
+  });
+
+  test('splits oversized warning messages across pages', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [1],
+        outstandingWarnings: [
+          ProductionSheetWarning(
+            message: 'warning-start-${'가' * 5000}-warning-end',
+          ),
+        ],
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(1)));
+    final renderedText = pages.expand((page) => page).join(' ');
+    expect(renderedText, contains('warning-start-'));
+    expect(renderedText, contains('-warning-end'));
+  });
+
+  test('splits oversized section names across pages', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [1],
+        sectionRecipeName: 'section-start-${'가' * 5000}-section-end',
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(1)));
+    final renderedText = pages.expand((page) => page).join(' ');
+    expect(renderedText, contains('section-start-'));
+    expect(renderedText, contains('-section-end'));
+  });
+
+  test('splits oversized amount text across pages', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [1],
+        calculatedAmount: 'amount-start-${'가' * 5000}-amount-end',
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(1)));
+    final renderedText = pages.expand((page) => page).join(' ');
+    expect(renderedText, contains('amount-start-'));
+    expect(renderedText, contains('-amount-end'));
   });
 
   test('keeps the page plan deterministic across render calls', () async {

@@ -11,6 +11,7 @@ const _smallFontSize = 9.0;
 const _sectionFontSize = 12.0;
 const _titleFontSize = 18.0;
 const _tableCellChunkCodePoints = 500;
+const _tableCellChunkLines = 40;
 
 /// Renders an immutable production sheet as an A4 portrait PDF.
 class ProductionSheetPdfRenderer {
@@ -70,7 +71,7 @@ class ProductionSheetPdfRenderer {
             footer: (context) => _footer(sheet, context),
             maxPages: 100,
             build: (context) => [
-              pw.Inseparable(child: _summary(sheet)),
+              _keepTogetherFirst(context, _summary(sheet)),
               if (sheet.outstandingWarnings.isNotEmpty) ...[
                 pw.SizedBox(height: 10),
                 _keepTogetherFirst(
@@ -115,44 +116,43 @@ class ProductionSheetPdfRenderer {
       ProductionSheetOrganization.batch => labels.batchOrganization,
       ProductionSheetOrganization.total => labels.totalOrganization,
     };
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
+    return pw.Table(
+      columnWidths: const {0: pw.FlexColumnWidth()},
       children: [
-        pw.Text(
-          labels.documentTitle,
-          style: const pw.TextStyle(
-            fontSize: _titleFontSize,
-            fontWeight: pw.FontWeight.bold,
+        for (final chunk in _textChunks([labels.documentTitle]))
+          pw.TableRow(
+            children: [_cell(chunk, bold: true, fontSize: _titleFontSize)],
           ),
-        ),
-        pw.SizedBox(height: 3),
-        pw.Text(
-          sheet.recipeName,
-          style: const pw.TextStyle(
-            fontSize: _sectionFontSize,
-            fontWeight: pw.FontWeight.bold,
+        pw.TableRow(children: [pw.SizedBox(height: 3)]),
+        for (final chunk in _textChunks([sheet.recipeName]))
+          pw.TableRow(
+            children: [_cell(chunk, bold: true, fontSize: _sectionFontSize)],
           ),
-        ),
-        pw.SizedBox(height: 8),
-        pw.Table(
-          columnWidths: const {
-            0: pw.FlexColumnWidth(),
-            1: pw.FlexColumnWidth(),
-          },
-          children: [
-            _summaryRow(labels.recipeRevision, '${sheet.recipeRevision}'),
-            _summaryRow(labels.targetYield, sheet.targetYield),
-            _summaryRow(labels.createdAt, sheet.createdAt),
-            _summaryRow(labels.rootBatchCount, '${sheet.rootBatchCount}'),
-            _summaryRow(labels.organization, organization),
-          ],
-        ),
+        pw.TableRow(children: [pw.SizedBox(height: 8)]),
+        ..._summaryRows(labels.recipeRevision, '${sheet.recipeRevision}'),
+        ..._summaryRows(labels.targetYield, sheet.targetYield),
+        ..._summaryRows(labels.createdAt, sheet.createdAt),
+        ..._summaryRows(labels.rootBatchCount, '${sheet.rootBatchCount}'),
+        ..._summaryRows(labels.organization, organization),
       ],
     );
   }
 
-  pw.TableRow _summaryRow(String label, String value) =>
-      pw.TableRow(children: [_cell(label, bold: true), _cell(value)]);
+  Iterable<pw.TableRow> _summaryRows(String label, String value) sync* {
+    for (final (left, right) in _pairedTextChunks(label, value)) {
+      yield pw.TableRow(
+        children: [
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(child: _cell(left, bold: true)),
+              pw.Expanded(child: _cell(right)),
+            ],
+          ),
+        ],
+      );
+    }
+  }
 
   pw.Widget _warningTable(
     String heading,
@@ -169,7 +169,8 @@ class ProductionSheetPdfRenderer {
           children: [_cell(heading, bold: true)],
         ),
         for (final warning in warnings)
-          pw.TableRow(children: [_cell('• ${warning.message}')]),
+          for (final chunk in _textChunks(['• ${warning.message}']))
+            pw.TableRow(children: [_cell(chunk)]),
       ],
     );
   }
@@ -186,17 +187,16 @@ class ProductionSheetPdfRenderer {
         1: pw.FlexColumnWidth(1.4),
       },
       children: [
-        pw.TableRow(
-          repeat: true,
-          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-          children: [
-            _cell(section.recipeName, bold: true, leftPadding: 4 + indent),
-            _cell(
+        ..._pairedTableRows(
+          left: section.recipeName,
+          right:
               '${labels.sectionTarget}: ${section.targetYield}\n'
               '${labels.sectionBatchCount}: ${section.batchCount}',
-              bold: true,
-            ),
-          ],
+          repeatFirst: true,
+          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          leftBold: true,
+          rightBold: true,
+          leftPadding: 4 + indent,
         ),
         for (final (index, note) in _textChunks(
           section.preparationNotes,
@@ -216,17 +216,14 @@ class ProductionSheetPdfRenderer {
           ],
         ),
         for (final table in section.tables) ...[
-          pw.TableRow(
+          ..._pairedTableRows(
+            left: table.heading,
+            right: table.batchYield == null
+                ? ''
+                : '${labels.batchYield}: ${table.batchYield}',
             decoration: const pw.BoxDecoration(color: PdfColors.blue50),
-            children: [
-              _cell(table.heading, bold: true),
-              _cell(
-                table.batchYield == null
-                    ? ''
-                    : '${labels.batchYield}: ${table.batchYield}',
-                bold: true,
-              ),
-            ],
+            leftBold: true,
+            rightBold: true,
           ),
           for (final row in table.rows) ..._componentRows(labels, row),
         ],
@@ -238,50 +235,70 @@ class ProductionSheetPdfRenderer {
     ProductionSheetLabels labels,
     ProductionSheetRow row,
   ) sync* {
-    final labelChunks = _textChunks([row.label]).toList();
-    final noteChunks = row.note == null
-        ? const <String>[]
-        : _textChunks([row.note!]).toList();
-    final firstLabel = labelChunks.isEmpty ? row.label : labelChunks.first;
-    final includeNoteInFirstRow =
-        labelChunks.length <= 1 && noteChunks.isNotEmpty;
-    yield pw.TableRow(
-      verticalAlignment: pw.TableCellVerticalAlignment.top,
-      children: [
-        _cell(
-          includeNoteInFirstRow
-              ? '$firstLabel\n${noteChunks.first}'
-              : firstLabel,
-          bold: true,
-        ),
-        _cell(_amountText(labels, row)),
-      ],
+    yield* _pairedTableRows(
+      left: row.note == null ? row.label : '${row.label}\n${row.note}',
+      right: _amountText(labels, row),
+      leftBold: true,
     );
-    final remainingChunks = <String>[
-      ...labelChunks.skip(1),
-      if (includeNoteInFirstRow) ...noteChunks.skip(1) else ...noteChunks,
-    ];
-    for (final chunk in remainingChunks) {
-      yield pw.TableRow(children: [_cell(chunk, bold: true), _cell('')]);
+  }
+
+  Iterable<pw.TableRow> _pairedTableRows({
+    required String left,
+    required String right,
+    bool repeatFirst = false,
+    pw.BoxDecoration? decoration,
+    bool leftBold = false,
+    bool rightBold = false,
+    double leftPadding = 4,
+  }) sync* {
+    for (final (index, pair) in _pairedTextChunks(left, right).indexed) {
+      yield pw.TableRow(
+        repeat: repeatFirst && index == 0,
+        decoration: decoration,
+        verticalAlignment: pw.TableCellVerticalAlignment.top,
+        children: [
+          _cell(pair.$1, bold: leftBold, leftPadding: leftPadding),
+          _cell(pair.$2, bold: rightBold),
+        ],
+      );
+    }
+  }
+
+  Iterable<(String, String)> _pairedTextChunks(
+    String left,
+    String right,
+  ) sync* {
+    final leftChunks = _textChunks([left]).toList();
+    final rightChunks = _textChunks([right]).toList();
+    final chunkCount = leftChunks.length > rightChunks.length
+        ? leftChunks.length
+        : rightChunks.length;
+    for (var index = 0; index < chunkCount; index++) {
+      yield (
+        index < leftChunks.length ? leftChunks[index] : '',
+        index < rightChunks.length ? rightChunks[index] : '',
+      );
     }
   }
 
   Iterable<String> _textChunks(Iterable<String> values) sync* {
     for (final value in values) {
-      for (final line in value.split('\n')) {
-        final runes = line.runes.toList();
-        for (
-          var start = 0;
-          start < runes.length;
-          start += _tableCellChunkCodePoints
-        ) {
-          final end = (start + _tableCellChunkCodePoints).clamp(
-            0,
-            runes.length,
-          );
-          yield String.fromCharCodes(runes.sublist(start, end));
+      var chunk = StringBuffer();
+      var codePointCount = 0;
+      var lineCount = 1;
+      for (final rune in value.runes) {
+        chunk.writeCharCode(rune);
+        codePointCount++;
+        if (rune == 0x0a) lineCount++;
+        if (codePointCount == _tableCellChunkCodePoints ||
+            lineCount > _tableCellChunkLines) {
+          yield chunk.toString();
+          chunk = StringBuffer();
+          codePointCount = 0;
+          lineCount = 1;
         }
       }
+      if (codePointCount > 0) yield chunk.toString();
     }
   }
 
@@ -294,13 +311,18 @@ class ProductionSheetPdfRenderer {
     ].join('\n');
   }
 
-  pw.Widget _cell(String text, {bool bold = false, double leftPadding = 4}) {
+  pw.Widget _cell(
+    String text, {
+    bool bold = false,
+    double fontSize = _bodyFontSize,
+    double leftPadding = 4,
+  }) {
     return pw.Padding(
       padding: pw.EdgeInsets.fromLTRB(leftPadding, 4, 4, 4),
       child: pw.Text(
         text,
         style: pw.TextStyle(
-          fontSize: _bodyFontSize,
+          fontSize: fontSize,
           fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
         ),
       ),
