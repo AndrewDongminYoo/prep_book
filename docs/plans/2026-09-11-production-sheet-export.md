@@ -1,5 +1,7 @@
 # Production Sheet Export Implementation Plan
 
+<!-- cspell:words xcodebuildmcp -->
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Generate an offline A4 production-sheet PDF from one saved `ProductionRun` snapshot and expose responsive preview, share, and print actions.
