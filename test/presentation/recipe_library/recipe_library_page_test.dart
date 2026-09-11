@@ -421,6 +421,40 @@ void main() {
       expect(find.byTooltip('Edit'), findsNWidgets(2));
     });
 
+    testWidgets('stacks row actions at 200 percent in a narrow master pane', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(600, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('recipe-detail-pane')), findsOneWidget);
+      expect(_recipeTile(tester, 'Croissant dough').trailing, isNull);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('stacks row actions in a narrow master pane', (tester) async {
+      tester.view
+        ..physicalSize = const Size(600, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('recipe-detail-pane')), findsOneWidget);
+      expect(_recipeTile(tester, 'Croissant dough').trailing, isNull);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets(
       'responsive layout keeps the selected recipe across width changes',
       (tester) async {

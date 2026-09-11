@@ -394,24 +394,30 @@ class _RecipeRow extends StatelessWidget {
       trailing: trailing,
     );
 
-    final textScaleFactor = MediaQuery.textScalerOf(context).scale(16) / 16;
-    if (textScaleFactor <= 2) return tile(trailing: productionButton);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        tile(),
-        Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: 72,
-            end: 16,
-            bottom: 12,
-          ),
-          child: Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: productionButton,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScaleFactor = MediaQuery.textScalerOf(context).scale(16) / 16;
+        if (constraints.maxWidth >= 420 && textScaleFactor < 2) {
+          return tile(trailing: productionButton);
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            tile(),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: 72,
+                end: 16,
+                bottom: 12,
+              ),
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: productionButton,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
