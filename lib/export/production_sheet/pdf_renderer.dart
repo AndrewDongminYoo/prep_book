@@ -10,6 +10,7 @@ const _footerHeight = 18.0;
 const _smallFontSize = 9.0;
 const _sectionFontSize = 12.0;
 const _titleFontSize = 18.0;
+const _preparationNoteChunkCodePoints = 500;
 
 /// Renders an immutable production sheet as an A4 portrait PDF.
 class ProductionSheetPdfRenderer {
@@ -197,11 +198,13 @@ class ProductionSheetPdfRenderer {
             ),
           ],
         ),
-        if (section.preparationNotes.isNotEmpty)
+        for (final (index, note) in _preparationNoteChunks(
+          section.preparationNotes,
+        ).indexed)
           pw.TableRow(
             children: [
-              _cell(labels.preparationNotes, bold: true),
-              _cell(section.preparationNotes.join('\n')),
+              _cell(index == 0 ? labels.preparationNotes : '', bold: true),
+              _cell(note),
             ],
           ),
         pw.TableRow(
@@ -239,6 +242,25 @@ class ProductionSheetPdfRenderer {
         ],
       ],
     );
+  }
+
+  Iterable<String> _preparationNoteChunks(List<String> notes) sync* {
+    for (final note in notes) {
+      for (final line in note.split('\n')) {
+        final runes = line.runes.toList();
+        for (
+          var start = 0;
+          start < runes.length;
+          start += _preparationNoteChunkCodePoints
+        ) {
+          final end = (start + _preparationNoteChunkCodePoints).clamp(
+            0,
+            runes.length,
+          );
+          yield String.fromCharCodes(runes.sublist(start, end));
+        }
+      }
+    }
   }
 
   String _amountText(ProductionSheetLabels labels, ProductionSheetRow row) {

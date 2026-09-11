@@ -36,6 +36,7 @@ ProductionSheet _sheet({
   required List<int> sectionRowCounts,
   ProductionSheetOrganization organization = ProductionSheetOrganization.batch,
   String? recipeName,
+  List<String> preparationNotes = const ['Mix slowly and check the dough.'],
 }) {
   return ProductionSheet(
     organization: organization,
@@ -64,7 +65,7 @@ ProductionSheet _sheet({
           recipeName: 'Section ${sectionIndex + 1} dough',
           targetYield: '${sectionIndex + 1} kg',
           batchCount: 3,
-          preparationNotes: const ['Mix slowly and check the dough.'],
+          preparationNotes: preparationNotes,
           tables: [
             ProductionSheetTable(
               heading: 'Batches 1–2',
@@ -231,6 +232,23 @@ void main() {
       expect(rowPages, hasLength(1), reason: 'row $row must stay intact');
       expect(rowPages.single, contains('calc-1-$row'));
     }
+  });
+
+  test('splits oversized preparation notes across pages', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [1],
+        preparationNotes: ['note-start-${'가' * 5000}-note-end'],
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(1)));
+    final renderedText = pages.expand((page) => page).join(' ');
+    expect(renderedText, contains('note-start-'));
+    expect(renderedText, contains('-note-end'));
   });
 
   test('keeps the page plan deterministic across render calls', () async {
