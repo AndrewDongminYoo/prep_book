@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -34,11 +35,12 @@ ProductionSheet _sheet({
   required bool isDraft,
   required List<int> sectionRowCounts,
   ProductionSheetOrganization organization = ProductionSheetOrganization.batch,
+  String? recipeName,
 }) {
   return ProductionSheet(
     organization: organization,
     labels: _labels,
-    recipeName: isDraft ? '긴 한국어 반죽' : 'Bun dough',
+    recipeName: recipeName ?? (isDraft ? '긴 한국어 반죽' : 'Bun dough'),
     recipeRevision: 4,
     targetYield: '120 kg',
     createdAt: '2026-09-11 04:05 UTC',
@@ -59,10 +61,10 @@ ProductionSheet _sheet({
         ProductionSheetSection(
           path: sectionIndex == 0 ? 'root' : 'root/$sectionIndex',
           depth: sectionIndex,
-          recipeName: 'Section ${sectionIndex + 1} 반죽',
+          recipeName: 'Section ${sectionIndex + 1} dough',
           targetYield: '${sectionIndex + 1} kg',
           batchCount: 3,
-          preparationNotes: const ['천천히 섞고 상태를 확인합니다.'],
+          preparationNotes: const ['Mix slowly and check the dough.'],
           tables: [
             ProductionSheetTable(
               heading: 'Batches 1–2',
@@ -74,10 +76,12 @@ ProductionSheet _sheet({
                   rowIndex++
                 )
                   ProductionSheetRow(
-                    label: '재료 ${sectionIndex + 1}-${rowIndex + 1}',
-                    note: rowIndex.isEven ? '준비 메모' : null,
-                    calculated: '${rowIndex + 1} g',
-                    exact: rowIndex.isEven ? '${rowIndex + 0.5} g' : null,
+                    label: 'Ingredient ${sectionIndex + 1}-${rowIndex + 1}',
+                    note: rowIndex.isEven ? 'Preparation note' : null,
+                    calculated: 'calc-${sectionIndex + 1}-${rowIndex + 1}',
+                    exact: rowIndex.isEven
+                        ? 'exact-${sectionIndex + 1}-${rowIndex + 1}'
+                        : null,
                     actualWholeRun: rowIndex == 0 ? '2 g' : null,
                   ),
               ],
@@ -102,6 +106,18 @@ Iterable<(double, double)> _pageSizes(Uint8List bytes) sync* {
   for (final match in mediaBox.allMatches(source)) {
     yield (double.parse(match.group(1)!), double.parse(match.group(2)!));
   }
+}
+
+List<List<String>> _drawnStringsByPage(Uint8List bytes) {
+  final source = utf8.decode(bytes, allowMalformed: true);
+  final streams = RegExp(r'stream\r?\n([\s\S]*?)\r?\nendstream');
+  final drawnString = RegExp(r'% drawString\("([^"]*)"\)');
+  return [
+    for (final stream in streams.allMatches(source))
+      if (drawnString.allMatches(stream.group(1)!).toList() case final drawn
+          when drawn.isNotEmpty)
+        [for (final match in drawn) match.group(1)!],
+  ];
 }
 
 void main() {
@@ -139,30 +155,68 @@ void main() {
   });
 
   test('renders a long Korean draft across at least three pages', () async {
-    final bytes = await const ProductionSheetPdfRenderer().render(
-      _sheet(isDraft: true, sectionRowCounts: const [100]),
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: true,
+        sectionRowCounts: const [100],
+        recipeName: 'Draft bun dough',
+      ),
       fontBytes: fontBytes,
     );
 
-    expect(_pageCount(bytes), greaterThanOrEqualTo(3));
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(_pageCount(bytes)));
+    expect(pages, hasLength(greaterThanOrEqualTo(3)));
+    for (var index = 0; index < pages.length; index++) {
+      final page = pages[index];
+      expect(page, contains('DRAFT'));
+      expect(page.join(' '), contains('Draft bun dough'));
+      expect(
+        page,
+        containsAllInOrder(['Page', '${index + 1}', 'of', '${pages.length}']),
+      );
+    }
   });
 
   test('moves a complete section when it fits on a fresh page', () async {
-    final bytes = await const ProductionSheetPdfRenderer().render(
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
       _sheet(isDraft: false, sectionRowCounts: const [12, 12]),
       fontBytes: fontBytes,
     );
 
-    expect(_pageCount(bytes), greaterThanOrEqualTo(2));
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThanOrEqualTo(2)));
+    final sectionPages = [
+      for (var index = 0; index < pages.length; index++)
+        if (pages[index].contains('2-1')) index,
+    ];
+    expect(sectionPages, hasLength(1));
+    final sectionPage = pages[sectionPages.single];
+    expect(sectionPage.join(' '), contains('Section 2 dough'));
+    for (var row = 1; row <= 12; row++) {
+      expect(sectionPage, contains('2-$row'));
+      expect(sectionPage, contains('calc-2-$row'));
+    }
   });
 
   test('splits an oversized section only across multiple pages', () async {
-    final bytes = await const ProductionSheetPdfRenderer().render(
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
       _sheet(isDraft: false, sectionRowCounts: const [80]),
       fontBytes: fontBytes,
     );
 
-    expect(_pageCount(bytes), greaterThanOrEqualTo(2));
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThanOrEqualTo(2)));
+    for (final page in pages) {
+      expect(page.join(' '), contains('Section 1 dough'));
+      expect(page, contains('Component'));
+      expect(page, contains('Calculated'));
+    }
+    for (var row = 1; row <= 80; row++) {
+      final rowPages = pages.where((page) => page.contains('1-$row')).toList();
+      expect(rowPages, hasLength(1), reason: 'row $row must stay intact');
+      expect(rowPages.single, contains('calc-1-$row'));
+    }
   });
 
   test('keeps the page plan deterministic across render calls', () async {

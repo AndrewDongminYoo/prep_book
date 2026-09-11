@@ -319,6 +319,9 @@ Renderer tests must verify these properties:
 - An oversized section splits only at row boundaries and repeats its headers.
 - The same sheet input yields the same page count across two renders.
 
+Layout regression tests use an uncompressed verbose test render and read the actual per-page drawing comments.
+The production render remains compressed and does not include those diagnostics.
+
 Visual PDF inspection must verify the draft watermark, localized text, footer text, section movement, row boundaries, and repeated headers against the rendered pages.
 
 Flutter widget tests must verify these properties:

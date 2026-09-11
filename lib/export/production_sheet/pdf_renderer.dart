@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:meta/meta.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:prep_book/export/production_sheet/model.dart';
@@ -17,6 +18,20 @@ class ProductionSheetPdfRenderer {
   Future<Uint8List> render(
     ProductionSheet sheet, {
     required Uint8List fontBytes,
+  }) => _render(sheet, fontBytes: fontBytes);
+
+  /// Renders readable drawing comments for PDF layout regression tests.
+  @visibleForTesting
+  Future<Uint8List> renderForTesting(
+    ProductionSheet sheet, {
+    required Uint8List fontBytes,
+  }) => _render(sheet, fontBytes: fontBytes, compress: false, verbose: true);
+
+  Future<Uint8List> _render(
+    ProductionSheet sheet, {
+    required Uint8List fontBytes,
+    bool compress = true,
+    bool verbose = false,
   }) {
     final font = pw.Font.ttf(ByteData.sublistView(fontBytes));
     final theme = pw.ThemeData.withFont(base: font, bold: font);
@@ -26,6 +41,8 @@ class ProductionSheetPdfRenderer {
           creator: 'PrepBook',
           producer: 'PrepBook',
           theme: theme,
+          compress: compress,
+          verbose: verbose,
         )..addPage(
           pw.MultiPage(
             pageTheme: pw.PageTheme(

@@ -970,10 +970,12 @@ Commit with `feat(export): expose saved production sheets`.
 - `dart run bloc_tools:bloc lint .` reported zero issues across `145` files.
 - The focused integration suite passed `35` tests.
 - `very_good test --coverage --test-randomize-ordering-seed random` passed `718` tests.
-- `lcov --summary coverage/lcov.info` reported `100.0%` line coverage for `3353` reached lines.
+- `lcov --summary coverage/lcov.info` reported `100.0%` line coverage for `3357` reached lines.
 - The export and presentation boundary tests passed after their planted violations had first produced the expected failures.
 - `git diff --check origin/main...HEAD` initially caught the pinned OFL file's upstream trailing space.
 - `.gitattributes` now disables whitespace diagnostics only for `assets/fonts/OFL.txt`, preserving both pinned asset hashes while allowing the complete range check to pass.
+- Renderer tests now read each verbose test PDF's page content streams and assert the per-page watermark, footer numbering, intact-section movement, row integrity, and repeated headers.
+- Removing the watermark, removing the footer, and disabling keep-together and repeated headers each produced the expected regression-test failure before the production behavior was restored.
 
 ### Android Emulator
 
