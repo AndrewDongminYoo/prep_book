@@ -187,10 +187,10 @@ The renderer must use fixed margins, spacing, and font sizes for A4 portrait out
 The summary, warning block, and each production section use a keep-together-first policy.
 If one block fits on a fresh page but not in the remaining space, the renderer moves the complete block to the next page.
 
-If one production section is taller than a fresh page, the renderer can split it only between preparation-note chunks, batch groups, component-note chunks, or component rows.
+If one production section is taller than a fresh page, the renderer can split it only between preparation-note chunks, batch groups, component-label chunks, component-note chunks, or component rows.
 It must never split one rendered row across pages.
 It must repeat the section header and table header after the split.
-Preparation and component notes must keep all text and split into deterministic bounded rows when one stored note cannot fit on a page.
+Preparation notes, component labels, and component notes must keep all text and split into deterministic bounded rows when one stored value cannot fit on a page.
 
 The renderer must preserve section order across every page.
 It must not move a later small section ahead of an earlier large section to fill unused space.
@@ -321,6 +321,7 @@ Renderer tests must verify these properties:
 - An oversized section splits only at row boundaries and repeats its headers.
 - An oversized preparation note spans pages without dropping its first or last text.
 - An oversized component note spans pages without dropping its first or last text.
+- An oversized component label spans pages without dropping its first or last text.
 - The same sheet input yields the same page count across two renders.
 
 Layout regression tests use an uncompressed verbose test render and read the actual per-page drawing comments.

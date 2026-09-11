@@ -238,21 +238,31 @@ class ProductionSheetPdfRenderer {
     ProductionSheetLabels labels,
     ProductionSheetRow row,
   ) sync* {
+    final labelChunks = _textChunks([row.label]).toList();
     final noteChunks = row.note == null
         ? const <String>[]
         : _textChunks([row.note!]).toList();
+    final firstLabel = labelChunks.isEmpty ? row.label : labelChunks.first;
+    final includeNoteInFirstRow =
+        labelChunks.length <= 1 && noteChunks.isNotEmpty;
     yield pw.TableRow(
       verticalAlignment: pw.TableCellVerticalAlignment.top,
       children: [
         _cell(
-          noteChunks.isEmpty ? row.label : '${row.label}\n${noteChunks.first}',
+          includeNoteInFirstRow
+              ? '$firstLabel\n${noteChunks.first}'
+              : firstLabel,
           bold: true,
         ),
         _cell(_amountText(labels, row)),
       ],
     );
-    for (final note in noteChunks.skip(1)) {
-      yield pw.TableRow(children: [_cell(note, bold: true), _cell('')]);
+    final remainingChunks = <String>[
+      ...labelChunks.skip(1),
+      if (includeNoteInFirstRow) ...noteChunks.skip(1) else ...noteChunks,
+    ];
+    for (final chunk in remainingChunks) {
+      yield pw.TableRow(children: [_cell(chunk, bold: true), _cell('')]);
     }
   }
 

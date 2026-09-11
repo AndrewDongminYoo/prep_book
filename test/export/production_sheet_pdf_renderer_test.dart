@@ -37,6 +37,7 @@ ProductionSheet _sheet({
   ProductionSheetOrganization organization = ProductionSheetOrganization.batch,
   String? recipeName,
   List<String> preparationNotes = const ['Mix slowly and check the dough.'],
+  String? componentLabel,
   String? componentNote,
 }) {
   return ProductionSheet(
@@ -78,7 +79,9 @@ ProductionSheet _sheet({
                   rowIndex++
                 )
                   ProductionSheetRow(
-                    label: 'Ingredient ${sectionIndex + 1}-${rowIndex + 1}',
+                    label: rowIndex == 0 && componentLabel != null
+                        ? componentLabel
+                        : 'Ingredient ${sectionIndex + 1}-${rowIndex + 1}',
                     note: rowIndex == 0 && componentNote != null
                         ? componentNote
                         : rowIndex.isEven
@@ -271,6 +274,23 @@ void main() {
     final renderedText = pages.expand((page) => page).join(' ');
     expect(renderedText, contains('component-start-'));
     expect(renderedText, contains('-component-end'));
+  });
+
+  test('splits oversized component labels across pages', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [1],
+        componentLabel: 'label-start-${'가' * 5000}-label-end',
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(1)));
+    final renderedText = pages.expand((page) => page).join(' ');
+    expect(renderedText, contains('label-start-'));
+    expect(renderedText, contains('-label-end'));
   });
 
   test('keeps the page plan deterministic across render calls', () async {
