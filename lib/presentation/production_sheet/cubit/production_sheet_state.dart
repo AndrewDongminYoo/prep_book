@@ -15,6 +15,7 @@ final class ProductionSheetState {
     this.generationError,
     this.actionStatus = ProductionSheetActionStatus.idle,
     this.actionError,
+    this.failedAction,
   });
 
   final ProductionSheetOrganization organization;
@@ -24,6 +25,7 @@ final class ProductionSheetState {
   final Object? generationError;
   final ProductionSheetActionStatus actionStatus;
   final Object? actionError;
+  final ProductionSheetActionStatus? failedAction;
 
   bool get canUsePdfActions =>
       status == ProductionSheetStatus.ready &&

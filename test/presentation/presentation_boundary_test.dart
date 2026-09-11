@@ -24,8 +24,10 @@ const _allowedUriPrefixes = <String>[
   'package:bloc/',
   'package:flutter/',
   'package:flutter_bloc/',
+  'package:intl/',
   'package:meta/',
   'package:printing/',
+  'package:prep_book/export/',
 ];
 
 /// Matches a whole `import`/`export` directive, from the keyword to its

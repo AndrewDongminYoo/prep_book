@@ -352,6 +352,7 @@ void main() {
     platform.shareError = StateError('share');
     await cubit.share();
     expect(cubit.state.actionError, isA<StateError>());
+    expect(cubit.state.failedAction, ProductionSheetActionStatus.sharing);
     expect(cubit.state.bytes, same(bytes));
     expect(cubit.state.status, ProductionSheetStatus.ready);
 
@@ -360,6 +361,7 @@ void main() {
       ..printError = StateError('print');
     await cubit.print();
     expect(cubit.state.actionError, isA<StateError>());
+    expect(cubit.state.failedAction, ProductionSheetActionStatus.printing);
     expect(cubit.state.bytes, same(bytes));
     await cubit.close();
   });

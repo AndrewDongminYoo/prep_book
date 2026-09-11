@@ -107,7 +107,13 @@ final class ProductionSheetCubit extends Cubit<ProductionSheetState> {
     } on Object catch (error, stackTrace) {
       addError(error, stackTrace);
       if (isClosed) return;
-      emit(_actionState(ProductionSheetActionStatus.idle, error: error));
+      emit(
+        _actionState(
+          ProductionSheetActionStatus.idle,
+          error: error,
+          failedAction: ProductionSheetActionStatus.sharing,
+        ),
+      );
     }
   }
 
@@ -123,13 +129,20 @@ final class ProductionSheetCubit extends Cubit<ProductionSheetState> {
     } on Object catch (error, stackTrace) {
       addError(error, stackTrace);
       if (isClosed) return;
-      emit(_actionState(ProductionSheetActionStatus.idle, error: error));
+      emit(
+        _actionState(
+          ProductionSheetActionStatus.idle,
+          error: error,
+          failedAction: ProductionSheetActionStatus.printing,
+        ),
+      );
     }
   }
 
   ProductionSheetState _actionState(
     ProductionSheetActionStatus actionStatus, {
     Object? error,
+    ProductionSheetActionStatus? failedAction,
   }) {
     return ProductionSheetState(
       organization: state.organization,
@@ -139,6 +152,7 @@ final class ProductionSheetCubit extends Cubit<ProductionSheetState> {
       generationError: state.generationError,
       actionStatus: actionStatus,
       actionError: error,
+      failedAction: failedAction,
     );
   }
 }
