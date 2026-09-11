@@ -69,7 +69,7 @@ class ProductionSheetPdfRenderer {
                   : null,
             ),
             footer: (context) => _footer(sheet, context),
-            maxPages: 100,
+            maxPages: _debugPageLimit(sheet),
             build: (context) => [
               _keepTogetherFirst(context, _summary(sheet)),
               if (sheet.outstandingWarnings.isNotEmpty) ...[
@@ -299,6 +299,66 @@ class ProductionSheetPdfRenderer {
         }
       }
       if (codePointCount > 0) yield chunk.toString();
+    }
+  }
+
+  int _debugPageLimit(ProductionSheet sheet) {
+    var rowBound = 1;
+    for (final value in _boundedValues(sheet)) {
+      final chunkCount = _textChunks([value]).length;
+      rowBound += chunkCount == 0 ? 1 : chunkCount;
+    }
+    return rowBound < 100 ? 100 : rowBound;
+  }
+
+  Iterable<String> _boundedValues(ProductionSheet sheet) sync* {
+    final labels = sheet.labels;
+    yield labels.documentTitle;
+    yield sheet.recipeName;
+    yield labels.recipeRevision;
+    yield '${sheet.recipeRevision}';
+    yield labels.targetYield;
+    yield sheet.targetYield;
+    yield labels.createdAt;
+    yield sheet.createdAt;
+    yield labels.rootBatchCount;
+    yield '${sheet.rootBatchCount}';
+    yield labels.organization;
+    yield sheet.organization == ProductionSheetOrganization.batch
+        ? labels.batchOrganization
+        : labels.totalOrganization;
+    yield labels.outstandingWarnings;
+    for (final warning in sheet.outstandingWarnings) {
+      yield warning.message;
+    }
+    yield labels.acknowledgedWarnings;
+    for (final warning in sheet.acknowledgedWarnings) {
+      yield warning.message;
+    }
+    for (final section in sheet.sections) {
+      yield section.recipeName;
+      yield labels.sectionTarget;
+      yield section.targetYield;
+      yield labels.sectionBatchCount;
+      yield '${section.batchCount}';
+      yield labels.preparationNotes;
+      yield* section.preparationNotes;
+      yield labels.component;
+      yield labels.calculatedAmount;
+      for (final table in section.tables) {
+        yield table.heading;
+        if (table.batchYield case final batchYield?) {
+          yield labels.batchYield;
+          yield batchYield;
+        }
+        for (final row in table.rows) {
+          yield row.label;
+          if (row.note case final note?) yield note;
+          yield row.calculated;
+          if (row.exact case final exact?) yield exact;
+          if (row.actualWholeRun case final actual?) yield actual;
+        }
+      }
     }
   }
 

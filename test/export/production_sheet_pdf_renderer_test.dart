@@ -377,6 +377,28 @@ void main() {
     expect(renderedText, contains('-amount-end'));
   });
 
+  test('renders a valid sheet that needs more than 100 pages', () async {
+    final componentNote = [
+      'document-start',
+      ...List.generate(4200, (index) => 'line-$index'),
+      'document-end',
+    ].join('\n');
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [1],
+        componentNote: componentNote,
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(100)));
+    final renderedText = pages.expand((page) => page).join(' ');
+    expect(renderedText, contains('document-start'));
+    expect(renderedText, contains('document-end'));
+  });
+
   test('keeps the page plan deterministic across render calls', () async {
     const renderer = ProductionSheetPdfRenderer();
     final sheet = _sheet(isDraft: true, sectionRowCounts: const [100]);

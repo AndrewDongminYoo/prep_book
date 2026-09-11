@@ -192,6 +192,8 @@ It must never split one rendered row across pages.
 It must repeat the section header and table header after the split.
 Summary text, warning messages, section names, preparation notes, component labels, component notes, and amount text must keep all text and split into deterministic bounded rows when one stored value cannot fit on a page.
 Each row contains at most `500` Unicode code points and at most `40` lines.
+The renderer must not impose a fixed document page limit on valid saved content.
+Its debug-only runaway-layout guard must scale from the bounded row count.
 
 The renderer must preserve section order across every page.
 It must not move a later small section ahead of an earlier large section to fill unused space.
@@ -327,6 +329,7 @@ Renderer tests must verify these properties:
 - An oversized warning message spans pages without dropping its first or last text.
 - An oversized section name spans pages without dropping its first or last text.
 - Oversized amount text spans pages without dropping its first or last text.
+- A valid sheet can render more than `100` pages without hitting the debug-only runaway-layout guard.
 - The same sheet input yields the same page count across two renders.
 
 Layout regression tests use an uncompressed verbose test render and read the actual per-page drawing comments.

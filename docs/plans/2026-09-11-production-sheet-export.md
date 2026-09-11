@@ -465,6 +465,7 @@ Create direct `ProductionSheet` fixtures for these cases:
 - A sheet with one unbroken warning message that is taller than a page.
 - A sheet with one unbroken section name that is taller than a page.
 - A sheet with one unbroken calculated amount that is taller than a page.
+- A valid sheet whose bounded rows need more than `100` pages.
 
 Load `assets/fonts/NotoSansKR.ttf` in the test.
 Assert the `%PDF-` signature.
@@ -507,6 +508,7 @@ Use a spanning `pw.Table` inside each production section.
 Mark the section-title row and column-header row with `repeat: true`.
 Split every user-derived table value into deterministic chunks of at most `500` Unicode code points or `40` lines per table row.
 Pair left-column and right-column chunks by index so the table can break only between bounded rows without dropping either value.
+Set the package's debug-only `maxPages` guard from a conservative count of all bounded input rows, with `100` as the minimum guard value.
 
 Do not put a spanning table inside a non-spanning `pw.Column`.
 Do not insert a `pw.NewPage` based on guessed row counts.
