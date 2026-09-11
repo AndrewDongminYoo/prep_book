@@ -37,6 +37,7 @@ ProductionSheet _sheet({
   ProductionSheetOrganization organization = ProductionSheetOrganization.batch,
   String? recipeName,
   List<String> preparationNotes = const ['Mix slowly and check the dough.'],
+  String? componentNote,
 }) {
   return ProductionSheet(
     organization: organization,
@@ -78,7 +79,11 @@ ProductionSheet _sheet({
                 )
                   ProductionSheetRow(
                     label: 'Ingredient ${sectionIndex + 1}-${rowIndex + 1}',
-                    note: rowIndex.isEven ? 'Preparation note' : null,
+                    note: rowIndex == 0 && componentNote != null
+                        ? componentNote
+                        : rowIndex.isEven
+                        ? 'Preparation note'
+                        : null,
                     calculated: 'calc-${sectionIndex + 1}-${rowIndex + 1}',
                     exact: rowIndex.isEven
                         ? 'exact-${sectionIndex + 1}-${rowIndex + 1}'
@@ -249,6 +254,23 @@ void main() {
     final renderedText = pages.expand((page) => page).join(' ');
     expect(renderedText, contains('note-start-'));
     expect(renderedText, contains('-note-end'));
+  });
+
+  test('splits oversized component notes across pages', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [1],
+        componentNote: 'component-start-${'가' * 5000}-component-end',
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(1)));
+    final renderedText = pages.expand((page) => page).join(' ');
+    expect(renderedText, contains('component-start-'));
+    expect(renderedText, contains('-component-end'));
   });
 
   test('keeps the page plan deterministic across render calls', () async {

@@ -10,7 +10,7 @@ const _footerHeight = 18.0;
 const _smallFontSize = 9.0;
 const _sectionFontSize = 12.0;
 const _titleFontSize = 18.0;
-const _preparationNoteChunkCodePoints = 500;
+const _tableCellChunkCodePoints = 500;
 
 /// Renders an immutable production sheet as an A4 portrait PDF.
 class ProductionSheetPdfRenderer {
@@ -198,7 +198,7 @@ class ProductionSheetPdfRenderer {
             ),
           ],
         ),
-        for (final (index, note) in _preparationNoteChunks(
+        for (final (index, note) in _textChunks(
           section.preparationNotes,
         ).indexed)
           pw.TableRow(
@@ -228,32 +228,44 @@ class ProductionSheetPdfRenderer {
               ),
             ],
           ),
-          for (final row in table.rows)
-            pw.TableRow(
-              verticalAlignment: pw.TableCellVerticalAlignment.top,
-              children: [
-                _cell(
-                  row.note == null ? row.label : '${row.label}\n${row.note}',
-                  bold: true,
-                ),
-                _cell(_amountText(labels, row)),
-              ],
-            ),
+          for (final row in table.rows) ..._componentRows(labels, row),
         ],
       ],
     );
   }
 
-  Iterable<String> _preparationNoteChunks(List<String> notes) sync* {
-    for (final note in notes) {
-      for (final line in note.split('\n')) {
+  Iterable<pw.TableRow> _componentRows(
+    ProductionSheetLabels labels,
+    ProductionSheetRow row,
+  ) sync* {
+    final noteChunks = row.note == null
+        ? const <String>[]
+        : _textChunks([row.note!]).toList();
+    yield pw.TableRow(
+      verticalAlignment: pw.TableCellVerticalAlignment.top,
+      children: [
+        _cell(
+          noteChunks.isEmpty ? row.label : '${row.label}\n${noteChunks.first}',
+          bold: true,
+        ),
+        _cell(_amountText(labels, row)),
+      ],
+    );
+    for (final note in noteChunks.skip(1)) {
+      yield pw.TableRow(children: [_cell(note, bold: true), _cell('')]);
+    }
+  }
+
+  Iterable<String> _textChunks(Iterable<String> values) sync* {
+    for (final value in values) {
+      for (final line in value.split('\n')) {
         final runes = line.runes.toList();
         for (
           var start = 0;
           start < runes.length;
-          start += _preparationNoteChunkCodePoints
+          start += _tableCellChunkCodePoints
         ) {
-          final end = (start + _preparationNoteChunkCodePoints).clamp(
+          final end = (start + _tableCellChunkCodePoints).clamp(
             0,
             runes.length,
           );

@@ -459,6 +459,7 @@ Create direct `ProductionSheet` fixtures for these cases:
 - A sheet where the next complete section fits on a fresh page but not in the first page's remaining space.
 - A sheet with one section whose table must split across pages.
 - A sheet with one unbroken preparation note that is taller than a page.
+- A sheet with one unbroken component note that is taller than a page.
 
 Load `assets/fonts/NotoSansKR.ttf` in the test.
 Assert the `%PDF-` signature.
@@ -499,7 +500,7 @@ Keep the footer recipe name and page label on one bounded row.
 Render the summary, warning group, and each section as a direct `pw.Inseparable(canSpan: true, child: ...)` child of `pw.MultiPage`.
 Use a spanning `pw.Table` inside each production section.
 Mark the section-title row and column-header row with `repeat: true`.
-Split preparation notes at stored line boundaries and then into deterministic chunks of at most `500` Unicode code points per table row.
+Split preparation and component notes at stored line boundaries and then into deterministic chunks of at most `500` Unicode code points per table row.
 Keep each component row as one `pw.TableRow` so the table can break only between rows.
 
 Do not put a spanning table inside a non-spanning `pw.Column`.
