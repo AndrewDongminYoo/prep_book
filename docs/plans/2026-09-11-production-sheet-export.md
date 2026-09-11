@@ -972,6 +972,8 @@ Commit with `feat(export): expose saved production sheets`.
 - `very_good test --coverage --test-randomize-ordering-seed random` passed `718` tests.
 - `lcov --summary coverage/lcov.info` reported `100.0%` line coverage for `3353` reached lines.
 - The export and presentation boundary tests passed after their planted violations had first produced the expected failures.
+- `git diff --check origin/main...HEAD` initially caught the pinned OFL file's upstream trailing space.
+- `.gitattributes` now disables whitespace diagnostics only for `assets/fonts/OFL.txt`, preserving both pinned asset hashes while allowing the complete range check to pass.
 
 ### Android Emulator
 

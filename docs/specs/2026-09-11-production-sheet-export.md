@@ -209,6 +209,7 @@ The font file SHA-256 is `194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03a
 The bundled `OFL.txt` SHA-256 is `1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9`.
 
 The app must bundle the corresponding SIL Open Font License text beside the font.
+The repository keeps the pinned license bytes unchanged and disables Git whitespace diagnostics only for that exact asset through `.gitattributes` because the upstream file contains one trailing space.
 The export flow must not use `PdfGoogleFonts`, download a font, or make any other network request.
 
 ## Filename
