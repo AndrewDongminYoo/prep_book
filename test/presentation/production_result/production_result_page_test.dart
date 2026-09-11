@@ -467,6 +467,198 @@ void main() {
       );
     });
 
+    testWidgets('splits panes without losing review state', (tester) async {
+      final run = await buildReviewableRun();
+      await _open(tester, run, viewport: const Size(599, 2400));
+
+      await _toggle(tester, '1');
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const ValueKey('override-amount-3')),
+          matching: find.byType(TextFormField),
+        ),
+        '25',
+      );
+      await tester.pump();
+      final manual = _warning<ManualComponentWarning>(run);
+      expect(find.byKey(ValueKey('reveal-${manual.hashCode}')), findsOneWidget);
+      await tester.tap(find.byKey(ValueKey('acknowledge-${manual.hashCode}')));
+      await tester.pump();
+      expect(
+        find.byKey(
+          const PageStorageKey<String>('production-result-summary-pane'),
+        ),
+        findsNothing,
+      );
+
+      tester.view.physicalSize = const Size(600, 2400);
+      await tester.pumpAndSettle();
+
+      final summary = find.byKey(
+        const PageStorageKey<String>('production-result-summary-pane'),
+      );
+      final components = find.byKey(
+        const ValueKey('production-result-components-pane'),
+      );
+      expect(summary, findsOneWidget);
+      expect(components, findsOneWidget);
+      expect(_amountField(tester, '3').controller!.text, '25');
+      expect(find.byKey(const ValueKey('expand-1/0')), findsOneWidget);
+      expect(find.byKey(ValueKey('reveal-${manual.hashCode}')), findsNothing);
+      expect(
+        find.descendant(of: components, matching: find.text('Acknowledged')),
+        findsOneWidget,
+      );
+      final rounding = _warning<RoundingAdjustedWarning>(run);
+      expect(
+        find.descendant(
+          of: components,
+          matching: find.byKey(ValueKey('acknowledge-${rounding.hashCode}')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: components,
+          matching: find.text('Bread flour in Bun was rounded for display.'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: components,
+          matching: find.text('Fine sea salt in Bun has no amount yet.'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: summary,
+          matching: find.text('Fine sea salt in Bun has no amount yet.'),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('keeps a collapsed nested warning reachable in wide mode', (
+      tester,
+    ) async {
+      final run = await _buildChainedRun(depth: 8, warnAtTheDeepest: true);
+      await _open(tester, run, viewport: const Size(600, 2400));
+      final manual = _warning<ManualComponentWarning>(run);
+      final reveal = find.byKey(ValueKey('reveal-${manual.hashCode}'));
+      final target = find.byKey(
+        ValueKey('override-amount-${_deepWarningPath(8)}'),
+      );
+      final summary = find.byKey(
+        const PageStorageKey<String>('production-result-summary-pane'),
+      );
+
+      expect(target, findsNothing);
+      expect(find.descendant(of: summary, matching: reveal), findsOneWidget);
+
+      await tester.tap(reveal);
+      await tester.pumpAndSettle();
+
+      expect(target, findsOneWidget);
+      expect(find.descendant(of: summary, matching: reveal), findsNothing);
+    });
+
+    testWidgets('keeps the summary scroll offset across width changes', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        await buildReviewableRun(),
+        viewport: const Size(600, 240),
+      );
+      final summary = find.byKey(
+        const PageStorageKey<String>('production-result-summary-pane'),
+      );
+      final summaryScroll =
+          tester
+              .state<ScrollableState>(
+                find.descendant(of: summary, matching: find.byType(Scrollable)),
+              )
+              .position
+            ..jumpTo(40);
+      await tester.pump();
+      expect(summaryScroll.pixels, 40);
+
+      tester.view.physicalSize = const Size(599, 240);
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(600, 240);
+      await tester.pumpAndSettle();
+
+      final restoredScroll = tester
+          .state<ScrollableState>(
+            find.descendant(of: summary, matching: find.byType(Scrollable)),
+          )
+          .position;
+      expect(restoredScroll.pixels, 40);
+    });
+
+    testWidgets('keeps the component scroll offset across width changes', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        await buildReviewableRun(),
+        viewport: const Size(600, 240),
+      );
+      final components = find.byKey(
+        const ValueKey('production-result-components-pane'),
+      );
+      final componentScroll =
+          tester
+              .state<ScrollableState>(
+                find.descendant(
+                  of: components,
+                  matching: find.byType(Scrollable),
+                ),
+              )
+              .position
+            ..jumpTo(40);
+      await tester.pump();
+      expect(componentScroll.pixels, 40);
+
+      tester.view.physicalSize = const Size(599, 240);
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(600, 240);
+      await tester.pumpAndSettle();
+
+      final restoredScroll = tester
+          .state<ScrollableState>(
+            find.descendant(of: components, matching: find.byType(Scrollable)),
+          )
+          .position;
+      expect(restoredScroll.pixels, 40);
+    });
+
+    testWidgets('large text keeps a narrow medium window on one pane', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await _open(
+        tester,
+        await buildReviewableRun(),
+        viewport: const Size(600, 2400),
+      );
+
+      expect(
+        find.byKey(
+          const PageStorageKey<String>('production-result-summary-pane'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('production-result-components-pane')),
+        findsNothing,
+      );
+    });
+
     testWidgets('an archived dependency is named', (tester) async {
       await _open(tester, await buildArchivedRun());
 
@@ -492,7 +684,7 @@ void main() {
       tester,
     ) async {
       final run = await _buildChainedRun(depth: 8, warnAtTheDeepest: true);
-      await _open(tester, run);
+      await _open(tester, run, viewport: const Size(599, 2400));
       final path = _deepWarningPath(8);
       expect(find.byKey(ValueKey('override-amount-$path')), findsNothing);
 
@@ -517,7 +709,7 @@ void main() {
       // either — in this window the control for each level lands below the
       // fold, which is the operator's own difficulty and would make the
       // setup untappable.
-      await _open(tester, run, viewport: const Size(800, 600));
+      await _open(tester, run, viewport: const Size(599, 600));
       final target = find.byKey(
         ValueKey('override-amount-${_deepWarningPath(8)}'),
       );
@@ -543,7 +735,7 @@ void main() {
       tester,
     ) async {
       final run = await _buildChainedRun(depth: 8, warnAtTheDeepest: true);
-      await _open(tester, run, viewport: const Size(800, 600));
+      await _open(tester, run, viewport: const Size(599, 600));
 
       await tester.tap(
         find.byKey(

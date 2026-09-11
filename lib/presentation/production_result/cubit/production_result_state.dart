@@ -366,6 +366,40 @@ final class ProductionResultState {
   /// it.
   List<ProductionWarning> get warnings => run.result.warnings;
 
+  /// Component warnings grouped by the key their row carries.
+  ///
+  /// Built once per immutable state so rendering each visible row is a map
+  /// lookup rather than another walk through the run's entire warning list.
+  late final Map<OverrideKey, List<ProductionWarning>> _warningsByComponent =
+      () {
+        final grouped = <OverrideKey, List<ProductionWarning>>{};
+        for (final warning in warnings) {
+          final key = switch (warning) {
+            ManualComponentWarning(:final recipeId, :final componentId) => (
+              recipeId,
+              componentId,
+            ),
+            RoundingAdjustedWarning(:final recipeId, :final componentId) => (
+              recipeId,
+              componentId,
+            ),
+            ArchivedDependencyWarning() => null,
+          };
+          if (key != null) (grouped[key] ??= []).add(warning);
+        }
+        return Map<OverrideKey, List<ProductionWarning>>.unmodifiable({
+          for (final entry in grouped.entries)
+            entry.key: List<ProductionWarning>.unmodifiable(entry.value),
+        });
+      }();
+
+  /// The component-level warnings raised against [row], in calculation order.
+  ///
+  /// Recipe-level warnings have no component key, so they remain outside the
+  /// component list.
+  List<ProductionWarning> warningsFor(ResultRow row) =>
+      _warningsByComponent[row.key] ?? const <ProductionWarning>[];
+
   /// Whether [warning] has been marked as seen.
   bool isAcknowledged(ProductionWarning warning) =>
       run.acknowledgedWarnings.contains(warning);

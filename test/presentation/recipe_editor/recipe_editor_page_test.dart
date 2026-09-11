@@ -105,6 +105,17 @@ Finder _dialogField() => find
 double _cardTop(WidgetTester tester, String target) =>
     tester.getTopLeft(find.widgetWithText(Card, target)).dy;
 
+ScrollPosition _editorScroll(WidgetTester tester) => tester
+    .state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(ReorderableListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    )
+    .position;
+
 void main() {
   late FakeRecipeRepository recipes;
   late FakeIngredientRepository ingredients;
@@ -163,6 +174,58 @@ void main() {
       expect(find.text('New recipe'), findsOneWidget);
       expect(find.text('No ingredients yet.'), findsOneWidget);
       expect(find.byType(Card), findsNothing);
+    });
+
+    testWidgets('bounds the wide form without losing the typed name', (
+      tester,
+    ) async {
+      await _openEditor(
+        tester,
+        recipes: recipes,
+        ingredients: ingredients,
+        viewport: const Size(599, 1600),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-name')),
+        'Ciabatta',
+      );
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('recipe-editor-width-boundary')),
+        findsNothing,
+      );
+
+      tester.view.physicalSize = const Size(1200, 1600);
+      await tester.pumpAndSettle();
+
+      final boundary = find.byKey(
+        const ValueKey('recipe-editor-width-boundary'),
+      );
+      expect(boundary, findsOneWidget);
+      expect(tester.getSize(boundary).width, 960);
+      expect(find.widgetWithText(TextFormField, 'Ciabatta'), findsOneWidget);
+    });
+
+    testWidgets('keeps the form scroll offset across the width boundary', (
+      tester,
+    ) async {
+      await _openEditor(
+        tester,
+        recipes: recipes,
+        ingredients: ingredients,
+        recipe: buildRecipe(id: 'r-a'),
+        viewport: const Size(599, 400),
+      );
+
+      final compactScroll = _editorScroll(tester)..jumpTo(80);
+      await tester.pump();
+      expect(compactScroll.pixels, 80);
+
+      tester.view.physicalSize = const Size(1200, 400);
+      await tester.pumpAndSettle();
+
+      expect(_editorScroll(tester).pixels, 80);
     });
 
     testWidgets('a stored recipe opens filled in', (tester) async {

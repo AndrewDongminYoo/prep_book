@@ -74,6 +74,25 @@ List<String> _rowTitles(WidgetTester tester) => [
     if (tile.title case final Text title) title.data!,
 ];
 
+Finder _inLibraryList(Finder matching) => find.descendant(
+  of: find.byKey(const PageStorageKey<String>('recipe-list-pane')),
+  matching: matching,
+);
+
+ListTile _recipeTile(WidgetTester tester, String name) => tester
+    .widget<ListTile>(_inLibraryList(find.widgetWithText(ListTile, name)));
+
+ScrollPosition _detailScroll(WidgetTester tester) => tester
+    .state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('recipe-detail-pane')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    )
+    .position;
+
 void main() {
   group('RecipeLibraryPage', () {
     late FakeRecipeRepository recipes;
@@ -110,8 +129,8 @@ void main() {
         'Croissant dough',
         'Ciabatta',
       ]);
-      expect(find.text('24 piece'), findsOneWidget);
-      expect(find.text('1000 g'), findsOneWidget);
+      expect(_inLibraryList(find.text('24 piece')), findsOneWidget);
+      expect(_inLibraryList(find.text('1000 g')), findsOneWidget);
       expect(find.text(_emptyMessage), findsNothing);
       expect(find.text(_errorMessage), findsNothing);
     });
@@ -120,7 +139,9 @@ void main() {
       await tester.pumpApp(_libraryOver(recipes));
       await tester.pump();
 
-      final actions = find.widgetWithText(FilledButton, 'Production Run');
+      final actions = _inLibraryList(
+        find.widgetWithText(FilledButton, 'Production Run'),
+      );
       expect(actions, findsNWidgets(2));
       await tester.tap(actions.first);
       await tester.pumpAndSettle();
@@ -156,7 +177,9 @@ void main() {
       // row ever showed, and the production screen is what names it. A row
       // that disabled the action instead would dead-end the operator with
       // nothing telling them why.
-      await tester.tap(find.widgetWithText(FilledButton, 'Production Run'));
+      await tester.tap(
+        _inLibraryList(find.widgetWithText(FilledButton, 'Production Run')),
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -178,7 +201,7 @@ void main() {
       await tester.pump(_pastTheDebounce);
       await tester.pump();
 
-      expect(find.text('Ciabatta'), findsOneWidget);
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
       expect(find.text('Croissant dough'), findsNothing);
 
       await tester.enterText(find.byType(TextField), 'zzz');
@@ -225,7 +248,7 @@ void main() {
         await tester.tap(find.byType(SwitchListTile));
         await tester.pump();
 
-        expect(find.text('Summer focaccia'), findsOneWidget);
+        expect(_inLibraryList(find.text('Summer focaccia')), findsOneWidget);
         expect(find.text(_onlyArchivedMessage), findsNothing);
       },
     );
@@ -357,13 +380,18 @@ void main() {
       await tester.pump();
 
       expect(find.text('Summer focaccia'), findsNothing);
-      expect(find.text('Ciabatta'), findsOneWidget);
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
 
       await tester.tap(find.byType(SwitchListTile));
       await tester.pump();
+      await tester.drag(
+        find.byKey(const PageStorageKey<String>('recipe-list-pane')),
+        const Offset(0, -1000),
+      );
+      await tester.pumpAndSettle();
 
-      expect(find.text('Summer focaccia'), findsOneWidget);
-      expect(find.text('Ciabatta'), findsOneWidget);
+      expect(_inLibraryList(find.text('Summer focaccia')), findsOneWidget);
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
       expect(find.textContaining('Archived'), findsOneWidget);
     });
 
@@ -391,6 +419,320 @@ void main() {
       // edit control, which is what the design document asks of every
       // secondary action.
       expect(find.byTooltip('Edit'), findsNWidgets(2));
+    });
+
+    testWidgets('stacks row actions at 200 percent in a narrow master pane', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(600, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('recipe-detail-pane')), findsOneWidget);
+      expect(_recipeTile(tester, 'Croissant dough').trailing, isNull);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('stacks row actions in a narrow master pane', (tester) async {
+      tester.view
+        ..physicalSize = const Size(600, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('recipe-detail-pane')), findsOneWidget);
+      expect(_recipeTile(tester, 'Croissant dough').trailing, isNull);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'responsive layout keeps the selected recipe across width changes',
+      (tester) async {
+        tester.view
+          ..physicalSize = const Size(599, 900)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpApp(_libraryOver(recipes));
+        await tester.pump();
+
+        expect(find.byKey(const ValueKey('recipe-detail-pane')), findsNothing);
+        expect(_recipeTile(tester, 'Croissant dough').selected, isFalse);
+
+        await tester.tapAt(
+          tester.getCenter(_inLibraryList(find.text('Ciabatta'))),
+        );
+        await tester.pump();
+        expect(_recipeTile(tester, 'Ciabatta').selected, isFalse);
+
+        tester.view.physicalSize = const Size(600, 900);
+        await tester.pump();
+
+        final detailPane = find.byKey(const ValueKey('recipe-detail-pane'));
+        expect(detailPane, findsOneWidget);
+        expect(
+          find.descendant(
+            of: detailPane,
+            matching: find.text('Croissant dough'),
+          ),
+          findsOneWidget,
+        );
+        expect(_recipeTile(tester, 'Croissant dough').selected, isTrue);
+
+        await tester.tapAt(
+          tester.getCenter(_inLibraryList(find.text('Ciabatta'))),
+        );
+        await tester.pump();
+
+        expect(
+          find.descendant(of: detailPane, matching: find.text('Ciabatta')),
+          findsOneWidget,
+        );
+        expect(_recipeTile(tester, 'Ciabatta').selected, isTrue);
+
+        tester.view.physicalSize = const Size(599, 900);
+        await tester.pump();
+        expect(detailPane, findsNothing);
+
+        tester.view.physicalSize = const Size(840, 900);
+        await tester.pump();
+        expect(
+          find.descendant(of: detailPane, matching: find.text('Ciabatta')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('keeps the visible search query across width changes', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(599, 900)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'cia');
+      await tester.pump(_pastTheDebounce);
+      await tester.pump();
+      expect(find.text('Ciabatta'), findsOneWidget);
+
+      tester.view.physicalSize = const Size(600, 900);
+      await tester.pump();
+
+      expect(
+        tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+        'cia',
+      );
+      expect(find.text('Ciabatta'), findsWidgets);
+      expect(find.text('Croissant dough'), findsNothing);
+    });
+
+    testWidgets('keeps the library scroll offset across width changes', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(599, 240)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+      final compactScroll = _screenScroll(tester)..jumpTo(40);
+      await tester.pump();
+      expect(compactScroll.pixels, 40);
+
+      tester.view.physicalSize = const Size(600, 240);
+      await tester.pumpAndSettle();
+
+      expect(_screenScroll(tester).pixels, 40);
+    });
+
+    testWidgets('keeps the master pane wide enough for large text', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(1200, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 4;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('recipe-detail-pane')), findsOneWidget);
+      expect(
+        tester
+            .getSize(
+              find.byKey(const PageStorageKey<String>('recipe-list-pane')),
+            )
+            .width,
+        600,
+      );
+    });
+
+    testWidgets('does not shrink the master pane above 200 percent text', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(840, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpApp(_libraryOver(FakeRecipeRepository()));
+      await tester.pump();
+      final list = find.byKey(const PageStorageKey<String>('recipe-list-pane'));
+      expect(tester.getSize(list).width, 420);
+
+      tester.platformDispatcher.textScaleFactorTestValue = 2.01;
+      await tester.pump();
+
+      expect(tester.getSize(list).width, 420);
+    });
+
+    testWidgets('starts each selected recipe detail at the top', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(840, 500)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final detailedRecipes = FakeRecipeRepository()
+        ..seed(
+          Recipe(
+            id: 'r-first',
+            revision: 1,
+            name: 'First recipe',
+            baseYield: Quantity.parse('1000', Unit.gram),
+            modifiedAt: DateTime.utc(2026, 9, 13),
+            preparationNotes: List.generate(30, (index) => 'First note $index'),
+            components: const [],
+          ),
+        )
+        ..seed(
+          Recipe(
+            id: 'r-second',
+            revision: 1,
+            name: 'Second recipe',
+            baseYield: Quantity.parse('1000', Unit.gram),
+            modifiedAt: DateTime.utc(2026, 9, 12),
+            preparationNotes: List.generate(
+              30,
+              (index) => 'Second note $index',
+            ),
+            components: const [],
+          ),
+        );
+
+      await tester.pumpApp(_libraryOver(detailedRecipes));
+      await tester.pump();
+
+      final firstScroll = _detailScroll(tester);
+      firstScroll.jumpTo(firstScroll.maxScrollExtent);
+      await tester.pump();
+      final savedOffset = firstScroll.pixels;
+      expect(savedOffset, greaterThan(0));
+
+      await tester.tap(_inLibraryList(find.text('Second recipe')));
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('recipe-detail-pane')),
+          matching: find.text('Second recipe'),
+        ),
+        findsOneWidget,
+      );
+      expect(_detailScroll(tester).pixels, 0);
+    });
+
+    testWidgets('large text keeps a narrow medium window on one pane', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(600, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 3;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('recipe-detail-pane')), findsNothing);
+      expect(_recipeTile(tester, 'Croissant dough').selected, isFalse);
+    });
+
+    testWidgets('the detail pane shows metadata and keeps both actions', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(840, 1000)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final detailed = Recipe(
+        id: 'r-detail',
+        revision: 1,
+        name: 'Country loaf',
+        category: 'Bread',
+        baseYield: Quantity.parse('1000', Unit.gram),
+        maxBatchYield: Quantity.parse('500', Unit.gram),
+        modifiedAt: DateTime.utc(2026, 9, 10),
+        preparationNotes: const ['Fold gently'],
+        components: const [],
+      );
+      final repository = FakeRecipeRepository()..seed(detailed);
+
+      await tester.pumpApp(_libraryOver(repository));
+      await tester.pump();
+
+      final detail = find.byKey(const ValueKey('recipe-detail-pane'));
+      expect(
+        find.descendant(of: detail, matching: find.text('Bread')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: detail, matching: find.text('500 g')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: detail, matching: find.text('Fold gently')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.descendant(
+          of: detail,
+          matching: find.widgetWithText(FilledButton, 'Production Run'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ProductionSetupPage), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: detail,
+          matching: find.widgetWithText(OutlinedButton, 'Edit'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Edit recipe'), findsOneWidget);
     });
   });
 
@@ -439,7 +781,7 @@ void main() {
       await tester.pumpApp(_libraryOver(recipes));
       await tester.pump();
 
-      await tester.tap(find.byIcon(Icons.edit_outlined).last);
+      await tester.tap(_inLibraryList(find.byIcon(Icons.edit_outlined)));
       await tester.pumpAndSettle();
 
       // The row's own recipe, filled in — the same editor the create
@@ -454,7 +796,7 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Save'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Ciabatta loaf'), findsOneWidget);
+      expect(_inLibraryList(find.text('Ciabatta loaf')), findsOneWidget);
       expect((await recipes.findLatest('r-a'))!.revision, 2);
     });
 
@@ -464,7 +806,7 @@ void main() {
       await tester.pumpApp(_libraryOver(recipes));
       await tester.pump();
 
-      await tester.tap(find.byIcon(Icons.edit_outlined).last);
+      await tester.tap(_inLibraryList(find.byIcon(Icons.edit_outlined)));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey('recipe-name')),
@@ -473,7 +815,7 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      expect(find.text('Ciabatta'), findsOneWidget);
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
       expect(find.text('Discarded'), findsNothing);
       expect((await recipes.findLatest('r-a'))!.revision, 1);
     });
@@ -496,7 +838,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(find.text('Ciabatta'), findsOneWidget);
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
     });
 
     testWidgets('shows the error message, and retry reads again', (
@@ -519,7 +861,7 @@ void main() {
       await tester.pump();
 
       expect(find.text(_errorMessage), findsNothing);
-      expect(find.text('Ciabatta'), findsOneWidget);
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
     });
 
     testWidgets('retry re-runs the search, not the whole library', (
@@ -556,7 +898,7 @@ void main() {
       // The field is uncontrolled, so it still shows what was typed. A
       // retry through `load()` would list the whole library underneath it.
       expect(find.widgetWithText(TextField, 'cia'), findsOneWidget);
-      expect(find.text('Ciabatta'), findsOneWidget);
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
       expect(find.text('Croissant dough'), findsNothing);
     });
 
@@ -592,7 +934,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.text('Ciabatta'), findsOneWidget);
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
       expect(find.text('Croissant dough'), findsNothing);
     });
   });

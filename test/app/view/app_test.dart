@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/app/app.dart';
 import 'package:prep_book/application/application.dart';
@@ -22,7 +23,13 @@ void main() {
       await tester.pump();
 
       expect(find.byType(RecipeLibraryPage), findsOneWidget);
-      expect(find.text('Test recipe'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const PageStorageKey<String>('recipe-list-pane')),
+          matching: find.text('Test recipe'),
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

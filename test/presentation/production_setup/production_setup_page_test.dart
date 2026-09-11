@@ -64,6 +64,12 @@ Future<void> _enterTarget(WidgetTester tester, String amount) async {
   await tester.pump();
 }
 
+ScrollPosition _listScroll(WidgetTester tester, Finder list) => tester
+    .state<ScrollableState>(
+      find.descendant(of: list, matching: find.byType(Scrollable)).first,
+    )
+    .position;
+
 void main() {
   group('ProductionSetupPage', () {
     testWidgets('names the recipe and asks for a target', (tester) async {
@@ -556,6 +562,122 @@ void main() {
       final field = tester.widget<TextFormField>(find.byKey(_amountField));
       expect(field.initialValue, '1000');
       expect(field.controller, isNull);
+    });
+
+    testWidgets('splits the form and outcome without losing the target', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(599, 900)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final storage = FakeRecipeRepository()..seed(_sheeted());
+
+      await tester.pumpApp(_screenOver(storage, recipe: _sheeted()));
+      await _enterTarget(tester, '1000');
+
+      expect(
+        find.byKey(const ValueKey('production-setup-outcome-pane')),
+        findsNothing,
+      );
+
+      tester.view.physicalSize = const Size(600, 900);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('production-setup-outcome-pane')),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<TextFormField>(find.byKey(_amountField)).initialValue,
+        '1000',
+      );
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('2 × 400 g'), findsOneWidget);
+    });
+
+    testWidgets('keeps the form scroll offset across the pane transition', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(599, 280)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      final storage = FakeRecipeRepository()..seed(_sheeted());
+
+      await tester.pumpApp(_screenOver(storage, recipe: _sheeted()));
+      await _enterTarget(tester, '1000');
+
+      final compactScroll = _listScroll(tester, find.byType(ListView))
+        ..jumpTo(40);
+      await tester.pump();
+      expect(compactScroll.pixels, 40);
+
+      tester.view.physicalSize = const Size(600, 280);
+      await tester.pumpAndSettle();
+
+      final wideScroll = _listScroll(
+        tester,
+        find.byKey(const ValueKey('production-setup-form-pane')),
+      );
+      expect(
+        wideScroll.pixels,
+        compactScroll.pixels.clamp(0, wideScroll.maxScrollExtent),
+      );
+      expect(wideScroll.pixels, greaterThan(0));
+    });
+
+    testWidgets('keeps the outcome scroll offset across width changes', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(600, 280)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      final storage = FakeRecipeRepository()..seed(_sheeted());
+
+      await tester.pumpApp(_screenOver(storage, recipe: _sheeted()));
+      await _enterTarget(tester, '1000');
+
+      final outcome = find.byKey(
+        const ValueKey('production-setup-outcome-pane'),
+      );
+      final outcomeScroll = _listScroll(tester, outcome)..jumpTo(40);
+      await tester.pump();
+      expect(outcomeScroll.pixels, 40);
+
+      tester.view.physicalSize = const Size(599, 280);
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(600, 280);
+      await tester.pumpAndSettle();
+
+      expect(_listScroll(tester, outcome).pixels, 40);
+    });
+
+    testWidgets('large text keeps a narrow medium window on one pane', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(600, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 3;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final storage = FakeRecipeRepository()..seed(_sheeted());
+
+      await tester.pumpApp(_screenOver(storage, recipe: _sheeted()));
+
+      expect(
+        find.byKey(const ValueKey('production-setup-outcome-pane')),
+        findsNothing,
+      );
     });
 
     testWidgets('keeps the typed target when the field scrolls away', (

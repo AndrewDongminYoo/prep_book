@@ -7,6 +7,7 @@ import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/production_result/view/production_result_launcher.dart';
 import 'package:prep_book/presentation/production_setup/cubit/production_setup_cubit.dart';
+import 'package:prep_book/presentation/responsive/window_width_class.dart';
 import 'package:prep_book/presentation/units/readable_quantity.dart';
 
 /// The production setup screen: today's target yield, and what it becomes.
@@ -48,12 +49,27 @@ class ProductionSetupPage extends StatelessWidget {
 
 /// The screen's rendering, split from [ProductionSetupPage] so the widget
 /// that provides the cubit is not also the widget that reads it.
-class ProductionSetupView extends StatelessWidget {
+class ProductionSetupView extends StatefulWidget {
   /// Creates the view over the launcher its Continue action opens.
   const ProductionSetupView({required this.result, super.key});
 
   /// Opens the production result screen over the calculated run.
   final ProductionResultLauncher result;
+
+  @override
+  State<ProductionSetupView> createState() => _ProductionSetupViewState();
+}
+
+class _ProductionSetupViewState extends State<ProductionSetupView> {
+  final _formScrollController = ScrollController();
+  final _outcomeScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _formScrollController.dispose();
+    _outcomeScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,30 +87,84 @@ class ProductionSetupView extends StatelessWidget {
       // there overflows where a scroll view scrolls.
       body: SafeArea(
         child: BlocBuilder<ProductionSetupCubit, ProductionSetupState>(
-          builder: (context, state) => ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                state.recipe.name,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              _TargetRow(state: state),
-              const SizedBox(height: 24),
-              _Outcome(state: state),
-              const SizedBox(height: 24),
-              // What decides whether it may be pressed was already
-              // written down when this screen was built:
-              // `ProductionSetupState.canContinue`, which
-              // `production_setup_cubit_test.dart` pins. This slice wires
-              // the route it gates rather than deriving the rule again.
-              _Continue(state: state, result: result),
-            ],
+          builder: (context, state) => LayoutBuilder(
+            builder: (context, constraints) {
+              final usesMultiplePanes = usesMultiplePanesAt(
+                constraints.maxWidth,
+                MediaQuery.textScalerOf(context),
+              );
+              if (!usesMultiplePanes) {
+                return ListView(
+                  key: const PageStorageKey<String>(
+                    'production-setup-form-scroll',
+                  ),
+                  controller: _formScrollController,
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _RecipeName(state: state),
+                    const SizedBox(height: 16),
+                    _TargetRow(state: state),
+                    const SizedBox(height: 24),
+                    _Outcome(state: state),
+                    const SizedBox(height: 24),
+                    _Continue(state: state, result: widget.result),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: const ValueKey('production-setup-form-pane'),
+                      child: ListView(
+                        key: const PageStorageKey<String>(
+                          'production-setup-form-scroll',
+                        ),
+                        controller: _formScrollController,
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          _RecipeName(state: state),
+                          const SizedBox(height: 16),
+                          _TargetRow(state: state),
+                          const SizedBox(height: 24),
+                          _Continue(state: state, result: widget.result),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const VerticalDivider(width: 1),
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: const ValueKey('production-setup-outcome-pane'),
+                      child: ListView(
+                        key: const PageStorageKey<String>(
+                          'production-setup-outcome-scroll',
+                        ),
+                        controller: _outcomeScrollController,
+                        padding: const EdgeInsets.all(16),
+                        children: [_Outcome(state: state)],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
+}
+
+class _RecipeName extends StatelessWidget {
+  const _RecipeName({required this.state});
+
+  final ProductionSetupState state;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(state.recipe.name, style: Theme.of(context).textTheme.titleLarge);
 }
 
 /// The action that carries the calculated run through to the production
