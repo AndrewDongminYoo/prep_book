@@ -159,6 +159,7 @@ class _ProductionResultViewState extends State<ProductionResultView> {
   Widget _compactBody(BuildContext context, ProductionResultState state) {
     final l10n = context.l10n;
     return ListView(
+      key: const PageStorageKey<String>('production-result-component-scroll'),
       controller: _componentController,
       padding: const EdgeInsets.all(16),
       scrollCacheExtent: _scrollCacheExtent,
@@ -213,15 +214,20 @@ class _ProductionResultViewState extends State<ProductionResultView> {
         ),
         const VerticalDivider(width: 1),
         Expanded(
-          child: ListView(
+          child: KeyedSubtree(
             key: const ValueKey('production-result-components-pane'),
-            controller: _componentController,
-            padding: const EdgeInsets.all(16),
-            scrollCacheExtent: _scrollCacheExtent,
-            children: [
-              _Heading(text: l10n.productionResultComponents),
-              ..._componentRows(state, showWarnings: true),
-            ],
+            child: ListView(
+              key: const PageStorageKey<String>(
+                'production-result-component-scroll',
+              ),
+              controller: _componentController,
+              padding: const EdgeInsets.all(16),
+              scrollCacheExtent: _scrollCacheExtent,
+              children: [
+                _Heading(text: l10n.productionResultComponents),
+                ..._componentRows(state, showWarnings: true),
+              ],
+            ),
           ),
         ),
       ],

@@ -138,6 +138,9 @@ class _ProductionSetupViewState extends State<ProductionSetupView> {
                     child: KeyedSubtree(
                       key: const ValueKey('production-setup-outcome-pane'),
                       child: ListView(
+                        key: const PageStorageKey<String>(
+                          'production-setup-outcome-scroll',
+                        ),
                         controller: _outcomeScrollController,
                         padding: const EdgeInsets.all(16),
                         children: [_Outcome(state: state)],

@@ -631,6 +631,36 @@ void main() {
       expect(wideScroll.pixels, greaterThan(0));
     });
 
+    testWidgets('keeps the outcome scroll offset across width changes', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(600, 280)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      final storage = FakeRecipeRepository()..seed(_sheeted());
+
+      await tester.pumpApp(_screenOver(storage, recipe: _sheeted()));
+      await _enterTarget(tester, '1000');
+
+      final outcome = find.byKey(
+        const ValueKey('production-setup-outcome-pane'),
+      );
+      final outcomeScroll = _listScroll(tester, outcome)..jumpTo(40);
+      await tester.pump();
+      expect(outcomeScroll.pixels, 40);
+
+      tester.view.physicalSize = const Size(599, 280);
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(600, 280);
+      await tester.pumpAndSettle();
+
+      expect(_listScroll(tester, outcome).pixels, 40);
+    });
+
     testWidgets('large text keeps a narrow medium window on one pane', (
       tester,
     ) async {

@@ -731,10 +731,11 @@ void main() {
     test('component warnings stay with the row they name', () async {
       final run = await buildReviewableRun();
       final state = _cubit(run).state;
+      final roundedRow = _row(state, '0');
+      final roundedWarnings = state.warningsFor(roundedRow);
 
-      expect(state.warningsFor(_row(state, '0')), [
-        _warning<RoundingAdjustedWarning>(run),
-      ]);
+      expect(roundedWarnings, [_warning<RoundingAdjustedWarning>(run)]);
+      expect(identical(roundedWarnings, state.warningsFor(roundedRow)), isTrue);
       expect(state.warningsFor(_row(state, '3')), [
         _warning<ManualComponentWarning>(run),
       ]);

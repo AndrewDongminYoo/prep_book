@@ -598,6 +598,43 @@ void main() {
       expect(restoredScroll.pixels, 40);
     });
 
+    testWidgets('keeps the component scroll offset across width changes', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        await buildReviewableRun(),
+        viewport: const Size(600, 240),
+      );
+      final components = find.byKey(
+        const ValueKey('production-result-components-pane'),
+      );
+      final componentScroll =
+          tester
+              .state<ScrollableState>(
+                find.descendant(
+                  of: components,
+                  matching: find.byType(Scrollable),
+                ),
+              )
+              .position
+            ..jumpTo(40);
+      await tester.pump();
+      expect(componentScroll.pixels, 40);
+
+      tester.view.physicalSize = const Size(599, 240);
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(600, 240);
+      await tester.pumpAndSettle();
+
+      final restoredScroll = tester
+          .state<ScrollableState>(
+            find.descendant(of: components, matching: find.byType(Scrollable)),
+          )
+          .position;
+      expect(restoredScroll.pixels, 40);
+    });
+
     testWidgets('large text keeps a narrow medium window on one pane', (
       tester,
     ) async {
