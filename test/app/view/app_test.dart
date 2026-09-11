@@ -25,7 +25,7 @@ void main() {
       expect(find.byType(RecipeLibraryPage), findsOneWidget);
       expect(
         find.descendant(
-          of: find.byKey(const ValueKey('recipe-list-pane')),
+          of: find.byKey(const PageStorageKey<String>('recipe-list-pane')),
           matching: find.text('Test recipe'),
         ),
         findsOneWidget,

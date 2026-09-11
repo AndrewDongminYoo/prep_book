@@ -143,9 +143,10 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final textScaler = MediaQuery.textScalerOf(context);
             final usesMultiplePanes = usesMultiplePanesAt(
               constraints.maxWidth,
-              MediaQuery.textScalerOf(context),
+              textScaler,
             );
             final list = _LibraryList(
               controller: _listController,
@@ -159,7 +160,7 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
             return Row(
               children: [
                 SizedBox(
-                  width: (constraints.maxWidth * 0.5).clamp(300, 420),
+                  width: _recipeListPaneWidth(constraints.maxWidth, textScaler),
                   child: list,
                 ),
                 const VerticalDivider(width: 1),
@@ -204,7 +205,7 @@ class _LibraryList extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return CustomScrollView(
-      key: const ValueKey('recipe-list-pane'),
+      key: const PageStorageKey<String>('recipe-list-pane'),
       controller: controller,
       slivers: [
         SliverToBoxAdapter(
@@ -244,6 +245,13 @@ class _LibraryList extends StatelessWidget {
       ],
     );
   }
+}
+
+double _recipeListPaneWidth(double width, TextScaler textScaler) {
+  final textScaleFactor = textScaler.scale(16) / 16;
+  final scaledMinimumWidth = 150 * textScaleFactor;
+  final maximumWidth = scaledMinimumWidth < 420 ? 420.0 : scaledMinimumWidth;
+  return (width * 0.5).clamp(300, maximumWidth);
 }
 
 /// Whichever of the four bodies the current [state] calls for, as the

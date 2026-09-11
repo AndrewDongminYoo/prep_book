@@ -75,7 +75,7 @@ List<String> _rowTitles(WidgetTester tester) => [
 ];
 
 Finder _inLibraryList(Finder matching) => find.descendant(
-  of: find.byKey(const ValueKey('recipe-list-pane')),
+  of: find.byKey(const PageStorageKey<String>('recipe-list-pane')),
   matching: matching,
 );
 
@@ -385,7 +385,7 @@ void main() {
       await tester.tap(find.byType(SwitchListTile));
       await tester.pump();
       await tester.drag(
-        find.byKey(const ValueKey('recipe-list-pane')),
+        find.byKey(const PageStorageKey<String>('recipe-list-pane')),
         const Offset(0, -1000),
       );
       await tester.pumpAndSettle();
@@ -503,6 +503,71 @@ void main() {
       );
       expect(find.text('Ciabatta'), findsWidgets);
       expect(find.text('Croissant dough'), findsNothing);
+    });
+
+    testWidgets('keeps the library scroll offset across width changes', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(599, 240)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+      final compactScroll = _screenScroll(tester)..jumpTo(40);
+      await tester.pump();
+      expect(compactScroll.pixels, 40);
+
+      tester.view.physicalSize = const Size(600, 240);
+      await tester.pumpAndSettle();
+
+      expect(_screenScroll(tester).pixels, 40);
+    });
+
+    testWidgets('keeps the master pane wide enough for large text', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(1200, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 4;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('recipe-detail-pane')), findsOneWidget);
+      expect(
+        tester
+            .getSize(
+              find.byKey(const PageStorageKey<String>('recipe-list-pane')),
+            )
+            .width,
+        600,
+      );
+    });
+
+    testWidgets('does not shrink the master pane above 200 percent text', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(840, 900)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpApp(_libraryOver(FakeRecipeRepository()));
+      await tester.pump();
+      final list = find.byKey(const PageStorageKey<String>('recipe-list-pane'));
+      expect(tester.getSize(list).width, 420);
+
+      tester.platformDispatcher.textScaleFactorTestValue = 2.01;
+      await tester.pump();
+
+      expect(tester.getSize(list).width, 420);
     });
 
     testWidgets('starts each selected recipe detail at the top', (
