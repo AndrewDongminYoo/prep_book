@@ -181,22 +181,30 @@ class _ProductionResultViewState extends State<ProductionResultView> {
 
   Widget _wideBody(BuildContext context, ProductionResultState state) {
     final l10n = context.l10n;
-    final recipeWarnings = state.warnings
-        .where((warning) => _componentOf(warning) == null)
+    final visibleComponentKeys = {for (final row in state.visibleRows) row.key};
+    final summaryWarnings = state.warnings
+        .where((warning) {
+          final component = _componentOf(warning);
+          return component == null || !visibleComponentKeys.contains(component);
+        })
         .toList(growable: false);
     return Row(
       children: [
         Expanded(
           child: ListView(
-            key: const ValueKey('production-result-summary-pane'),
+            key: const PageStorageKey<String>('production-result-summary-pane'),
             padding: const EdgeInsets.all(16),
             children: [
               ..._runFacts(context, state),
-              if (recipeWarnings.isNotEmpty) ...[
+              if (summaryWarnings.isNotEmpty) ...[
                 const Divider(height: 32),
                 _Heading(text: l10n.productionResultWarnings),
-                for (final warning in recipeWarnings)
-                  _WarningTile(state: state, warning: warning, onReveal: null),
+                for (final warning in summaryWarnings)
+                  _WarningTile(
+                    state: state,
+                    warning: warning,
+                    onReveal: _reveal,
+                  ),
               ],
               const Divider(height: 32),
               _SaveSection(state: state),

@@ -479,6 +479,32 @@ void main() {
       },
     );
 
+    testWidgets('keeps the visible search query across width changes', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(599, 900)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'cia');
+      await tester.pump(_pastTheDebounce);
+      await tester.pump();
+      expect(find.text('Ciabatta'), findsOneWidget);
+
+      tester.view.physicalSize = const Size(600, 900);
+      await tester.pump();
+
+      expect(
+        tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+        'cia',
+      );
+      expect(find.text('Ciabatta'), findsWidgets);
+      expect(find.text('Croissant dough'), findsNothing);
+    });
+
     testWidgets('starts each selected recipe detail at the top', (
       tester,
     ) async {

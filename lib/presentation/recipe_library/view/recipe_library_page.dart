@@ -76,11 +76,27 @@ class RecipeLibraryView extends StatefulWidget {
 
 class _RecipeLibraryViewState extends State<RecipeLibraryView> {
   final _listController = ScrollController();
+  final _searchController = TextEditingController();
+  RecipeLibraryCubit? _libraryCubit;
   String? _selectedRecipeId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final cubit = context.read<RecipeLibraryCubit>();
+    if (identical(cubit, _libraryCubit)) return;
+    _libraryCubit = cubit;
+    final query = cubit.state.query;
+    _searchController.value = TextEditingValue(
+      text: query,
+      selection: TextSelection.collapsed(offset: query.length),
+    );
+  }
 
   @override
   void dispose() {
     _listController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -133,6 +149,7 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
             );
             final list = _LibraryList(
               controller: _listController,
+              searchController: _searchController,
               editor: widget.editor,
               production: widget.production,
               selectedRecipeId: _selectedRecipeId,
@@ -169,6 +186,7 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
 class _LibraryList extends StatelessWidget {
   const _LibraryList({
     required this.controller,
+    required this.searchController,
     required this.editor,
     required this.production,
     required this.selectedRecipeId,
@@ -176,6 +194,7 @@ class _LibraryList extends StatelessWidget {
   });
 
   final ScrollController controller;
+  final TextEditingController searchController;
   final RecipeEditorLauncher editor;
   final ProductionSetupLauncher production;
   final String? selectedRecipeId;
@@ -192,6 +211,7 @@ class _LibraryList extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
+              controller: searchController,
               decoration: InputDecoration(
                 labelText: l10n.recipeLibrarySearchLabel,
                 prefixIcon: const Icon(Icons.search),

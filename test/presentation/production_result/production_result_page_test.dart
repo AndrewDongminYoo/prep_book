@@ -485,7 +485,9 @@ void main() {
       await tester.tap(find.byKey(ValueKey('acknowledge-${manual.hashCode}')));
       await tester.pump();
       expect(
-        find.byKey(const ValueKey('production-result-summary-pane')),
+        find.byKey(
+          const PageStorageKey<String>('production-result-summary-pane'),
+        ),
         findsNothing,
       );
 
@@ -493,7 +495,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final summary = find.byKey(
-        const ValueKey('production-result-summary-pane'),
+        const PageStorageKey<String>('production-result-summary-pane'),
       );
       final components = find.byKey(
         const ValueKey('production-result-components-pane'),
@@ -538,6 +540,64 @@ void main() {
       );
     });
 
+    testWidgets('keeps a collapsed nested warning reachable in wide mode', (
+      tester,
+    ) async {
+      final run = await _buildChainedRun(depth: 8, warnAtTheDeepest: true);
+      await _open(tester, run, viewport: const Size(600, 2400));
+      final manual = _warning<ManualComponentWarning>(run);
+      final reveal = find.byKey(ValueKey('reveal-${manual.hashCode}'));
+      final target = find.byKey(
+        ValueKey('override-amount-${_deepWarningPath(8)}'),
+      );
+      final summary = find.byKey(
+        const PageStorageKey<String>('production-result-summary-pane'),
+      );
+
+      expect(target, findsNothing);
+      expect(find.descendant(of: summary, matching: reveal), findsOneWidget);
+
+      await tester.tap(reveal);
+      await tester.pumpAndSettle();
+
+      expect(target, findsOneWidget);
+      expect(find.descendant(of: summary, matching: reveal), findsNothing);
+    });
+
+    testWidgets('keeps the summary scroll offset across width changes', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        await buildReviewableRun(),
+        viewport: const Size(600, 240),
+      );
+      final summary = find.byKey(
+        const PageStorageKey<String>('production-result-summary-pane'),
+      );
+      final summaryScroll =
+          tester
+              .state<ScrollableState>(
+                find.descendant(of: summary, matching: find.byType(Scrollable)),
+              )
+              .position
+            ..jumpTo(40);
+      await tester.pump();
+      expect(summaryScroll.pixels, 40);
+
+      tester.view.physicalSize = const Size(599, 240);
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(600, 240);
+      await tester.pumpAndSettle();
+
+      final restoredScroll = tester
+          .state<ScrollableState>(
+            find.descendant(of: summary, matching: find.byType(Scrollable)),
+          )
+          .position;
+      expect(restoredScroll.pixels, 40);
+    });
+
     testWidgets('large text keeps a narrow medium window on one pane', (
       tester,
     ) async {
@@ -551,7 +611,9 @@ void main() {
       );
 
       expect(
-        find.byKey(const ValueKey('production-result-summary-pane')),
+        find.byKey(
+          const PageStorageKey<String>('production-result-summary-pane'),
+        ),
         findsNothing,
       );
       expect(
