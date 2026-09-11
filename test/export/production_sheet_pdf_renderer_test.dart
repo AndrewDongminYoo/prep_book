@@ -33,9 +33,10 @@ const _labels = ProductionSheetLabels(
 ProductionSheet _sheet({
   required bool isDraft,
   required List<int> sectionRowCounts,
+  ProductionSheetOrganization organization = ProductionSheetOrganization.batch,
 }) {
   return ProductionSheet(
-    organization: ProductionSheetOrganization.batch,
+    organization: organization,
     labels: _labels,
     recipeName: isDraft ? '긴 한국어 반죽' : 'Bun dough',
     recipeRevision: 4,
@@ -122,6 +123,19 @@ void main() {
     expect(pageSizes, hasLength(1));
     expect(pageSizes.single.$1, closeTo(PdfPageFormat.a4.width, 0.02));
     expect(pageSizes.single.$2, closeTo(PdfPageFormat.a4.height, 0.02));
+  });
+
+  test('renders the total organization summary', () async {
+    final bytes = await const ProductionSheetPdfRenderer().render(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [1],
+        organization: ProductionSheetOrganization.total,
+      ),
+      fontBytes: fontBytes,
+    );
+
+    expect(_pageCount(bytes), 1);
   });
 
   test('renders a long Korean draft across at least three pages', () async {

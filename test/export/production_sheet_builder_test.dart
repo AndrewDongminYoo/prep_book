@@ -172,6 +172,38 @@ void main() {
       );
     });
 
+    test('falls back to an archived warning recipe identifier', () {
+      final source = buildProductionSheetRun();
+      final run = ProductionRun(
+        id: source.id,
+        createdAt: source.createdAt,
+        recipe: source.recipe,
+        dependencySnapshot: source.dependencySnapshot,
+        ingredientSnapshot: source.ingredientSnapshot,
+        targetYield: source.targetYield,
+        result: ProductionResult(
+          scaleRatio: source.result.scaleRatio,
+          batchPlan: source.result.batchPlan,
+          components: source.result.components,
+          warnings: [
+            ...source.result.warnings,
+            const ArchivedDependencyWarning('removed-child'),
+          ],
+        ),
+      );
+
+      final sheet = _builder.build(
+        run: run,
+        organization: ProductionSheetOrganization.batch,
+        localizations: _localizations,
+      );
+
+      expect(
+        sheet.outstandingWarnings.last.message,
+        'removed-child:-:ArchivedDependencyWarning',
+      );
+    });
+
     test('copies every collection into an unmodifiable value', () {
       final sheet = _builder.build(
         run: buildProductionSheetRun(),

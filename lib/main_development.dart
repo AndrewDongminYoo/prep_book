@@ -28,6 +28,9 @@ Future<void> main() async {
           acknowledgeWarning: const AcknowledgeWarning(),
           applyOverride: const ApplyOverride(),
           saveProductionRun: SaveProductionRun(runs),
+          productionSheet: const ProductionSheetLauncher(
+            platform: PrintingProductionSheetPlatform(),
+          ),
         ),
       ),
     );

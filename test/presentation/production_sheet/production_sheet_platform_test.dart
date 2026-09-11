@@ -35,6 +35,12 @@ void main() {
     expect(preview.pageFormat, PdfPageFormat.a4);
     expect(preview.loadingWidget, same(loading));
     expect(await preview.build(PdfPageFormat.a4), same(bytes));
+    await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+    final error = preview.onError!(
+      tester.element(find.byType(SizedBox)),
+      StateError('preview'),
+    );
+    expect((error as Text).data, 'Bad state: preview');
   });
 
   test('shares the identical bytes and deterministic filename', () async {

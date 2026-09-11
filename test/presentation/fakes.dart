@@ -328,6 +328,9 @@ ProductionResultLauncher buildResultLauncher(ProductionRunRepository runs) =>
       acknowledgeWarning: const AcknowledgeWarning(),
       applyOverride: const ApplyOverride(),
       saveProductionRun: SaveProductionRun(runs),
+      productionSheet: const ProductionSheetLauncher(
+        platform: PrintingProductionSheetPlatform(),
+      ),
     );
 
 /// A sub-recipe produced one gram at a time.

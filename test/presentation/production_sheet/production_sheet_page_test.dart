@@ -80,8 +80,11 @@ final class _RecordingPlatform implements ProductionSheetPlatform {
   final previewedBytes = <Uint8List>[];
   final sharedBytes = <Uint8List>[];
   final printedBytes = <Uint8List>[];
+  Widget Function(Object error)? previewErrorBuilder;
   Object? shareError;
   Object? printError;
+  Completer<bool>? nextShare;
+  Completer<bool>? nextPrint;
   bool shareResult = false;
   bool printResult = false;
 
@@ -95,6 +98,7 @@ final class _RecordingPlatform implements ProductionSheetPlatform {
     required Widget Function(Object error) onError,
   }) {
     previewedBytes.add(bytes);
+    previewErrorBuilder = onError;
     return const ColoredBox(
       key: ValueKey('fake-pdf-preview'),
       color: Colors.white,
@@ -106,7 +110,7 @@ final class _RecordingPlatform implements ProductionSheetPlatform {
     sharedBytes.add(bytes);
     final error = shareError;
     if (error != null) return Future.error(error);
-    return Future.value(shareResult);
+    return nextShare?.future ?? Future.value(shareResult);
   }
 
   @override
@@ -114,7 +118,7 @@ final class _RecordingPlatform implements ProductionSheetPlatform {
     printedBytes.add(bytes);
     final error = printError;
     if (error != null) return Future.error(error);
-    return Future.value(printResult);
+    return nextPrint?.future ?? Future.value(printResult);
   }
 }
 
@@ -195,6 +199,8 @@ void main() {
 
     expect(find.byKey(const ValueKey('fake-pdf-preview')), findsOneWidget);
     expect(harness.platform.previewedBytes.last, same(bytes));
+    final error = harness.platform.previewErrorBuilder!(StateError('preview'));
+    expect(((error as Center).child! as Text).data, contains('could not'));
     expect(
       tester
           .widget<ButtonStyleButton>(find.widgetWithText(FilledButton, 'Share'))
@@ -209,6 +215,30 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('labels share and print while each action is in flight', (
+    tester,
+  ) async {
+    final harness = _Harness();
+    await _open(tester, harness);
+    await _complete(tester, harness, 0, Uint8List.fromList([6]));
+
+    final share = Completer<bool>();
+    harness.platform.nextShare = share;
+    await tester.tap(find.text('Share'));
+    await tester.pump();
+    expect(find.text('Sharing…'), findsOneWidget);
+    share.complete(false);
+    await tester.pumpAndSettle();
+
+    final print = Completer<bool>();
+    harness.platform.nextPrint = print;
+    await tester.tap(find.text('Print'));
+    await tester.pump();
+    expect(find.text('Printing…'), findsOneWidget);
+    print.complete(false);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('keeps total selected while its PDF is generated', (

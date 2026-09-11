@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/presentation/production_result/view/production_result_page.dart';
+import 'package:prep_book/presentation/production_sheet/view/production_sheet_launcher.dart';
 
 /// Opens the production result screen.
 ///
@@ -16,6 +17,7 @@ final class ProductionResultLauncher {
     required this.acknowledgeWarning,
     required this.applyOverride,
     required this.saveProductionRun,
+    required this.productionSheet,
   });
 
   /// Marks one warning as seen.
@@ -26,6 +28,9 @@ final class ProductionResultLauncher {
 
   /// Commits a calculated run as an immutable snapshot.
   final SaveProductionRun saveProductionRun;
+
+  /// Opens share and print for the stored snapshot.
+  final ProductionSheetLauncher productionSheet;
 
   /// Pushes the production result screen over the calculated [run].
   ///
@@ -39,6 +44,7 @@ final class ProductionResultLauncher {
             acknowledgeWarning: acknowledgeWarning,
             applyOverride: applyOverride,
             saveProductionRun: saveProductionRun,
+            productionSheet: productionSheet,
             run: run,
           ),
         ),

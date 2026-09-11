@@ -8,6 +8,7 @@ library;
 
 export 'production_result/production_result.dart';
 export 'production_setup/production_setup.dart';
+export 'production_sheet/production_sheet.dart';
 export 'recipe_editor/recipe_editor.dart';
 export 'recipe_library/recipe_library.dart';
 export 'responsive/window_width_class.dart';
