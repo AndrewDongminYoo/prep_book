@@ -6,6 +6,7 @@ import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/recipe_editor/recipe_editor.dart';
+import 'package:prep_book/presentation/responsive/window_width_class.dart';
 import 'package:prep_book/presentation/units/readable_quantity.dart';
 
 part 'recipe_editor_pickers.dart';
@@ -68,9 +69,22 @@ class RecipeEditorPage extends StatelessWidget {
 
 /// The editor's rendering, split from [RecipeEditorPage] so the widget that
 /// provides the cubit is not also the widget that reads it.
-class RecipeEditorView extends StatelessWidget {
+class RecipeEditorView extends StatefulWidget {
   /// Creates the view.
   const RecipeEditorView({super.key});
+
+  @override
+  State<RecipeEditorView> createState() => _RecipeEditorViewState();
+}
+
+class _RecipeEditorViewState extends State<RecipeEditorView> {
+  final _formScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _formScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +153,29 @@ class RecipeEditorView extends StatelessWidget {
               ),
             ],
           ),
-          body: SafeArea(child: _EditorBody(state: state)),
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final body = _EditorBody(
+                  state: state,
+                  scrollController: _formScrollController,
+                );
+                final widthClass = windowWidthClassOf(constraints.maxWidth);
+                if (!widthClass.usesMultiplePanes) return body;
+
+                return Center(
+                  child: SizedBox(
+                    key: const ValueKey('recipe-editor-width-boundary'),
+                    width: constraints.maxWidth > 960
+                        ? 960
+                        : constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    child: body,
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -154,9 +190,10 @@ class RecipeEditorView extends StatelessWidget {
 
 /// Whichever of the three bodies the current [state] calls for.
 class _EditorBody extends StatelessWidget {
-  const _EditorBody({required this.state});
+  const _EditorBody({required this.state, required this.scrollController});
 
   final RecipeEditorState state;
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) => switch (state.status) {
@@ -179,7 +216,7 @@ class _EditorBody extends StatelessWidget {
       absorbing: !state.isEditable,
       child: ExcludeFocus(
         excluding: !state.isEditable,
-        child: _EditorForm(state: state),
+        child: _EditorForm(state: state, scrollController: scrollController),
       ),
     ),
   };
@@ -220,14 +257,17 @@ class _LoadErrorBody extends StatelessWidget {
 /// scroll view — and so dragging a component is the list's own behaviour
 /// rather than something this screen implements.
 class _EditorForm extends StatelessWidget {
-  const _EditorForm({required this.state});
+  const _EditorForm({required this.state, required this.scrollController});
 
   final RecipeEditorState state;
+  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<RecipeEditorCubit>();
     return ReorderableListView(
+      key: const PageStorageKey<String>('recipe-editor-form-scroll'),
+      scrollController: scrollController,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       // Off, and replaced by the handle each card carries. The default on a
       // touch platform is a long press anywhere on the child, and every

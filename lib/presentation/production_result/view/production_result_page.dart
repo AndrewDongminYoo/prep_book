@@ -9,6 +9,7 @@ import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/production_result/cubit/production_result_cubit.dart';
+import 'package:prep_book/presentation/responsive/window_width_class.dart';
 import 'package:prep_book/presentation/units/readable_quantity.dart';
 
 /// The production result screen: what today's run takes, component by
@@ -65,6 +66,8 @@ class ProductionResultView extends StatefulWidget {
 }
 
 class _ProductionResultViewState extends State<ProductionResultView> {
+  final _componentController = ScrollController();
+
   /// One key per line the screen has rendered, so a reveal has something to
   /// scroll to. Keyed on the path, which is what expansion is keyed on and
   /// is unique across the tree.
@@ -73,6 +76,12 @@ class _ProductionResultViewState extends State<ProductionResultView> {
   /// The line a reveal is on its way to, held from the tap until the scroll
   /// runs one frame later.
   String? _revealing;
+
+  @override
+  void dispose() {
+    _componentController.dispose();
+    super.dispose();
+  }
 
   /// Opens the sub-recipes hiding the component [key] names, then brings
   /// its line on screen.
@@ -131,69 +140,123 @@ class _ProductionResultViewState extends State<ProductionResultView> {
       // longer than any window.
       body: SafeArea(
         child: BlocBuilder<ProductionResultCubit, ProductionResultState>(
-          builder: (context, state) => ListView(
-            padding: const EdgeInsets.all(16),
-            // Every line built, but only until the reveal's scroll has
-            // landed. The list is lazy the rest of the time, and a lazy
-            // list has not built the row a reveal is aimed at: measured at
-            // 80 lines in a 600-pixel viewport, rows 0 to 11 existed and
-            // row 60 had no context at all, so `ensureVisible` had nothing
-            // to scroll to. Widening is what puts it in reach.
-            //
-            // A hundred thousand pixels rather than an infinite extent,
-            // which is not usable: the semantics layer asserts on the
-            // non-finite rect it computes from one, and the frame throws
-            // before anything scrolls. This is roughly a thousand lines at
-            // the height a line renders at, past which a reveal opens the
-            // tree without scrolling — which is what it did before this
-            // existed, not a new way to fail.
-            scrollCacheExtent: _revealing == null
-                ? null
-                : const ScrollCacheExtent.pixels(100000),
-            children: [
-              Text(
-                state.run.recipe.name,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              _Fact(
-                label: l10n.productionResultTarget,
-                value: readableQuantity(state.run.targetYield),
-              ),
-              _Fact(
-                label: l10n.productionResultBatches,
-                value: '${state.run.result.batchPlan.batchCount}',
-              ),
-              if (state.warnings.isNotEmpty) ...[
-                const Divider(height: 32),
-                _Heading(text: l10n.productionResultWarnings),
-                for (final warning in state.warnings)
-                  _WarningTile(
-                    state: state,
-                    warning: warning,
-                    onReveal: _reveal,
-                  ),
-              ],
-              const Divider(height: 32),
-              _Heading(text: l10n.productionResultComponents),
-              // Only the lines whose ancestors are open. A sub-recipe's own
-              // lines are rows of this same list rather than a nested
-              // widget, so however deep the run expands the screen stays
-              // one scrollable column.
-              for (final row in state.visibleRows)
-                _ComponentRow(
-                  key: _rowKeys.putIfAbsent(row.path, GlobalKey.new),
-                  state: state,
-                  row: row,
-                ),
-              const Divider(height: 32),
-              _SaveSection(state: state),
-            ],
+          builder: (context, state) => LayoutBuilder(
+            builder: (context, constraints) {
+              final usesMultiplePanes = usesMultiplePanesAt(
+                constraints.maxWidth,
+                MediaQuery.textScalerOf(context),
+              );
+              return usesMultiplePanes
+                  ? _wideBody(context, state)
+                  : _compactBody(context, state);
+            },
           ),
         ),
       ),
     );
   }
+
+  Widget _compactBody(BuildContext context, ProductionResultState state) {
+    final l10n = context.l10n;
+    return ListView(
+      controller: _componentController,
+      padding: const EdgeInsets.all(16),
+      scrollCacheExtent: _scrollCacheExtent,
+      children: [
+        ..._runFacts(context, state),
+        if (state.warnings.isNotEmpty) ...[
+          const Divider(height: 32),
+          _Heading(text: l10n.productionResultWarnings),
+          for (final warning in state.warnings)
+            _WarningTile(state: state, warning: warning, onReveal: _reveal),
+        ],
+        const Divider(height: 32),
+        _Heading(text: l10n.productionResultComponents),
+        ..._componentRows(state, showWarnings: false),
+        const Divider(height: 32),
+        _SaveSection(state: state),
+      ],
+    );
+  }
+
+  Widget _wideBody(BuildContext context, ProductionResultState state) {
+    final l10n = context.l10n;
+    final recipeWarnings = state.warnings
+        .where((warning) => _componentOf(warning) == null)
+        .toList(growable: false);
+    return Row(
+      children: [
+        Expanded(
+          child: ListView(
+            key: const ValueKey('production-result-summary-pane'),
+            padding: const EdgeInsets.all(16),
+            children: [
+              ..._runFacts(context, state),
+              if (recipeWarnings.isNotEmpty) ...[
+                const Divider(height: 32),
+                _Heading(text: l10n.productionResultWarnings),
+                for (final warning in recipeWarnings)
+                  _WarningTile(state: state, warning: warning, onReveal: null),
+              ],
+              const Divider(height: 32),
+              _SaveSection(state: state),
+            ],
+          ),
+        ),
+        const VerticalDivider(width: 1),
+        Expanded(
+          child: ListView(
+            key: const ValueKey('production-result-components-pane'),
+            controller: _componentController,
+            padding: const EdgeInsets.all(16),
+            scrollCacheExtent: _scrollCacheExtent,
+            children: [
+              _Heading(text: l10n.productionResultComponents),
+              ..._componentRows(state, showWarnings: true),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _runFacts(BuildContext context, ProductionResultState state) {
+    final l10n = context.l10n;
+    return [
+      Text(
+        state.run.recipe.name,
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
+      const SizedBox(height: 16),
+      _Fact(
+        label: l10n.productionResultTarget,
+        value: readableQuantity(state.run.targetYield),
+      ),
+      _Fact(
+        label: l10n.productionResultBatches,
+        value: '${state.run.result.batchPlan.batchCount}',
+      ),
+    ];
+  }
+
+  Iterable<Widget> _componentRows(
+    ProductionResultState state, {
+    required bool showWarnings,
+  }) => state.visibleRows.map(
+    (row) => _ComponentRow(
+      key: _rowKeys.putIfAbsent(row.path, GlobalKey.new),
+      state: state,
+      row: row,
+      showWarnings: showWarnings,
+    ),
+  );
+
+  /// Every line is built only while a warning reveal is scrolling to it.
+  ///
+  /// A finite extent avoids the semantics failure produced by infinity and
+  /// keeps roughly one thousand rows reachable during the reveal.
+  ScrollCacheExtent? get _scrollCacheExtent =>
+      _revealing == null ? null : const ScrollCacheExtent.pixels(100000);
 }
 
 /// The deepest nesting level the indent still steps for.
@@ -218,10 +281,16 @@ const _maxIndentedDepth = 6;
 /// One line of the run: what it is, what it takes, and — once opened — its
 /// batches and the amount the operator will actually use.
 class _ComponentRow extends StatelessWidget {
-  const _ComponentRow({required this.state, required this.row, super.key});
+  const _ComponentRow({
+    required this.state,
+    required this.row,
+    required this.showWarnings,
+    super.key,
+  });
 
   final ProductionResultState state;
   final ResultRow row;
+  final bool showWarnings;
 
   @override
   Widget build(BuildContext context) {
@@ -271,6 +340,9 @@ class _ComponentRow extends StatelessWidget {
           // ingredient identifier.
           if (row.component.source.note case final note?)
             Text(note, style: Theme.of(context).textTheme.bodySmall),
+          if (showWarnings)
+            for (final warning in state.warningsFor(row))
+              _WarningTile(state: state, warning: warning, onReveal: null),
           // The operator's own value, on the line it replaces rather than
           // over it: the calculated amount above stays exactly as it was
           // calculated, which is what keeps the two comparable.
@@ -489,13 +561,15 @@ class _WarningTile extends StatelessWidget {
   final ProductionWarning warning;
 
   /// Asks the screen to open and scroll to the line a warning names.
-  final ValueChanged<OverrideKey> onReveal;
+  final ValueChanged<OverrideKey>? onReveal;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<ProductionResultCubit>();
     final acknowledged = state.isAcknowledged(warning);
+    final reveal = onReveal;
+    final revealComponent = reveal == null ? null : _componentOf(warning);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       // A `Wrap` rather than a `Row`, which is the one layout on this
@@ -526,10 +600,10 @@ class _WarningTile extends StatelessWidget {
           // recipe rather than a component gets no such action, because
           // the line it would scroll to is the whole sub-recipe the
           // operator can already see.
-          if (_componentOf(warning) case final component?)
+          if (revealComponent case final component?)
             TextButton(
               key: ValueKey('reveal-${warning.hashCode}'),
-              onPressed: () => onReveal(component),
+              onPressed: () => reveal?.call(component),
               child: Text(l10n.productionResultShowLine),
             ),
           if (acknowledged)

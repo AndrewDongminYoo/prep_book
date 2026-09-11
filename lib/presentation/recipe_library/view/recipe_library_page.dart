@@ -8,6 +8,7 @@ import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/production_setup/production_setup.dart';
 import 'package:prep_book/presentation/recipe_editor/recipe_editor.dart';
 import 'package:prep_book/presentation/recipe_library/recipe_library.dart';
+import 'package:prep_book/presentation/responsive/window_width_class.dart';
 import 'package:prep_book/presentation/units/readable_quantity.dart';
 
 /// The recipe library: the screen the app opens on.
@@ -55,7 +56,7 @@ class RecipeLibraryPage extends StatelessWidget {
 
 /// The library's rendering, split from [RecipeLibraryPage] so the widget
 /// that provides the cubit is not also the widget that reads it.
-class RecipeLibraryView extends StatelessWidget {
+class RecipeLibraryView extends StatefulWidget {
   /// Creates the view.
   const RecipeLibraryView({
     required this.editor,
@@ -68,6 +69,25 @@ class RecipeLibraryView extends StatelessWidget {
 
   /// Opens production setup for a row's Production Run action.
   final ProductionSetupLauncher production;
+
+  @override
+  State<RecipeLibraryView> createState() => _RecipeLibraryViewState();
+}
+
+class _RecipeLibraryViewState extends State<RecipeLibraryView> {
+  final _listController = ScrollController();
+  String? _selectedRecipeId;
+
+  @override
+  void dispose() {
+    _listController.dispose();
+    super.dispose();
+  }
+
+  void _select(Recipe recipe) {
+    if (_selectedRecipeId == recipe.id) return;
+    setState(() => _selectedRecipeId = recipe.id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +106,7 @@ class RecipeLibraryView extends StatelessWidget {
           IconButton(
             tooltip: l10n.recipeLibraryCreate,
             icon: const Icon(Icons.add),
-            onPressed: () => _openEditor(context, editor),
+            onPressed: () => _openEditor(context, widget.editor),
           ),
         ],
       ),
@@ -105,47 +125,103 @@ class RecipeLibraryView extends StatelessWidget {
       // out under it, and the last row under the home indicator. This is
       // the widget that applies them.
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // Outside the builders on purpose. A keystroke emits the query
-            // at once, and the search it starts emits again when it lands,
-            // so a search field rebuilt under the caret while the operator
-            // is still typing is the failure this arrangement avoids.
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: l10n.recipeLibrarySearchLabel,
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final usesMultiplePanes = usesMultiplePanesAt(
+              constraints.maxWidth,
+              MediaQuery.textScalerOf(context),
+            );
+            final list = _LibraryList(
+              controller: _listController,
+              editor: widget.editor,
+              production: widget.production,
+              selectedRecipeId: _selectedRecipeId,
+              onSelected: usesMultiplePanes ? _select : null,
+            );
+            if (!usesMultiplePanes) return list;
+            return Row(
+              children: [
+                SizedBox(
+                  width: (constraints.maxWidth * 0.5).clamp(300, 420),
+                  child: list,
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: BlocBuilder<RecipeLibraryCubit, RecipeLibraryState>(
+                    builder: (context, state) => _RecipeDetailPane(
+                      key: const ValueKey('recipe-detail-pane'),
+                      state: state,
+                      selectedRecipeId: _selectedRecipeId,
+                      editor: widget.editor,
+                      production: widget.production,
+                    ),
                   ),
-                  onChanged: context.read<RecipeLibraryCubit>().search,
                 ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: BlocBuilder<RecipeLibraryCubit, RecipeLibraryState>(
-                builder: (context, state) => SwitchListTile(
-                  value: state.showArchived,
-                  title: Text(l10n.recipeLibraryShowArchived),
-                  onChanged: (show) => context
-                      .read<RecipeLibraryCubit>()
-                      .showArchived(show: show),
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: Divider(height: 1)),
-            BlocBuilder<RecipeLibraryCubit, RecipeLibraryState>(
-              builder: (context, state) => _LibraryBody(
-                state: state,
-                editor: editor,
-                production: production,
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
+    );
+  }
+}
+
+class _LibraryList extends StatelessWidget {
+  const _LibraryList({
+    required this.controller,
+    required this.editor,
+    required this.production,
+    required this.selectedRecipeId,
+    required this.onSelected,
+  });
+
+  final ScrollController controller;
+  final RecipeEditorLauncher editor;
+  final ProductionSetupLauncher production;
+  final String? selectedRecipeId;
+  final ValueChanged<Recipe>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return CustomScrollView(
+      key: const ValueKey('recipe-list-pane'),
+      controller: controller,
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: TextField(
+              decoration: InputDecoration(
+                labelText: l10n.recipeLibrarySearchLabel,
+                prefixIcon: const Icon(Icons.search),
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: context.read<RecipeLibraryCubit>().search,
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: BlocBuilder<RecipeLibraryCubit, RecipeLibraryState>(
+            builder: (context, state) => SwitchListTile(
+              value: state.showArchived,
+              title: Text(l10n.recipeLibraryShowArchived),
+              onChanged: (show) =>
+                  context.read<RecipeLibraryCubit>().showArchived(show: show),
+            ),
+          ),
+        ),
+        const SliverToBoxAdapter(child: Divider(height: 1)),
+        BlocBuilder<RecipeLibraryCubit, RecipeLibraryState>(
+          builder: (context, state) => _LibraryBody(
+            state: state,
+            editor: editor,
+            production: production,
+            selectedRecipeId: selectedRecipeId,
+            onSelected: onSelected,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -161,11 +237,15 @@ class _LibraryBody extends StatelessWidget {
     required this.state,
     required this.editor,
     required this.production,
+    required this.selectedRecipeId,
+    required this.onSelected,
   });
 
   final RecipeLibraryState state;
   final RecipeEditorLauncher editor;
   final ProductionSetupLauncher production;
+  final String? selectedRecipeId;
+  final ValueChanged<Recipe>? onSelected;
 
   @override
   Widget build(BuildContext context) => switch (state.status) {
@@ -181,6 +261,8 @@ class _LibraryBody extends StatelessWidget {
       state: state,
       editor: editor,
       production: production,
+      selectedRecipeId: selectedRecipeId,
+      onSelected: onSelected,
     ),
   };
 }
@@ -192,11 +274,15 @@ class _LoadedBody extends StatelessWidget {
     required this.state,
     required this.editor,
     required this.production,
+    required this.selectedRecipeId,
+    required this.onSelected,
   });
 
   final RecipeLibraryState state;
   final RecipeEditorLauncher editor;
   final ProductionSetupLauncher production;
+  final String? selectedRecipeId;
+  final ValueChanged<Recipe>? onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -207,12 +293,19 @@ class _LoadedBody extends StatelessWidget {
         child: _CenteredMessage(message: _emptyMessage(context.l10n)),
       );
     }
+    final selectedId = onSelected == null
+        ? null
+        : recipes.any((recipe) => recipe.id == selectedRecipeId)
+        ? selectedRecipeId
+        : recipes.first.id;
     return SliverList.builder(
       itemCount: recipes.length,
       itemBuilder: (context, index) => _RecipeRow(
         recipe: recipes[index],
         editor: editor,
         production: production,
+        selected: recipes[index].id == selectedId,
+        onSelected: onSelected,
       ),
     );
   }
@@ -236,47 +329,176 @@ class _RecipeRow extends StatelessWidget {
     required this.recipe,
     required this.editor,
     required this.production,
+    required this.selected,
+    required this.onSelected,
   });
 
   final Recipe recipe;
   final RecipeEditorLauncher editor;
   final ProductionSetupLauncher production;
+  final bool selected;
+  final ValueChanged<Recipe>? onSelected;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final baseYield = readableQuantity(recipe.baseYield);
-    return ListTile(
-      // Edit sits in `leading` rather than beside Production Run in
-      // `trailing`, which is where it reads more naturally. `ListTile` lays
-      // the trailing slot out against the whole tile width and asserts when
-      // it fills it, and a `Row` that overflows clamps to exactly that
-      // width — so a second control in `trailing` cannot be made to shrink
-      // its way out, and the 48 logical pixels it costs come straight off
-      // the row's width and text-scale headroom. `leading` is measured
-      // separately and the design document calls edit a secondary action,
-      // so this is the slot that fits it.
-      leading: IconButton(
-        tooltip: l10n.recipeLibraryEdit,
-        icon: const Icon(Icons.edit_outlined),
-        onPressed: () => _openEditor(context, editor, recipe: recipe),
-      ),
+    final select = onSelected;
+    final editButton = IconButton(
+      tooltip: l10n.recipeLibraryEdit,
+      icon: const Icon(Icons.edit_outlined),
+      onPressed: () => _openEditor(context, editor, recipe: recipe),
+    );
+    final productionButton = FilledButton(
+      onPressed: () => production.open(context, recipe: recipe),
+      child: Text(l10n.recipeLibraryProductionRun),
+    );
+    ListTile tile({Widget? trailing}) => ListTile(
+      selected: selected,
+      onTap: select == null ? null : () => select(recipe),
+      leading: editButton,
       title: Text(recipe.name),
       subtitle: Text(
         recipe.isArchived
             ? '$baseYield · ${l10n.recipeLibraryArchived}'
             : baseYield,
       ),
-      // Live on every row, archived ones included. An archived recipe
-      // cannot be run, but the reason is the production screen's to give:
-      // the row would have to say it in the space a button occupies, and
-      // the screen says which recipe is archived — this one, or something
-      // it depends on, which no row could have known.
-      trailing: FilledButton(
-        onPressed: () => production.open(context, recipe: recipe),
-        child: Text(l10n.recipeLibraryProductionRun),
-      ),
+      trailing: trailing,
     );
+
+    final textScaleFactor = MediaQuery.textScalerOf(context).scale(16) / 16;
+    if (textScaleFactor <= 2) return tile(trailing: productionButton);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        tile(),
+        Padding(
+          padding: const EdgeInsetsDirectional.only(
+            start: 72,
+            end: 16,
+            bottom: 12,
+          ),
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: productionButton,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecipeDetailPane extends StatefulWidget {
+  const _RecipeDetailPane({
+    required this.state,
+    required this.selectedRecipeId,
+    required this.editor,
+    required this.production,
+    super.key,
+  });
+
+  final RecipeLibraryState state;
+  final String? selectedRecipeId;
+  final RecipeEditorLauncher editor;
+  final ProductionSetupLauncher production;
+
+  @override
+  State<_RecipeDetailPane> createState() => _RecipeDetailPaneState();
+}
+
+class _RecipeDetailPaneState extends State<_RecipeDetailPane> {
+  final _scrollController = ScrollController(keepScrollOffset: false);
+
+  @override
+  void didUpdateWidget(_RecipeDetailPane oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldRecipeId = _selectedRecipe(
+      oldWidget.state.visibleRecipes,
+      oldWidget.selectedRecipeId,
+    )?.id;
+    final recipeId = _selectedRecipe(
+      widget.state.visibleRecipes,
+      widget.selectedRecipeId,
+    )?.id;
+    if (recipeId != oldRecipeId && _scrollController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) _scrollController.jumpTo(0);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recipe = _selectedRecipe(
+      widget.state.visibleRecipes,
+      widget.selectedRecipeId,
+    );
+    if (recipe == null) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    return ListView(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text(recipe.name, style: Theme.of(context).textTheme.headlineSmall),
+        if (recipe.category case final category?) ...[
+          const SizedBox(height: 8),
+          Text(category, style: Theme.of(context).textTheme.titleMedium),
+        ],
+        const SizedBox(height: 24),
+        Text(
+          l10n.recipeEditorBaseYieldLabel,
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        Text(readableQuantity(recipe.baseYield)),
+        if (recipe.maxBatchYield case final maximum?) ...[
+          const SizedBox(height: 16),
+          Text(
+            l10n.recipeEditorMaxBatchLabel,
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          Text(readableQuantity(maximum)),
+        ],
+        if (recipe.preparationNotes.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Text(
+            l10n.recipeEditorNotesLabel,
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          for (final note in recipe.preparationNotes) Text(note),
+        ],
+        const SizedBox(height: 24),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            FilledButton.icon(
+              onPressed: () => widget.production.open(context, recipe: recipe),
+              icon: const Icon(Icons.play_arrow),
+              label: Text(l10n.recipeLibraryProductionRun),
+            ),
+            OutlinedButton.icon(
+              onPressed: () =>
+                  _openEditor(context, widget.editor, recipe: recipe),
+              icon: const Icon(Icons.edit_outlined),
+              label: Text(l10n.recipeLibraryEdit),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Recipe? _selectedRecipe(List<Recipe> recipes, String? selectedRecipeId) {
+    for (final recipe in recipes) {
+      if (recipe.id == selectedRecipeId) return recipe;
+    }
+    return recipes.isEmpty ? null : recipes.first;
   }
 }
 

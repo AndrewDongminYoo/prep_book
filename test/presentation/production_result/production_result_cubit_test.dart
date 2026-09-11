@@ -728,6 +728,19 @@ void main() {
   });
 
   group('warnings', () {
+    test('component warnings stay with the row they name', () async {
+      final run = await buildReviewableRun();
+      final state = _cubit(run).state;
+
+      expect(state.warningsFor(_row(state, '0')), [
+        _warning<RoundingAdjustedWarning>(run),
+      ]);
+      expect(state.warningsFor(_row(state, '3')), [
+        _warning<ManualComponentWarning>(run),
+      ]);
+      expect(state.warningsFor(_row(state, '1')), isEmpty);
+    });
+
     test('a warning stays listed once it has been acknowledged', () async {
       final run = await buildReviewableRun();
       final cubit = _cubit(run);

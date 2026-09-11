@@ -366,6 +366,22 @@ final class ProductionResultState {
   /// it.
   List<ProductionWarning> get warnings => run.result.warnings;
 
+  /// The component-level warnings raised against [row], in calculation order.
+  ///
+  /// Recipe-level warnings have no component key, so they remain outside the
+  /// component list.
+  List<ProductionWarning> warningsFor(ResultRow row) => [
+    for (final warning in warnings)
+      if (switch (warning) {
+        ManualComponentWarning(:final recipeId, :final componentId) =>
+          (recipeId, componentId) == row.key,
+        RoundingAdjustedWarning(:final recipeId, :final componentId) =>
+          (recipeId, componentId) == row.key,
+        ArchivedDependencyWarning() => false,
+      })
+        warning,
+  ];
+
   /// Whether [warning] has been marked as seen.
   bool isAcknowledged(ProductionWarning warning) =>
       run.acknowledgedWarnings.contains(warning);
