@@ -12,6 +12,8 @@ const _sectionFontSize = 12.0;
 const _titleFontSize = 18.0;
 const _tableCellChunkCodePoints = 500;
 const _tableCellChunkLines = 40;
+const _repeatableTableCellChunkCodePoints = 120;
+const _repeatableTableCellChunkLines = 8;
 
 /// Renders an immutable production sheet as an A4 portrait PDF.
 class ProductionSheetPdfRenderer {
@@ -284,7 +286,15 @@ class ProductionSheetPdfRenderer {
     bool rightBold = false,
     double leftPadding = 4,
   }) sync* {
-    for (final (index, pair) in _pairedTextChunks(left, right).indexed) {
+    final pairs = repeatFirst
+        ? _pairedTextChunks(
+            left,
+            right,
+            codePointLimit: _repeatableTableCellChunkCodePoints,
+            lineLimit: _repeatableTableCellChunkLines,
+          )
+        : _pairedTextChunks(left, right);
+    for (final (index, pair) in pairs.indexed) {
       yield pw.TableRow(
         repeat: repeatFirst && index == 0,
         decoration: decoration,
@@ -299,10 +309,20 @@ class ProductionSheetPdfRenderer {
 
   Iterable<(String, String)> _pairedTextChunks(
     String left,
-    String right,
-  ) sync* {
-    final leftChunks = _textChunks([left]).toList();
-    final rightChunks = _textChunks([right]).toList();
+    String right, {
+    int codePointLimit = _tableCellChunkCodePoints,
+    int lineLimit = _tableCellChunkLines,
+  }) sync* {
+    final leftChunks = _textChunks(
+      [left],
+      codePointLimit: codePointLimit,
+      lineLimit: lineLimit,
+    ).toList();
+    final rightChunks = _textChunks(
+      [right],
+      codePointLimit: codePointLimit,
+      lineLimit: lineLimit,
+    ).toList();
     final chunkCount = leftChunks.length > rightChunks.length
         ? leftChunks.length
         : rightChunks.length;
@@ -314,7 +334,11 @@ class ProductionSheetPdfRenderer {
     }
   }
 
-  Iterable<String> _textChunks(Iterable<String> values) sync* {
+  Iterable<String> _textChunks(
+    Iterable<String> values, {
+    int codePointLimit = _tableCellChunkCodePoints,
+    int lineLimit = _tableCellChunkLines,
+  }) sync* {
     for (final value in values) {
       var chunk = StringBuffer();
       var codePointCount = 0;
@@ -323,8 +347,7 @@ class ProductionSheetPdfRenderer {
         chunk.writeCharCode(rune);
         codePointCount++;
         if (rune == 0x0a) lineCount++;
-        if (codePointCount == _tableCellChunkCodePoints ||
-            lineCount > _tableCellChunkLines) {
+        if (codePointCount == codePointLimit || lineCount > lineLimit) {
           yield chunk.toString();
           chunk = StringBuffer();
           codePointCount = 0;

@@ -42,6 +42,8 @@ ProductionSheet _sheet({
   String? componentNote,
   String? calculatedAmount,
   String? sectionRecipeName,
+  String? sectionTargetYield,
+  String? batchYield,
   List<ProductionSheetWarning>? outstandingWarnings,
   List<ProductionSheetWarning>? acknowledgedWarnings,
   bool hasTables = true,
@@ -76,7 +78,7 @@ ProductionSheet _sheet({
           recipeName: sectionIndex == 0 && sectionRecipeName != null
               ? sectionRecipeName
               : 'Section ${sectionIndex + 1} dough',
-          targetYield: '${sectionIndex + 1} kg',
+          targetYield: sectionTargetYield ?? '${sectionIndex + 1} kg',
           batchCount: 3,
           preparationNotes:
               preparationNotesBySection?[sectionIndex] ?? preparationNotes,
@@ -84,7 +86,7 @@ ProductionSheet _sheet({
             if (hasTables)
               ProductionSheetTable(
                 heading: 'Batches 1–2',
-                batchYield: '40 kg',
+                batchYield: batchYield ?? '40 kg',
                 rows: [
                   for (
                     var rowIndex = 0;
@@ -332,6 +334,27 @@ void main() {
       expect(page, contains('Batches'));
       expect(page.join(' '), contains('Batch yield: 40 kg'));
     }
+    for (var row = 1; row <= 80; row++) {
+      final rowPages = pages.where((page) => page.contains('1-$row')).toList();
+      expect(rowPages, hasLength(1), reason: 'row $row must stay intact');
+      expect(rowPages.single, contains('calc-1-$row'));
+    }
+  });
+
+  test('bounds combined repeated section and batch headers', () async {
+    final longUnit = List.filled(40, 'unit').join('\n');
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [80],
+        sectionTargetYield: '1 $longUnit',
+        batchYield: '40 $longUnit',
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    expect(pages, hasLength(greaterThan(1)));
     for (var row = 1; row <= 80; row++) {
       final rowPages = pages.where((page) => page.contains('1-$row')).toList();
       expect(rowPages, hasLength(1), reason: 'row $row must stay intact');
