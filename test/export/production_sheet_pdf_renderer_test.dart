@@ -37,11 +37,13 @@ ProductionSheet _sheet({
   ProductionSheetOrganization organization = ProductionSheetOrganization.batch,
   String? recipeName,
   List<String> preparationNotes = const ['Mix slowly and check the dough.'],
+  List<List<String>>? preparationNotesBySection,
   String? componentLabel,
   String? componentNote,
   String? calculatedAmount,
   String? sectionRecipeName,
   List<ProductionSheetWarning>? outstandingWarnings,
+  bool hasTables = true,
 }) {
   return ProductionSheet(
     organization: organization,
@@ -74,36 +76,39 @@ ProductionSheet _sheet({
               : 'Section ${sectionIndex + 1} dough',
           targetYield: '${sectionIndex + 1} kg',
           batchCount: 3,
-          preparationNotes: preparationNotes,
+          preparationNotes:
+              preparationNotesBySection?[sectionIndex] ?? preparationNotes,
           tables: [
-            ProductionSheetTable(
-              heading: 'Batches 1–2',
-              batchYield: '40 kg',
-              rows: [
-                for (
-                  var rowIndex = 0;
-                  rowIndex < sectionRowCounts[sectionIndex];
-                  rowIndex++
-                )
-                  ProductionSheetRow(
-                    label: rowIndex == 0 && componentLabel != null
-                        ? componentLabel
-                        : 'Ingredient ${sectionIndex + 1}-${rowIndex + 1}',
-                    note: rowIndex == 0 && componentNote != null
-                        ? componentNote
-                        : rowIndex.isEven
-                        ? 'Preparation note'
-                        : null,
-                    calculated: rowIndex == 0 && calculatedAmount != null
-                        ? calculatedAmount
-                        : 'calc-${sectionIndex + 1}-${rowIndex + 1}',
-                    exact: rowIndex.isEven
-                        ? 'exact-${sectionIndex + 1}-${rowIndex + 1}'
-                        : null,
-                    actualWholeRun: rowIndex == 0 ? '2 g' : null,
-                  ),
-              ],
-            ),
+            if (hasTables)
+              ProductionSheetTable(
+                heading: 'Batches 1–2',
+                batchYield: '40 kg',
+                rows: [
+                  for (
+                    var rowIndex = 0;
+                    rowIndex < sectionRowCounts[sectionIndex];
+                    rowIndex++
+                  )
+                    ProductionSheetRow(
+                      label: rowIndex == 0 && componentLabel != null
+                          ? componentLabel
+                          : 'Ingredient ${sectionIndex + 1}-'
+                                '${rowIndex + 1}',
+                      note: rowIndex == 0 && componentNote != null
+                          ? componentNote
+                          : rowIndex.isEven
+                          ? 'Preparation note'
+                          : null,
+                      calculated: rowIndex == 0 && calculatedAmount != null
+                          ? calculatedAmount
+                          : 'calc-${sectionIndex + 1}-${rowIndex + 1}',
+                      exact: rowIndex.isEven
+                          ? 'exact-${sectionIndex + 1}-${rowIndex + 1}'
+                          : null,
+                      actualWholeRun: rowIndex == 0 ? '2 g' : null,
+                    ),
+                ],
+              ),
           ],
         ),
     ],
@@ -231,6 +236,34 @@ void main() {
     }
   });
 
+  test('does not create a footer-only page before a section', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [14, 1],
+        preparationNotesBySection: [
+          const ['first section'],
+          [List.generate(46, (_) => 'line').join('\n')],
+        ],
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    for (final (pageIndex, page) in pages.indexed) {
+      final pageText = page.join(' ');
+      final hasBody =
+          pageText.contains('Production sheet') ||
+          pageText.contains('Acknowledged warnings') ||
+          pageText.contains('Section ');
+      expect(
+        hasBody,
+        isTrue,
+        reason: 'page $pageIndex contains only the footer: $page',
+      );
+    }
+  });
+
   test('splits an oversized section only across multiple pages', () async {
     final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
       _sheet(isDraft: false, sectionRowCounts: const [80]),
@@ -243,6 +276,8 @@ void main() {
       expect(page.join(' '), contains('Section 1 dough'));
       expect(page, contains('Component'));
       expect(page, contains('Calculated'));
+      expect(page, contains('Batches'));
+      expect(page.join(' '), contains('Batch yield: 40 kg'));
     }
     for (var row = 1; row <= 80; row++) {
       final rowPages = pages.where((page) => page.contains('1-$row')).toList();
@@ -267,6 +302,27 @@ void main() {
     expect(renderedText, contains('note-start-'));
     expect(renderedText, contains('-note-end'));
   });
+
+  test(
+    'splits oversized notes when a section has no component table',
+    () async {
+      final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+        _sheet(
+          isDraft: false,
+          sectionRowCounts: const [0],
+          preparationNotes: ['empty-start-${'가' * 5000}-empty-end'],
+          hasTables: false,
+        ),
+        fontBytes: fontBytes,
+      );
+
+      final pages = _drawnStringsByPage(bytes);
+      expect(pages, hasLength(greaterThan(1)));
+      final renderedText = pages.expand((page) => page).join(' ');
+      expect(renderedText, contains('empty-start-'));
+      expect(renderedText, contains('-empty-end'));
+    },
+  );
 
   test('splits oversized component notes across pages', () async {
     final bytes = await const ProductionSheetPdfRenderer().renderForTesting(

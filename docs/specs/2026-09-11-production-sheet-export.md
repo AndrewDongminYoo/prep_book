@@ -186,10 +186,11 @@ The renderer must use fixed margins, spacing, and font sizes for A4 portrait out
 
 The summary, warning block, and each production section use a keep-together-first policy.
 If one block fits on a fresh page but not in the remaining space, the renderer moves the complete block to the next page.
+Section spacing participates in the keep-together decision and must not create a footer-only page.
 
 If one block is taller than a fresh page, the renderer can split it only between bounded table rows.
 It must never split one rendered row across pages.
-It must repeat the section header and table header after the split.
+It must repeat the section header, table header, and active batch heading after the split.
 Summary text, warning messages, section names, preparation notes, component labels, component notes, and amount text must keep all text and split into deterministic bounded rows when one stored value cannot fit on a page.
 Each row contains at most `500` Unicode code points and at most `40` lines.
 The renderer must not impose a fixed document page limit on valid saved content.
@@ -321,7 +322,9 @@ Renderer tests must verify these properties:
 - Every draft page contains the watermark.
 - Every footer contains the root recipe and correct page numbers.
 - A section moves intact when it fits on a fresh page.
+- Section spacing does not create a footer-only page.
 - An oversized section splits only at row boundaries and repeats its headers.
+- Every continuation page identifies the active batch or batch range.
 - An oversized preparation note spans pages without dropping its first or last text.
 - An oversized component note spans pages without dropping its first or last text.
 - An oversized component label spans pages without dropping its first or last text.

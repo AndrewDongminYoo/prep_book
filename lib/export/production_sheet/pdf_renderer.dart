@@ -94,13 +94,8 @@ class ProductionSheetPdfRenderer {
                   ),
                 ),
               ],
-              for (final section in sheet.sections) ...[
-                pw.SizedBox(height: 14),
-                _keepTogetherFirst(
-                  context,
-                  _sectionTable(sheet.labels, section),
-                ),
-              ],
+              for (final section in sheet.sections)
+                ..._sectionBlocks(context, sheet.labels, section),
             ],
           ),
         );
@@ -175,10 +170,48 @@ class ProductionSheetPdfRenderer {
     );
   }
 
-  pw.Widget _sectionTable(
+  Iterable<pw.Widget> _sectionBlocks(
+    pw.Context context,
     ProductionSheetLabels labels,
     ProductionSheetSection section,
-  ) {
+  ) sync* {
+    final completeSection = _sectionTable(labels, section)
+      ..layout(
+        context,
+        pw.BoxConstraints(maxWidth: PdfPageFormat.a4.width - 72),
+      );
+    if (completeSection.box!.height <= _maxSinglePageHeight) {
+      yield _keepTogetherFirst(context, completeSection, topSpacing: 14);
+      return;
+    }
+
+    if (section.tables.isEmpty) {
+      yield _keepTogetherFirst(context, completeSection, topSpacing: 14);
+      return;
+    }
+
+    for (final (index, table) in section.tables.indexed) {
+      yield _keepTogetherFirst(
+        context,
+        _sectionTable(
+          labels,
+          section,
+          tables: [table],
+          includePreparationNotes: index == 0,
+          repeatBatchHeading: true,
+        ),
+        topSpacing: index == 0 ? 14 : 0,
+      );
+    }
+  }
+
+  pw.Widget _sectionTable(
+    ProductionSheetLabels labels,
+    ProductionSheetSection section, {
+    List<ProductionSheetTable>? tables,
+    bool includePreparationNotes = true,
+    bool repeatBatchHeading = false,
+  }) {
     final indent = section.depth.clamp(0, 6).toDouble() * 10;
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
@@ -198,15 +231,16 @@ class ProductionSheetPdfRenderer {
           rightBold: true,
           leftPadding: 4 + indent,
         ),
-        for (final (index, note) in _textChunks(
-          section.preparationNotes,
-        ).indexed)
-          pw.TableRow(
-            children: [
-              _cell(index == 0 ? labels.preparationNotes : '', bold: true),
-              _cell(note),
-            ],
-          ),
+        if (includePreparationNotes)
+          for (final (index, note) in _textChunks(
+            section.preparationNotes,
+          ).indexed)
+            pw.TableRow(
+              children: [
+                _cell(index == 0 ? labels.preparationNotes : '', bold: true),
+                _cell(note),
+              ],
+            ),
         pw.TableRow(
           repeat: true,
           decoration: const pw.BoxDecoration(color: PdfColors.grey100),
@@ -215,12 +249,13 @@ class ProductionSheetPdfRenderer {
             _cell(labels.calculatedAmount, bold: true),
           ],
         ),
-        for (final table in section.tables) ...[
+        for (final table in tables ?? section.tables) ...[
           ..._pairedTableRows(
             left: table.heading,
             right: table.batchYield == null
                 ? ''
                 : '${labels.batchYield}: ${table.batchYield}',
+            repeatFirst: repeatBatchHeading,
             decoration: const pw.BoxDecoration(color: PdfColors.blue50),
             leftBold: true,
             rightBold: true,
@@ -418,7 +453,11 @@ class ProductionSheetPdfRenderer {
     );
   }
 
-  pw.Widget _keepTogetherFirst(pw.Context context, pw.Widget child) {
+  pw.Widget _keepTogetherFirst(
+    pw.Context context,
+    pw.Widget child, {
+    double topSpacing = 0,
+  }) {
     // `Inseparable(canSpan: true)` starts splitting in the current page's
     // remaining space. Measure once at the exact printable width so a block
     // that fits on a fresh page can use the stable non-spanning path instead.
@@ -426,11 +465,23 @@ class ProductionSheetPdfRenderer {
       context,
       pw.BoxConstraints(maxWidth: PdfPageFormat.a4.width - 72),
     );
-    final maxSinglePageHeight =
-        PdfPageFormat.a4.height - 36 - 42 - _footerHeight;
-    return pw.Inseparable(
-      canSpan: child.box!.height > maxSinglePageHeight,
-      child: child,
-    );
+    if (child.box!.height <= _maxSinglePageHeight) {
+      if (topSpacing == 0 ||
+          child.box!.height + topSpacing > _maxSinglePageHeight) {
+        return pw.Inseparable(child: child);
+      }
+      return pw.Inseparable(
+        child: pw.Column(
+          children: [
+            pw.SizedBox(height: topSpacing),
+            child,
+          ],
+        ),
+      );
+    }
+    return pw.Inseparable(canSpan: true, child: child);
   }
 }
+
+final double _maxSinglePageHeight =
+    PdfPageFormat.a4.height - 36 - 42 - _footerHeight;
