@@ -72,8 +72,7 @@ class ProductionSheetPdfRenderer {
             maxPages: _debugPageLimit(sheet),
             build: (context) => [
               _keepTogetherFirst(context, _summary(sheet)),
-              if (sheet.outstandingWarnings.isNotEmpty) ...[
-                pw.SizedBox(height: 10),
+              if (sheet.outstandingWarnings.isNotEmpty)
                 _keepTogetherFirst(
                   context,
                   _warningTable(
@@ -81,10 +80,9 @@ class ProductionSheetPdfRenderer {
                     sheet.outstandingWarnings,
                     outstanding: true,
                   ),
+                  topSpacing: 10,
                 ),
-              ],
-              if (sheet.acknowledgedWarnings.isNotEmpty) ...[
-                pw.SizedBox(height: 10),
+              if (sheet.acknowledgedWarnings.isNotEmpty)
                 _keepTogetherFirst(
                   context,
                   _warningTable(
@@ -92,8 +90,8 @@ class ProductionSheetPdfRenderer {
                     sheet.acknowledgedWarnings,
                     outstanding: false,
                   ),
+                  topSpacing: 10,
                 ),
-              ],
               for (final section in sheet.sections)
                 ..._sectionBlocks(context, sheet.labels, section),
             ],

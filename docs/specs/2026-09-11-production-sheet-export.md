@@ -186,7 +186,7 @@ The renderer must use fixed margins, spacing, and font sizes for A4 portrait out
 
 The summary, warning block, and each production section use a keep-together-first policy.
 If one block fits on a fresh page but not in the remaining space, the renderer moves the complete block to the next page.
-Section spacing participates in the keep-together decision and must not create a footer-only page.
+Warning and section spacing participates in the keep-together decision and must not create a footer-only page.
 
 If one block is taller than a fresh page, the renderer can split it only between bounded table rows.
 It must never split one rendered row across pages.
@@ -322,7 +322,7 @@ Renderer tests must verify these properties:
 - Every draft page contains the watermark.
 - Every footer contains the root recipe and correct page numbers.
 - A section moves intact when it fits on a fresh page.
-- Section spacing does not create a footer-only page.
+- Warning and section spacing does not create a footer-only page.
 - An oversized section splits only at row boundaries and repeats its headers.
 - Every continuation page identifies the active batch or batch range.
 - An oversized preparation note spans pages without dropping its first or last text.

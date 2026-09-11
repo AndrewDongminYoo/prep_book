@@ -458,6 +458,7 @@ Create direct `ProductionSheet` fixtures for these cases:
 - A draft sheet long enough to span at least three pages.
 - A sheet where the next complete section fits on a fresh page but not in the first page's remaining space.
 - A sheet where standalone section spacing would otherwise create a footer-only page.
+- A sheet where standalone warning spacing could otherwise create a footer-only page.
 - A sheet with one section whose table must split across pages.
 - A sheet with one unbroken preparation note that is taller than a page.
 - A sheet with one unbroken component note that is taller than a page.
@@ -505,7 +506,7 @@ Keep the footer recipe name and page label on one bounded row.
 - [ ] **Step 5: Implement keep-together-first blocks**
 
 Render the summary, warning group, and each section as a direct `pw.Inseparable` child of `pw.MultiPage`.
-Keep section spacing inside the non-spanning decision and omit it when the complete section would otherwise exceed a fresh page.
+Keep warning and section spacing inside the non-spanning decision and omit it when the complete block would otherwise exceed a fresh page.
 Use a spanning `pw.Table` inside each production section.
 Mark the section-title row and column-header row with `repeat: true`.
 When an oversized section has batch groups, render each group as its own spanning table and repeat its active batch heading.

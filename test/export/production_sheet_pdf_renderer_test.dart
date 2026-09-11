@@ -43,6 +43,7 @@ ProductionSheet _sheet({
   String? calculatedAmount,
   String? sectionRecipeName,
   List<ProductionSheetWarning>? outstandingWarnings,
+  List<ProductionSheetWarning>? acknowledgedWarnings,
   bool hasTables = true,
 }) {
   return ProductionSheet(
@@ -59,9 +60,9 @@ ProductionSheet _sheet({
         (isDraft
             ? const [ProductionSheetWarning(message: '소금 양을 입력하세요.')]
             : const []),
-    acknowledgedWarnings: const [
-      ProductionSheetWarning(message: '반올림 값을 확인했습니다.'),
-    ],
+    acknowledgedWarnings:
+        acknowledgedWarnings ??
+        const [ProductionSheetWarning(message: '반올림 값을 확인했습니다.')],
     sections: [
       for (
         var sectionIndex = 0;
@@ -256,6 +257,40 @@ void main() {
           pageText.contains('Production sheet') ||
           pageText.contains('Acknowledged warnings') ||
           pageText.contains('Section ');
+      expect(
+        hasBody,
+        isTrue,
+        reason: 'page $pageIndex contains only the footer: $page',
+      );
+    }
+  });
+
+  test('does not create a footer-only page before a warning block', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(
+        isDraft: false,
+        sectionRowCounts: const [],
+        outstandingWarnings: [
+          ProductionSheetWarning(
+            message: List.generate(50, (_) => 'outstanding line').join('\n'),
+          ),
+        ],
+        acknowledgedWarnings: [
+          ProductionSheetWarning(
+            message: List.generate(75, (_) => 'acknowledged line').join('\n'),
+          ),
+        ],
+      ),
+      fontBytes: fontBytes,
+    );
+
+    final pages = _drawnStringsByPage(bytes);
+    for (final (pageIndex, page) in pages.indexed) {
+      final pageText = page.join(' ');
+      final hasBody =
+          pageText.contains('Production sheet') ||
+          pageText.contains('Outstanding warnings') ||
+          pageText.contains('Acknowledged warnings');
       expect(
         hasBody,
         isTrue,
