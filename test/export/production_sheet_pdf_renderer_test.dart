@@ -154,6 +154,20 @@ void main() {
     expect(_pageCount(bytes), 1);
   });
 
+  test('omits wall-clock metadata timestamps', () async {
+    final bytes = await const ProductionSheetPdfRenderer().render(
+      _sheet(isDraft: false, sectionRowCounts: const [1]),
+      fontBytes: fontBytes,
+    );
+    final source = String.fromCharCodes(bytes);
+
+    expect(source, contains('/Creator(PrepBook)'));
+    expect(source, contains('/Title(Bun dough)'));
+    expect(source, contains('/Producer(PrepBook'));
+    expect(source, isNot(contains('/CreationDate')));
+    expect(source, isNot(contains('/ModDate')));
+  });
+
   test('renders a long Korean draft across at least three pages', () async {
     final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
       _sheet(

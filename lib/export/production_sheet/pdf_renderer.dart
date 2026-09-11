@@ -102,6 +102,9 @@ class ProductionSheetPdfRenderer {
             ],
           ),
         );
+    document.document.objects.whereType<PdfInfo>().single.params.values.remove(
+      '/CreationDate',
+    );
     return document.save();
   }
 
