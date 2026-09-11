@@ -220,6 +220,7 @@ The timestamp format is `yyyyMMdd'T'HHmmss'Z'` and comes from `ProductionRun.cre
 The recipe segment preserves Unicode letters and numbers.
 The sanitizer replaces control characters and `/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, and `|` with `-`.
 It replaces each whitespace run with `-`, collapses repeated hyphens, removes leading and trailing dots, spaces, and hyphens, and limits the segment to the first `80` Unicode code points.
+It truncates the segment further when necessary so the complete filename does not exceed `255` UTF-8 bytes.
 If the result is empty, the segment is `production-run`.
 
 ## Presentation flow
@@ -306,7 +307,7 @@ Pure Dart tests must verify these properties:
 - Repeated sub-recipe occurrences remain separate and keep depth-first order.
 - Warnings split into outstanding and acknowledged groups without changing order.
 - Draft state follows `ProductionRun.isFinalizable`.
-- Filename construction is deterministic and safe for English, Korean, invalid characters, an empty sanitized name, and names longer than `80` code points.
+- Filename construction is deterministic and safe for English, Korean, invalid characters, an empty sanitized name, names longer than `80` code points, and the `255`-byte filename limit.
 - The export boundary rejects Flutter, persistence, platform, network, and `printing` imports.
 
 Renderer tests must verify these properties:

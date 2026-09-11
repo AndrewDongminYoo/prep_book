@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/export/export.dart';
 
@@ -50,13 +52,25 @@ void main() {
 
   test('limits the recipe segment to 80 Unicode code points', () {
     final filename = buildProductionSheetFilename(
-      runNamed('${'가' * 79}나다', fixedTime),
+      runNamed('${'a' * 79}bc', fixedTime),
     );
     final segment = filename
         .replaceFirst('production-sheet-', '')
         .replaceFirst('-20260911T040506Z.pdf', '');
 
     expect(segment.runes, hasLength(80));
-    expect(segment, '${'가' * 79}나');
+    expect(segment, '${'a' * 79}b');
+  });
+
+  test('limits the complete filename to 255 UTF-8 bytes', () {
+    final filename = buildProductionSheetFilename(
+      runNamed('가' * 80, fixedTime),
+    );
+    final segment = filename
+        .replaceFirst('production-sheet-', '')
+        .replaceFirst('-20260911T040506Z.pdf', '');
+
+    expect(utf8.encode(filename), hasLength(lessThanOrEqualTo(255)));
+    expect(segment, '가' * 72);
   });
 }

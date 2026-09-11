@@ -398,12 +398,13 @@ expect(buildProductionSheetFilename(runNamed('소금 / 반죽', fixedTime)), con
 expect(buildProductionSheetFilename(runNamed('///', fixedTime)), contains('production-run'));
 ```
 
-Add assertions for control characters, `\:*?"<>|`, repeated whitespace, repeated hyphens, leading and trailing dots, and a name longer than `80` Unicode code points.
+Add assertions for control characters, `\:*?"<>|`, repeated whitespace, repeated hyphens, leading and trailing dots, a name longer than `80` Unicode code points, and a multibyte name that would exceed the `255`-byte filename limit.
 
 - [ ] **Step 8: Implement the filename policy**
 
 Implement the exact sanitizer and UTC timestamp contract from the spec.
 Use `String.runes.take(80)` for the code-point limit.
+Reserve the prefix, timestamp, and extension bytes before truncating the segment to the remaining UTF-8 byte budget.
 Use small private zero-padding helpers instead of `intl` so the result does not depend on locale data.
 
 - [ ] **Step 9: Export the core API and verify GREEN**
