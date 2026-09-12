@@ -15,6 +15,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// its first read without awaiting it.
 const _allowedUriPrefixes = <String>[
   'dart:async',
+  'dart:typed_data',
+  'package:pdf/',
   'package:prep_book/application/',
   'package:prep_book/domain/',
   'package:prep_book/l10n/',
@@ -22,7 +24,10 @@ const _allowedUriPrefixes = <String>[
   'package:bloc/',
   'package:flutter/',
   'package:flutter_bloc/',
+  'package:intl/',
   'package:meta/',
+  'package:printing/',
+  'package:prep_book/export/',
 ];
 
 /// Matches a whole `import`/`export` directive, from the keyword to its

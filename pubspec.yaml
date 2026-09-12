@@ -17,6 +17,8 @@ dependencies:
     sdk: flutter
   intl: ^0.20.3
   meta: ^1.19.0
+  pdf: ^3.13.0
+  printing: ^5.15.0
   rational: ^2.2.3
   sqflite: ^2.4.3
 
@@ -32,6 +34,9 @@ dev_dependencies:
   very_good_analysis: ^11.0.0
 
 flutter:
+  assets:
+    - assets/fonts/NotoSansKR.ttf
+    - assets/fonts/OFL.txt
   generate: true
   uses-material-design: true
 

@@ -9,6 +9,7 @@ import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/production_result/cubit/production_result_cubit.dart';
+import 'package:prep_book/presentation/production_sheet/view/production_sheet_launcher.dart';
 import 'package:prep_book/presentation/responsive/window_width_class.dart';
 import 'package:prep_book/presentation/units/readable_quantity.dart';
 
@@ -23,6 +24,7 @@ class ProductionResultPage extends StatelessWidget {
     required this.acknowledgeWarning,
     required this.applyOverride,
     required this.saveProductionRun,
+    required this.productionSheet,
     required this.run,
     super.key,
   });
@@ -35,6 +37,9 @@ class ProductionResultPage extends StatelessWidget {
 
   /// Commits the run as an immutable snapshot.
   final SaveProductionRun saveProductionRun;
+
+  /// Opens share and print for the stored snapshot.
+  final ProductionSheetLauncher productionSheet;
 
   /// The run the production setup screen calculated. Never stored yet.
   final ProductionRun run;
@@ -50,7 +55,7 @@ class ProductionResultPage extends StatelessWidget {
         saveProductionRun,
         run: run,
       ),
-      child: const ProductionResultView(),
+      child: ProductionResultView(productionSheet: productionSheet),
     );
   }
 }
@@ -59,7 +64,10 @@ class ProductionResultPage extends StatelessWidget {
 /// that provides the cubit is not also the widget that reads it.
 class ProductionResultView extends StatefulWidget {
   /// Creates the view.
-  const ProductionResultView({super.key});
+  const ProductionResultView({required this.productionSheet, super.key});
+
+  /// Opens share and print for the stored snapshot.
+  final ProductionSheetLauncher productionSheet;
 
   @override
   State<ProductionResultView> createState() => _ProductionResultViewState();
@@ -175,7 +183,7 @@ class _ProductionResultViewState extends State<ProductionResultView> {
         _Heading(text: l10n.productionResultComponents),
         ..._componentRows(state, showWarnings: false),
         const Divider(height: 32),
-        _SaveSection(state: state),
+        _SaveSection(state: state, productionSheet: widget.productionSheet),
       ],
     );
   }
@@ -208,7 +216,10 @@ class _ProductionResultViewState extends State<ProductionResultView> {
                   ),
               ],
               const Divider(height: 32),
-              _SaveSection(state: state),
+              _SaveSection(
+                state: state,
+                productionSheet: widget.productionSheet,
+              ),
             ],
           ),
         ),
@@ -638,9 +649,10 @@ class _WarningTile extends StatelessWidget {
 
 /// What the run is saved as, and the action that saves it.
 class _SaveSection extends StatelessWidget {
-  const _SaveSection({required this.state});
+  const _SaveSection({required this.state, required this.productionSheet});
 
   final ProductionResultState state;
+  final ProductionSheetLauncher productionSheet;
 
   @override
   Widget build(BuildContext context) {
@@ -674,6 +686,15 @@ class _SaveSection extends StatelessWidget {
                 : l10n.productionResultSave,
           ),
         ),
+        if (state.status == ProductionResultStatus.saved) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () =>
+                unawaited(productionSheet.open(context, run: state.run)),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: Text(l10n.productionSheetTitle),
+          ),
+        ],
       ],
     );
   }

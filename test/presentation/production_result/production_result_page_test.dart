@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
@@ -6,6 +9,7 @@ import 'package:prep_book/persistence/repositories.dart';
 import 'package:prep_book/presentation/presentation.dart';
 
 import '../../application/fakes.dart';
+import '../../export/fixtures.dart';
 import '../../helpers/helpers.dart';
 import '../fakes.dart';
 
@@ -18,27 +22,56 @@ import '../fakes.dart';
 /// about a small window sets its own.
 const _roomyViewport = Size(800, 2400);
 
-Widget _screenOver(ProductionRun run, {ProductionRunRepository? runs}) =>
-    ProductionResultPage(
-      acknowledgeWarning: const AcknowledgeWarning(),
-      applyOverride: const ApplyOverride(),
-      saveProductionRun: SaveProductionRun(
-        runs ?? FakeProductionRunRepository(),
-      ),
-      run: run,
-    );
+Widget _screenOver(
+  ProductionRun run, {
+  ProductionRunRepository? runs,
+  ProductionSheetLauncher? productionSheet,
+}) => ProductionResultPage(
+  acknowledgeWarning: const AcknowledgeWarning(),
+  applyOverride: const ApplyOverride(),
+  saveProductionRun: SaveProductionRun(runs ?? FakeProductionRunRepository()),
+  productionSheet:
+      productionSheet ??
+      ProductionSheetLauncher(platform: _PendingProductionSheetPlatform()),
+  run: run,
+);
 
 Future<void> _open(
   WidgetTester tester,
   ProductionRun run, {
   ProductionRunRepository? runs,
+  ProductionSheetLauncher? productionSheet,
   Size viewport = _roomyViewport,
 }) async {
   tester.view.physicalSize = viewport;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpApp(_screenOver(run, runs: runs));
+  await tester.pumpApp(
+    _screenOver(run, runs: runs, productionSheet: productionSheet),
+  );
   await tester.pump();
+}
+
+final class _PendingProductionSheetPlatform implements ProductionSheetPlatform {
+  final _font = Completer<Uint8List>();
+
+  @override
+  Future<Uint8List> loadFontBytes() => _font.future;
+
+  @override
+  Widget preview({
+    required Uint8List bytes,
+    required Widget loading,
+    required Widget Function(Object error) onError,
+  }) => const SizedBox();
+
+  @override
+  Future<bool> print({required Uint8List bytes, required String name}) =>
+      Future.value(false);
+
+  @override
+  Future<bool> share({required Uint8List bytes, required String filename}) =>
+      Future.value(false);
 }
 
 /// Opens or closes the line at [path].
@@ -774,6 +807,86 @@ void main() {
         find.widgetWithText(FilledButton, 'Save as draft'),
       );
       expect(save.onPressed, isNull);
+      expect(find.text('Share and print'), findsOneWidget);
+    });
+
+    testWidgets('export is available only after a successful save', (
+      tester,
+    ) async {
+      final run = await buildReviewableRun();
+      final pending = PendingRunRepository();
+      await _open(tester, run, runs: pending);
+
+      expect(find.text('Share and print'), findsNothing);
+      await tester.tap(find.widgetWithText(FilledButton, 'Save as draft'));
+      await tester.pump();
+      expect(find.text('Share and print'), findsNothing);
+
+      pending.release();
+      await tester.pump();
+      expect(find.text('Share and print'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await _open(tester, run, runs: UnwritableRunRepository());
+      await tester.tap(find.widgetWithText(FilledButton, 'Save as draft'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Share and print'), findsNothing);
+    });
+
+    testWidgets('saved final run opens export with the identical snapshot', (
+      tester,
+    ) async {
+      final run = buildProductionSheetRun(acknowledgeManual: true);
+      final platform = _PendingProductionSheetPlatform();
+      await _open(
+        tester,
+        run,
+        productionSheet: ProductionSheetLauncher(platform: platform),
+        viewport: const Size(599, 5000),
+      );
+
+      expect(run.isFinalizable, isTrue);
+      expect(find.text('Share and print'), findsNothing);
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Save production run'),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('Share and print'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final page = tester.widget<ProductionSheetPage>(
+        find.byType(ProductionSheetPage),
+      );
+      expect(page.run, same(run));
+      expect(page.platform, same(platform));
+    });
+
+    testWidgets('saved draft opens export with the identical snapshot', (
+      tester,
+    ) async {
+      final run = await buildReviewableRun();
+      final platform = _PendingProductionSheetPlatform();
+      await _open(
+        tester,
+        run,
+        productionSheet: ProductionSheetLauncher(platform: platform),
+      );
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Save as draft'));
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('Share and print'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final page = tester.widget<ProductionSheetPage>(
+        find.byType(ProductionSheetPage),
+      );
+      expect(page.run, same(run));
+      expect(page.platform, same(platform));
     });
 
     testWidgets('a tap in the frame of a save reaches nothing', (tester) async {
