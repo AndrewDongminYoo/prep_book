@@ -313,7 +313,7 @@ void main() {
         );
       });
 
-      test('bounds a compressed manifest before reading its content', () {
+      test('checks declared manifest size against its dedicated limit', () {
         final bytes = _zipEntries([
           ArchiveFile.string(
             'manifest.json',
@@ -321,7 +321,25 @@ void main() {
           ),
           _databaseEntry(),
         ]);
-        final codec = BackupArchiveCodec(maxArchiveBytes: bytes.length);
+        const codec = BackupArchiveCodec(maxManifestBytes: 128);
+
+        _expectFailure(
+          bytes,
+          LibraryBackupFailureKind.backupTooLarge,
+          codec: codec,
+        );
+      });
+
+      test('bounds manifest expansion when its declared size lies', () {
+        final bytes = _zipEntries([
+          ArchiveFile.string(
+            'manifest.json',
+            '${' ' * 1024}${jsonEncode(_validManifestMap)}',
+          ),
+          _databaseEntry(),
+        ]);
+        _patchCentralUint32(bytes, 'manifest.json', offset: 24, value: 1);
+        const codec = BackupArchiveCodec(maxManifestBytes: 128);
 
         _expectFailure(
           bytes,

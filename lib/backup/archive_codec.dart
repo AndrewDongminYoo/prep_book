@@ -43,13 +43,17 @@ final class BackupArchiveCodec {
   const BackupArchiveCodec({
     int maxArchiveBytes = maxLibraryBackupBytes,
     int maxDatabaseBytes = maxLibraryBackupBytes,
+    int maxManifestBytes = 64 * 1024,
   }) : assert(maxArchiveBytes > 0, 'maxArchiveBytes must be positive.'),
        assert(maxDatabaseBytes > 0, 'maxDatabaseBytes must be positive.'),
+       assert(maxManifestBytes > 0, 'maxManifestBytes must be positive.'),
        _maxArchiveBytes = maxArchiveBytes,
-       _maxDatabaseBytes = maxDatabaseBytes;
+       _maxDatabaseBytes = maxDatabaseBytes,
+       _maxManifestBytes = maxManifestBytes;
 
   final int _maxArchiveBytes;
   final int _maxDatabaseBytes;
+  final int _maxManifestBytes;
 
   /// Encodes one manifest and one SQLite database into a ZIP archive.
   Uint8List encode({
@@ -97,9 +101,11 @@ final class BackupArchiveCodec {
       );
     }
     for (final header in headers) {
-      final maxEntryBytes = header.filename == _databaseEntryName
-          ? _maxDatabaseBytes
-          : _maxArchiveBytes;
+      final maxEntryBytes = switch (header.filename) {
+        _manifestEntryName => _maxManifestBytes,
+        _databaseEntryName => _maxDatabaseBytes,
+        _ => _maxArchiveBytes,
+      };
       if (header.uncompressedSize > maxEntryBytes) {
         _throwBackupTooLarge();
       }
@@ -128,7 +134,7 @@ final class BackupArchiveCodec {
     }
     final manifestBytes = _readAndVerify(
       manifestEntry,
-      maxBytes: _maxArchiveBytes,
+      maxBytes: _maxManifestBytes,
     );
     final databaseBytes = _readAndVerify(
       databaseEntry,
