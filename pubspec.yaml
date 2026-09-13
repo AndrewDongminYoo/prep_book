@@ -10,11 +10,13 @@ environment:
 dependencies:
   bloc: ^9.2.1
   decimal: ^3.2.6
+  file_picker: ^12.3.0
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1
   flutter_localizations:
     sdk: flutter
+  http: ^1.6.0
   intl: ^0.20.3
   meta: ^1.19.0
   pdf: ^3.13.0

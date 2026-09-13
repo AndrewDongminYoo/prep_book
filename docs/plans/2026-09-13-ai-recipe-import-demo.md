@@ -402,25 +402,25 @@ abstract interface class RecipeImagePicker {
 }
 ```
 
-- [ ] **4.1 Add only transport dependencies.** Add compatible pinned `http` and
+- [x] **4.1 Add only transport dependencies.** Add compatible pinned `http` and
       `file_picker` versions, run `flutter pub get`, and inspect native plugin
       changes. Do not add a provider SDK to Flutter.
 
-- [ ] **4.2 Test and implement request values.** Cover blank/over-limit text,
+- [x] **4.2 Test and implement request values.** Cover blank/over-limit text,
       exact limits, MIME validation, exact JSON keys, and base64 generation only at
       serialization. Preserve original text except for blank validation.
 
-- [ ] **4.3 Test and implement the HTTP client.** Inject `http.Client` and URI.
+- [x] **4.3 Test and implement the HTTP client.** Inject `http.Client` and URI.
       Assert one JSON POST with no authorization header. Apply `27` second client
       timeout. Decode success through `ExtractedRecipeDraft.fromJson`, map stable
       endpoint errors, and never auto-retry.
 
-- [ ] **4.4 Test and implement the picker.** Request one in-memory custom file
+- [x] **4.4 Test and implement the picker.** Request one in-memory custom file
       with `jpg`, `jpeg`, `png`, or `webp`. Never use a filesystem path. Reject
       absent bytes, multiple files, MIME/extension mismatch, unsupported extension,
       and over-limit data. Cancellation returns null.
 
-- [ ] **4.5 Verify web and normal mobile builds.** Run sequentially:
+- [x] **4.5 Verify web and normal mobile builds.** Run sequentially:
 
   ```sh
   flutter test test/championship/import test/championship/input
@@ -433,7 +433,7 @@ abstract interface class RecipeImagePicker {
     --target lib/main_development.dart
   ```
 
-- [ ] **4.6 Inspect and commit.** Commit:
+- [x] **4.6 Inspect and commit.** Commit:
 
   ```sh
   git commit -m "feat(championship): connect text and image import"
