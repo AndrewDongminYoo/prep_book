@@ -58,6 +58,7 @@ void main() {
         fault: fault,
         candidatePath: candidatePath,
         rollbackPath: rollbackPath,
+        failedPath: failedPath,
       ),
       validateCandidate:
           validateCandidate ??
@@ -76,6 +77,7 @@ void main() {
         openCalls++;
         final replacementMustFail = switch (fault) {
           _FaultPoint.replacementReopen ||
+          _FaultPoint.diagnosticCopy ||
           _FaultPoint.rollbackInstall ||
           _FaultPoint.rollbackReopen => openCalls == 1,
           _ => false,
@@ -205,6 +207,7 @@ void main() {
     _FaultPoint.candidateRename,
     _FaultPoint.replacementReopen,
     _FaultPoint.replacementActivation,
+    _FaultPoint.diagnosticCopy,
   ]) {
     test('$fault restores and activates the previous library', () async {
       final activations = <({bool restored, List<String> ids})>[];
@@ -323,6 +326,7 @@ enum _FaultPoint {
   candidateRename,
   replacementReopen,
   replacementActivation,
+  diagnosticCopy,
   rollbackInstall,
   rollbackReopen,
   cleanupDelete,
@@ -334,17 +338,22 @@ final class _FaultingBackupFiles implements BackupFiles {
     required this.fault,
     required this.candidatePath,
     required this.rollbackPath,
+    required this.failedPath,
   });
 
   final BackupFiles _delegate;
   final _FaultPoint? fault;
   final String candidatePath;
   final String rollbackPath;
+  final String failedPath;
 
   @override
   Future<void> copy(String source, String destination, {required bool flush}) {
     if (fault == _FaultPoint.rollbackCopy) {
       throw StateError('rollback copy failed');
+    }
+    if (fault == _FaultPoint.diagnosticCopy && destination == failedPath) {
+      throw StateError('diagnostic copy failed');
     }
     return _delegate.copy(source, destination, flush: flush);
   }

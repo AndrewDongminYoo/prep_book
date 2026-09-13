@@ -146,10 +146,14 @@ final class DatabaseSession {
           await replacement.close();
         }
         if (rollbackReady) {
-          if (replacementMayBeInstalled) {
-            await _files.copy(_databasePath, failedPath, flush: true);
-          }
           await _files.copy(rollbackPath, rollbackInstallPath, flush: true);
+          if (replacementMayBeInstalled) {
+            try {
+              await _files.copy(_databasePath, failedPath, flush: true);
+            } on Object catch (error, stackTrace) {
+              _reportError(error, stackTrace);
+            }
+          }
           await _files.renameReplacing(rollbackInstallPath, _databasePath);
         }
 
