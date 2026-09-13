@@ -99,13 +99,33 @@ final class BackupArchiveCodec {
       }
     }
     _validateArchiveStructure(headers);
-    final archive = ZipDecoder().decodeBytes(archiveBytes);
+    final ArchiveFile manifestEntry;
+    final ArchiveFile databaseEntry;
+    try {
+      final archive = ZipDecoder().decodeBytes(archiveBytes);
+      manifestEntry =
+          archive.find(_manifestEntryName) ??
+          (throw const FormatException(
+            'The manifest entry could not be decoded.',
+          ));
+      databaseEntry =
+          archive.find(_databaseEntryName) ??
+          (throw const FormatException(
+            'The database entry could not be decoded.',
+          ));
+    } on Object catch (error, stackTrace) {
+      _throwBackupFailure(
+        LibraryBackupFailureKind.invalidArchive,
+        error,
+        stackTrace,
+      );
+    }
     final manifestBytes = _readAndVerify(
-      archive.find(_manifestEntryName)!,
+      manifestEntry,
       maxBytes: _maxArchiveBytes,
     );
     final databaseBytes = _readAndVerify(
-      archive.find(_databaseEntryName)!,
+      databaseEntry,
       maxBytes: _maxDatabaseBytes,
     );
     final manifest = _decodeManifest(manifestBytes);

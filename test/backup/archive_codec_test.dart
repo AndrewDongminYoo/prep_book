@@ -68,6 +68,13 @@ void main() {
         _expectInvalidArchive(bytes);
       });
 
+      test('maps a corrupt local entry header to invalid archive', () {
+        final bytes = _archiveWithManifest(_validManifestMap);
+        _patchLocalUint32(bytes, 'library.db', offset: 0, value: 0);
+
+        _expectInvalidArchive(bytes);
+      });
+
       test('rejects every missing required entry', () {
         _expectInvalidArchive(_zipEntries([_databaseEntry()]));
         _expectInvalidArchive(_zipEntries([_manifestEntry()]));
