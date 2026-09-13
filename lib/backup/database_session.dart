@@ -90,6 +90,7 @@ final class DatabaseSession {
   }) async {
     final candidatePath = _createCandidatePath();
     final rollbackPath = _createRollbackPath();
+    final rollbackInstallPath = '$rollbackPath.install';
     final failedPath = _createFailedPath();
     var liveCloseStarted = false;
     var rollbackReady = false;
@@ -116,11 +117,21 @@ final class DatabaseSession {
       await _activate(replacement, restored: true);
       _connection = replacement;
       replacement = null;
-      await _cleanupDisposable(candidatePath, rollbackPath, failedPath);
+      await _cleanupDisposable(
+        candidatePath,
+        rollbackPath,
+        rollbackInstallPath,
+        failedPath,
+      );
       return;
     } on Object catch (error, stackTrace) {
       if (!liveCloseStarted) {
-        await _cleanupDisposable(candidatePath, rollbackPath, failedPath);
+        await _cleanupDisposable(
+          candidatePath,
+          rollbackPath,
+          rollbackInstallPath,
+          failedPath,
+        );
         if (error is LibraryBackupException) rethrow;
         throw LibraryBackupException(
           LibraryBackupFailureKind.restoreFailed,
@@ -136,9 +147,10 @@ final class DatabaseSession {
         }
         if (rollbackReady) {
           if (replacementMayBeInstalled) {
-            await _files.renameReplacing(_databasePath, failedPath);
+            await _files.copy(_databasePath, failedPath, flush: true);
           }
-          await _files.renameReplacing(rollbackPath, _databasePath);
+          await _files.copy(rollbackPath, rollbackInstallPath, flush: true);
+          await _files.renameReplacing(rollbackInstallPath, _databasePath);
         }
 
         final recovered = await _openDatabase(_databasePath);
@@ -149,13 +161,28 @@ final class DatabaseSession {
           rethrow;
         }
         _connection = recovered;
-        await _cleanupDisposable(candidatePath, rollbackPath, failedPath);
+        await _cleanupDisposable(
+          candidatePath,
+          rollbackPath,
+          rollbackInstallPath,
+          failedPath,
+        );
       } on Object catch (recoveryError, recoveryStackTrace) {
         _reportError(recoveryError, recoveryStackTrace);
-        await _mountRecoveryFailure();
+        Object? mountError;
+        try {
+          await _mountRecoveryFailure();
+        } on Object catch (error, stackTrace) {
+          mountError = error;
+          _reportError(error, stackTrace);
+        }
         throw LibraryBackupException(
           LibraryBackupFailureKind.recoveryFailed,
-          cause: (restoreError: error, recoveryError: recoveryError),
+          cause: (
+            restoreError: error,
+            recoveryError: recoveryError,
+            mountError: mountError,
+          ),
           stackTrace: recoveryStackTrace,
         );
       }
@@ -171,9 +198,15 @@ final class DatabaseSession {
   Future<void> _cleanupDisposable(
     String candidatePath,
     String rollbackPath,
+    String rollbackInstallPath,
     String failedPath,
   ) async {
-    for (final path in [candidatePath, rollbackPath, failedPath]) {
+    for (final path in [
+      candidatePath,
+      rollbackPath,
+      rollbackInstallPath,
+      failedPath,
+    ]) {
       try {
         await _files.deleteDatabaseSidecars(path);
         await _files.deleteIfExists(path);

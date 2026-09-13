@@ -16,6 +16,7 @@ void main() {
   late String livePath;
   late String candidatePath;
   late String rollbackPath;
+  late String rollbackInstallPath;
   late String failedPath;
   late Database live;
   late Uint8List restoredBytes;
@@ -25,6 +26,7 @@ void main() {
     livePath = '${directory.path}/library.db';
     candidatePath = '${directory.path}/candidate.db';
     rollbackPath = '${directory.path}/rollback.db';
+    rollbackInstallPath = '$rollbackPath.install';
     failedPath = '${directory.path}/failed.db';
     live = await _open(livePath);
     await _storeIngredient(live, 'previous');
@@ -74,7 +76,7 @@ void main() {
         openCalls++;
         final replacementMustFail = switch (fault) {
           _FaultPoint.replacementReopen ||
-          _FaultPoint.rollbackRename ||
+          _FaultPoint.rollbackInstall ||
           _FaultPoint.rollbackReopen => openCalls == 1,
           _ => false,
         };
@@ -90,7 +92,12 @@ void main() {
   }
 
   Future<List<bool>> temporaryPaths() => Future.value([
-    for (final path in [candidatePath, rollbackPath, failedPath])
+    for (final path in [
+      candidatePath,
+      rollbackPath,
+      rollbackInstallPath,
+      failedPath,
+    ])
       File(path).existsSync(),
   ]);
 
@@ -189,7 +196,7 @@ void main() {
     live = session.connection;
 
     expect(await _ids(live), ['restored']);
-    expect(reports, hasLength(3));
+    expect(reports, hasLength(4));
     expect(reports, everyElement(isA<StateError>()));
   });
 
@@ -235,7 +242,7 @@ void main() {
   }
 
   for (final fault in const [
-    _FaultPoint.rollbackRename,
+    _FaultPoint.rollbackInstall,
     _FaultPoint.rollbackReopen,
   ]) {
     test('$fault mounts failure and preserves readable diagnostics', () async {
@@ -265,6 +272,15 @@ void main() {
 
       expect(failureMounts, 1);
       expect(reports, hasLength(2));
+      final retryDatabase = await _open(livePath);
+      try {
+        expect(
+          await _ids(retryDatabase),
+          fault == _FaultPoint.rollbackInstall ? ['restored'] : ['previous'],
+        );
+      } finally {
+        await retryDatabase.close();
+      }
       final readable = <String>[];
       for (final path in [livePath, rollbackPath, failedPath]) {
         final file = File(path);
@@ -273,6 +289,33 @@ void main() {
       expect(readable, hasLength(greaterThanOrEqualTo(2)));
     });
   }
+
+  test('mount failure preserves the recoveryFailed contract', () async {
+    final mountError = StateError('failure root did not mount');
+    final reports = <Object>[];
+    final session = buildSession(
+      fault: _FaultPoint.rollbackReopen,
+      onMountRecoveryFailure: () => throw mountError,
+      onReportError: (error, stackTrace) => reports.add(error),
+    );
+
+    await expectLater(
+      session.restore(
+        restoredBytes,
+        manifestSchemaVersion: currentSchemaVersion,
+      ),
+      throwsA(
+        isA<LibraryBackupException>().having(
+          (error) => error.kind,
+          'kind',
+          LibraryBackupFailureKind.recoveryFailed,
+        ),
+      ),
+    );
+
+    expect(reports, hasLength(3));
+    expect(reports.last, same(mountError));
+  });
 }
 
 enum _FaultPoint {
@@ -280,7 +323,7 @@ enum _FaultPoint {
   candidateRename,
   replacementReopen,
   replacementActivation,
-  rollbackRename,
+  rollbackInstall,
   rollbackReopen,
   cleanupDelete,
 }
@@ -311,7 +354,8 @@ final class _FaultingBackupFiles implements BackupFiles {
     if (fault == _FaultPoint.candidateRename && source == candidatePath) {
       throw StateError('candidate rename failed');
     }
-    if (fault == _FaultPoint.rollbackRename && source == rollbackPath) {
+    if (fault == _FaultPoint.rollbackInstall &&
+        source == '$rollbackPath.install') {
       throw StateError('rollback rename failed');
     }
     return _delegate.renameReplacing(source, destination);
