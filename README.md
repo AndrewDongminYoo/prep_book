@@ -16,6 +16,7 @@ The application works entirely offline. It requires no account, no subscription,
 ## Status
 
 Pre-release, version `0.1.0+1`. The domain, persistence, and application layers are implemented, and the recipe library is the first screen; export and migration are not implemented yet.
+Portable library backup and restore are implemented and verified on iOS and Android.
 
 The approved design is `docs/notes/2026-09-06-prepbook-pro-design.md`, which defines the scope, domain model, scaling semantics, screens, testing strategy, and definition of done.
 Contributors and agents should read it before starting any feature work.

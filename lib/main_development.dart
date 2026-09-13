@@ -6,35 +6,55 @@ import 'package:prep_book/persistence/persistence.dart';
 import 'package:prep_book/presentation/presentation.dart';
 
 Future<void> main() async {
-  await bootstrap((recipes, ingredients, runs) async {
-    await _seedDevelopmentData(recipes, ingredients);
-    return App(
-      listLibrary: ListLibrary(recipes),
-      searchLibrary: SearchLibrary(recipes),
-      editor: RecipeEditorLauncher(
-        listLibrary: ListLibrary(recipes),
-        listIngredients: ListIngredients(ingredients),
-        saveRecipeRevision: SaveRecipeRevision(recipes, const SystemClock()),
-        saveIngredient: SaveIngredient(ingredients),
-      ),
-      production: ProductionSetupLauncher(
-        StartProductionRun(
-          recipes,
-          ingredients,
-          RandomRunIdSource(),
-          const SystemClock(),
-        ),
-        result: ProductionResultLauncher(
-          acknowledgeWarning: const AcknowledgeWarning(),
-          applyOverride: const ApplyOverride(),
-          saveProductionRun: SaveProductionRun(runs),
-          productionSheet: const ProductionSheetLauncher(
-            platform: PrintingProductionSheetPlatform(),
+  await bootstrap(
+    builder:
+        ({
+          required recipes,
+          required ingredients,
+          required runs,
+          required createLibraryBackup,
+          required restoreLibraryBackup,
+          required restored,
+          required restoreFailure,
+        }) => App(
+          listLibrary: ListLibrary(recipes),
+          searchLibrary: SearchLibrary(recipes),
+          editor: RecipeEditorLauncher(
+            listLibrary: ListLibrary(recipes),
+            listIngredients: ListIngredients(ingredients),
+            saveRecipeRevision: SaveRecipeRevision(
+              recipes,
+              const SystemClock(),
+            ),
+            saveIngredient: SaveIngredient(ingredients),
           ),
+          production: ProductionSetupLauncher(
+            StartProductionRun(
+              recipes,
+              ingredients,
+              RandomRunIdSource(),
+              const SystemClock(),
+            ),
+            result: ProductionResultLauncher(
+              acknowledgeWarning: const AcknowledgeWarning(),
+              applyOverride: const ApplyOverride(),
+              saveProductionRun: SaveProductionRun(runs),
+              productionSheet: const ProductionSheetLauncher(
+                platform: PrintingProductionSheetPlatform(),
+              ),
+            ),
+          ),
+          libraryBackup: LibraryBackupLauncher(
+            createBackup: createLibraryBackup,
+            restoreBackup: restoreLibraryBackup,
+            platform: const FilePickerLibraryBackupPlatform(),
+          ),
+          restored: restored,
+          restoreFailure: restoreFailure,
         ),
-      ),
-    );
-  });
+    prepare: ({required recipes, required ingredients, required runs}) =>
+        _seedDevelopmentData(recipes, ingredients),
+  );
 }
 
 /// Writes [_developmentLibrary] and [_developmentIngredients] into a

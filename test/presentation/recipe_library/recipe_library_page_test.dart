@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
@@ -43,6 +45,9 @@ const _homeIndicatorInset = 21.0;
 Widget _libraryOver(
   RecipeRepository recipes, {
   IngredientRepository? ingredients,
+  LibraryBackupLauncher? libraryBackup,
+  bool restored = false,
+  LibraryBackupFailureKind? restoreFailure,
 }) => RecipeLibraryPage(
   listLibrary: ListLibrary(recipes),
   searchLibrary: SearchLibrary(recipes),
@@ -51,7 +56,52 @@ Widget _libraryOver(
     ingredients ?? FakeIngredientRepository(),
   ),
   production: buildProductionLauncher(recipes),
+  libraryBackup: libraryBackup ?? _backupLauncher(),
+  restored: restored,
+  restoreFailure: restoreFailure,
 );
+
+LibraryBackupLauncher _backupLauncher({
+  LibraryBackupGateway? gateway,
+  LibraryBackupPlatform? platform,
+}) {
+  final activeGateway = gateway ?? _BackupGateway();
+  return LibraryBackupLauncher(
+    createBackup: CreateLibraryBackup(activeGateway),
+    restoreBackup: RestoreLibraryBackup(activeGateway),
+    platform: platform ?? _BackupPlatform(),
+  );
+}
+
+final class _BackupGateway implements LibraryBackupGateway {
+  int createCalls = 0;
+  int restoreCalls = 0;
+
+  @override
+  Future<LibraryBackupFile> create() async {
+    createCalls++;
+    return LibraryBackupFile(
+      bytes: Uint8List.fromList([1]),
+      suggestedName: 'backup.prepbook',
+    );
+  }
+
+  @override
+  Future<void> restore(Uint8List archiveBytes) async {
+    restoreCalls++;
+  }
+}
+
+final class _BackupPlatform implements LibraryBackupPlatform {
+  Uint8List? pickedBytes;
+  bool saveResult = false;
+
+  @override
+  Future<Uint8List?> pickBackup() async => pickedBytes;
+
+  @override
+  Future<bool> saveBackup(LibraryBackupFile backup) async => saveResult;
+}
 
 /// The screen's own scroll position.
 ///
@@ -133,6 +183,127 @@ void main() {
       expect(_inLibraryList(find.text('1000 g')), findsOneWidget);
       expect(find.text(_emptyMessage), findsNothing);
       expect(find.text(_errorMessage), findsNothing);
+    });
+
+    testWidgets('backup menu exposes both library operations', (tester) async {
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('Library backup'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Back up library'), findsOneWidget);
+      expect(find.text('Restore backup'), findsOneWidget);
+      expect(find.byTooltip('New recipe'), findsOneWidget);
+    });
+
+    testWidgets('backup keeps query, selection, and scroll position', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(840, 600)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final many = FakeRecipeRepository();
+      for (var index = 0; index < 20; index++) {
+        many.seed(
+          buildRecipe(
+            id: 'recipe-$index',
+            name: 'Recipe $index',
+            modifiedAt: DateTime.utc(
+              2026,
+              9,
+              13,
+            ).subtract(Duration(minutes: index)),
+          ),
+        );
+      }
+      final gateway = _BackupGateway();
+      final platform = _BackupPlatform()..saveResult = true;
+      await tester.pumpApp(
+        _libraryOver(
+          many,
+          libraryBackup: _backupLauncher(gateway: gateway, platform: platform),
+        ),
+      );
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Recipe');
+      await tester.pump(_pastTheDebounce);
+      await tester.pump();
+      await tester.tap(_inLibraryList(find.text('Recipe 1')));
+      await tester.pump();
+      final scroll = _screenScroll(tester);
+      expect(scroll.maxScrollExtent, greaterThan(80));
+      scroll.jumpTo(80);
+      await tester.pump();
+      final beforeOffset = scroll.pixels;
+
+      await tester.tap(find.byTooltip('Library backup'));
+      await tester.pumpAndSettle();
+      expect(
+        _screenScroll(tester).pixels,
+        beforeOffset,
+        reason: 'opening the backup menu must preserve list position',
+      );
+      await tester.tap(find.text('Back up library'));
+      expect(
+        _screenScroll(tester).pixels,
+        beforeOffset,
+        reason: 'selecting backup must preserve list position',
+      );
+      await tester.pump();
+      expect(
+        _screenScroll(tester).pixels,
+        beforeOffset,
+        reason: 'opening backup dialog must preserve list position',
+      );
+      await tester.pumpAndSettle();
+
+      expect(gateway.createCalls, 1);
+      expect(_screenScroll(tester).pixels, beforeOffset);
+      expect(_recipeTile(tester, 'Recipe 1').selected, isTrue);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('recipe-detail-pane')),
+          matching: find.text('Recipe 1'),
+        ),
+        findsOneWidget,
+      );
+      _screenScroll(tester).jumpTo(0);
+      await tester.pump();
+      expect(
+        tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+        'Recipe',
+      );
+    });
+
+    testWidgets('restored root shows one completion notice', (tester) async {
+      await tester.pumpApp(_libraryOver(recipes, restored: true));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Library restored from backup.'), findsOneWidget);
+    });
+
+    testWidgets('recovered root shows one restore failure notice', (
+      tester,
+    ) async {
+      await tester.pumpApp(
+        _libraryOver(
+          recipes,
+          restoreFailure: LibraryBackupFailureKind.restoreFailed,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text(
+          'The backup could not be restored. '
+          'Your current library is unchanged.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Production Run opens setup over that row', (tester) async {

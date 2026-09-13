@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/app/app.dart';
@@ -18,6 +20,13 @@ void main() {
           searchLibrary: SearchLibrary(recipes),
           editor: buildEditorLauncher(recipes, FakeIngredientRepository()),
           production: buildProductionLauncher(recipes),
+          libraryBackup: LibraryBackupLauncher(
+            createBackup: CreateLibraryBackup(_BackupGateway()),
+            restoreBackup: RestoreLibraryBackup(_BackupGateway()),
+            platform: _BackupPlatform(),
+          ),
+          restored: false,
+          restoreFailure: null,
         ),
       );
       await tester.pump();
@@ -32,4 +41,23 @@ void main() {
       );
     });
   });
+}
+
+final class _BackupGateway implements LibraryBackupGateway {
+  @override
+  Future<LibraryBackupFile> create() async => LibraryBackupFile(
+    bytes: Uint8List.fromList([1]),
+    suggestedName: 'backup.prepbook',
+  );
+
+  @override
+  Future<void> restore(Uint8List archiveBytes) async {}
+}
+
+final class _BackupPlatform implements LibraryBackupPlatform {
+  @override
+  Future<Uint8List?> pickBackup() async => null;
+
+  @override
+  Future<bool> saveBackup(LibraryBackupFile backup) async => false;
 }
