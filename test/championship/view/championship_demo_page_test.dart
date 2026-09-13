@@ -17,7 +17,11 @@ void main() {
     final cubit = buildChampionshipTestCubit();
     addTearDown(cubit.close);
     await tester.pumpWidget(
-      ChampionshipApp(cubit: cubit, locale: const Locale('en')),
+      ChampionshipApp(
+        cubit: cubit,
+        openProductionSheet: ignoreChampionshipProductionSheet,
+        locale: const Locale('en'),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -60,7 +64,11 @@ void main() {
     final cubit = buildChampionshipTestCubit();
     addTearDown(cubit.close);
     await tester.pumpWidget(
-      ChampionshipApp(cubit: cubit, locale: const Locale('ko')),
+      ChampionshipApp(
+        cubit: cubit,
+        openProductionSheet: ignoreChampionshipProductionSheet,
+        locale: const Locale('ko'),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -87,7 +95,11 @@ void main() {
     final cubit = buildChampionshipTestCubit();
     addTearDown(cubit.close);
     await tester.pumpWidget(
-      ChampionshipApp(cubit: cubit, locale: const Locale('en')),
+      ChampionshipApp(
+        cubit: cubit,
+        openProductionSheet: ignoreChampionshipProductionSheet,
+        locale: const Locale('en'),
+      ),
     );
     final compactContext = tester.element(
       find.byKey(const ValueKey('championship-demo-content')),
@@ -125,7 +137,13 @@ void main() {
 
         final cubit = buildChampionshipTestCubit();
         addTearDown(cubit.close);
-        await tester.pumpWidget(ChampionshipApp(cubit: cubit, locale: locale));
+        await tester.pumpWidget(
+          ChampionshipApp(
+            cubit: cubit,
+            openProductionSheet: ignoreChampionshipProductionSheet,
+            locale: locale,
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(

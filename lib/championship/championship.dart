@@ -14,3 +14,4 @@ export 'model/review_recipe_draft.dart';
 export 'sample/championship_sample_loader.dart';
 export 'view/championship_app.dart';
 export 'view/championship_demo_page.dart';
+export 'view/championship_result_panel.dart';

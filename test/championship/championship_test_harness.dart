@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:prep_book/championship/cubit/championship_demo_cubit.dart';
 import 'package:prep_book/championship/input/recipe_image_picker.dart';
@@ -8,9 +10,15 @@ import 'package:prep_book/championship/input/recipe_import_client.dart';
 import 'package:prep_book/championship/input/recipe_import_request.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/championship/sample/championship_sample_loader.dart';
+import 'package:prep_book/domain/domain.dart';
 
 const championshipFixturePath =
     'assets/championship/sample_croissant_draft.json';
+
+Future<void> ignoreChampionshipProductionSheet(
+  BuildContext context,
+  ProductionRun run,
+) async {}
 
 final class FileChampionshipAssetBundle extends CachingAssetBundle {
   @override

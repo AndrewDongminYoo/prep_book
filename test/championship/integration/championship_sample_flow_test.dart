@@ -25,7 +25,11 @@ void main() {
     final cubit = buildChampionshipTestCubit(client: client);
     addTearDown(cubit.close);
     await tester.pumpWidget(
-      ChampionshipApp(cubit: cubit, locale: const Locale('en')),
+      ChampionshipApp(
+        cubit: cubit,
+        openProductionSheet: ignoreChampionshipProductionSheet,
+        locale: const Locale('en'),
+      ),
     );
 
     await _tapVisible(tester, find.byKey(const ValueKey('source-sample')));

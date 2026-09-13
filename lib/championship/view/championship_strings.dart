@@ -207,4 +207,9 @@ final class ChampionshipStrings {
   String get warnings => isKorean ? '계산 경고' : 'Domain warnings';
   String get noWarnings =>
       isKorean ? '계산 경고가 없습니다.' : 'No calculation warnings.';
+  String get productionSheet =>
+      isKorean ? '생산 작업표 열기' : 'Open production sheet';
+  String get productionSheetFailure => isKorean
+      ? '생산 작업표를 열지 못했습니다.'
+      : 'The production sheet could not be opened.';
 }

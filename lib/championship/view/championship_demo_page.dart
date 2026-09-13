@@ -10,7 +10,9 @@ import 'package:prep_book/championship/view/championship_target_panel.dart';
 import 'package:prep_book/presentation/responsive/window_width_class.dart';
 
 class ChampionshipDemoPage extends StatelessWidget {
-  const ChampionshipDemoPage({super.key});
+  const ChampionshipDemoPage({required this.openProductionSheet, super.key});
+
+  final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
   Widget build(BuildContext context) {
@@ -32,11 +34,13 @@ class ChampionshipDemoPage extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1120),
                   child: !expanded
-                      ? const _CompactShell(
-                          key: ValueKey('championship-compact-layout'),
+                      ? _CompactShell(
+                          key: const ValueKey('championship-compact-layout'),
+                          openProductionSheet: openProductionSheet,
                         )
-                      : const _ExpandedShell(
-                          key: ValueKey('championship-expanded-layout'),
+                      : _ExpandedShell(
+                          key: const ValueKey('championship-expanded-layout'),
+                          openProductionSheet: openProductionSheet,
                         ),
                 ),
               ),
@@ -49,28 +53,39 @@ class ChampionshipDemoPage extends StatelessWidget {
 }
 
 class _CompactShell extends StatelessWidget {
-  const _CompactShell({super.key});
+  const _CompactShell({required this.openProductionSheet, super.key});
+
+  final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [_Introduction(), SizedBox(height: 32), _PhasePanel()],
+      children: [
+        const _Introduction(),
+        const SizedBox(height: 32),
+        _PhasePanel(openProductionSheet: openProductionSheet),
+      ],
     );
   }
 }
 
 class _ExpandedShell extends StatelessWidget {
-  const _ExpandedShell({super.key});
+  const _ExpandedShell({required this.openProductionSheet, super.key});
+
+  final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(flex: 2, child: _Introduction()),
-        SizedBox(width: 48),
-        Expanded(flex: 3, child: _PhasePanel()),
+        const Expanded(flex: 2, child: _Introduction()),
+        const SizedBox(width: 48),
+        Expanded(
+          flex: 3,
+          child: _PhasePanel(openProductionSheet: openProductionSheet),
+        ),
       ],
     );
   }
@@ -95,7 +110,9 @@ class _Introduction extends StatelessWidget {
 }
 
 class _PhasePanel extends StatelessWidget {
-  const _PhasePanel();
+  const _PhasePanel({required this.openProductionSheet});
+
+  final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
   Widget build(BuildContext context) {
@@ -131,23 +148,26 @@ class _PhasePanel extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        _CurrentPanel(state: state),
+        _CurrentPanel(state: state, openProductionSheet: openProductionSheet),
       ],
     );
   }
 }
 
 class _CurrentPanel extends StatelessWidget {
-  const _CurrentPanel({required this.state});
+  const _CurrentPanel({required this.state, required this.openProductionSheet});
 
   final ChampionshipDemoState state;
+  final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
   Widget build(BuildContext context) => switch (state.phase) {
     ChampionshipPhase.source => const ChampionshipSourcePanel(),
     ChampionshipPhase.review => const ChampionshipReviewPanel(),
     ChampionshipPhase.target => const ChampionshipTargetPanel(),
-    ChampionshipPhase.result => const ChampionshipResultPanel(),
+    ChampionshipPhase.result => ChampionshipResultPanel(
+      openProductionSheet: openProductionSheet,
+    ),
   };
 }
 

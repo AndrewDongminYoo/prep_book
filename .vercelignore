@@ -1,0 +1,16 @@
+android
+ios
+linux
+macos
+windows
+test
+coverage
+docs
+build
+.dart_tool
+.env*
+*.pem
+*.key
+*.db
+*.sqlite*
+*.pdf

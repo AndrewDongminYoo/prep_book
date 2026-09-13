@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:prep_book/championship/championship.dart';
+import 'package:prep_book/presentation/production_sheet/view/production_sheet_launcher.dart';
+import 'package:prep_book/presentation/production_sheet/view/production_sheet_platform.dart';
 
 void main() {
   runApp(const _ChampionshipRoot());
@@ -19,6 +21,9 @@ class _ChampionshipRoot extends StatefulWidget {
 class _ChampionshipRootState extends State<_ChampionshipRoot> {
   late final http.Client _httpClient;
   late final ChampionshipDemoCubit _cubit;
+  final _productionSheet = const ProductionSheetLauncher(
+    platform: PrintingProductionSheetPlatform(),
+  );
 
   @override
   void initState() {
@@ -50,5 +55,9 @@ class _ChampionshipRootState extends State<_ChampionshipRoot> {
   }
 
   @override
-  Widget build(BuildContext context) => ChampionshipApp(cubit: _cubit);
+  Widget build(BuildContext context) => ChampionshipApp(
+    cubit: _cubit,
+    openProductionSheet: (context, run) =>
+        _productionSheet.open(context, run: run),
+  );
 }

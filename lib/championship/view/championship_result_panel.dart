@@ -4,8 +4,13 @@ import 'package:prep_book/championship/cubit/championship_demo_cubit.dart';
 import 'package:prep_book/championship/view/championship_strings.dart';
 import 'package:prep_book/domain/domain.dart';
 
+typedef OpenChampionshipProductionSheet =
+    Future<void> Function(BuildContext context, ProductionRun run);
+
 class ChampionshipResultPanel extends StatelessWidget {
-  const ChampionshipResultPanel({super.key});
+  const ChampionshipResultPanel({required this.openProductionSheet, super.key});
+
+  final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +62,21 @@ class ChampionshipResultPanel extends StatelessWidget {
               for (final warning in run.result.warnings)
                 Text('• ${_warningLabel(warning, run)}'),
             const SizedBox(height: 24),
+            FilledButton.icon(
+              key: const ValueKey('result-production-sheet'),
+              onPressed: () async {
+                try {
+                  await openProductionSheet(context, run);
+                } on Object {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(strings.productionSheetFailure)),
+                  );
+                }
+              },
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              label: Text(strings.productionSheet),
+            ),
             TextButton(
               key: const ValueKey('result-back'),
               onPressed: cubit.back,

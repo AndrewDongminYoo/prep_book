@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/championship/championship.dart';
+import 'package:prep_book/domain/domain.dart';
 
 import '../championship_test_harness.dart';
 
@@ -18,7 +19,11 @@ Future<void> _pumpApp(
   addTearDown(tester.view.reset);
   addTearDown(cubit.close);
   await tester.pumpWidget(
-    ChampionshipApp(cubit: cubit, locale: const Locale('en')),
+    ChampionshipApp(
+      cubit: cubit,
+      openProductionSheet: ignoreChampionshipProductionSheet,
+      locale: const Locale('en'),
+    ),
   );
   await tester.pumpAndSettle();
 }
@@ -520,6 +525,62 @@ void main() {
       await tester.pumpAndSettle();
       await _tapVisible(tester, find.byKey(const ValueKey('result-reset')));
       expect(cubit.state.phase, ChampionshipPhase.source);
+    },
+  );
+
+  testWidgets(
+    'production sheet receives the identical run and failures recover',
+    (tester) async {
+      final cubit = buildChampionshipTestCubit();
+      await cubit.loadSample();
+      cubit
+        ..confirmAllUnambiguous()
+        ..updateReview(
+          (draft) => draft.editComponentUnit(2, 'g').confirmComponentUnit(2),
+        )
+        ..updateReview((draft) => draft.confirmComponentBehavior(3))
+        ..continueToTarget()
+        ..setTargetAmount('180')
+        ..calculate();
+      final run = cubit.state.run!;
+      final openedRuns = <ProductionRun>[];
+      var shouldFail = true;
+
+      tester.view
+        ..physicalSize = const Size(900, 1000)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      addTearDown(cubit.close);
+      await tester.pumpWidget(
+        ChampionshipApp(
+          cubit: cubit,
+          locale: const Locale('en'),
+          openProductionSheet: (_, openedRun) async {
+            openedRuns.add(openedRun);
+            if (shouldFail) {
+              shouldFail = false;
+              throw StateError('platform failure');
+            }
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final action = find.byKey(const ValueKey('result-production-sheet'));
+      await _tapVisible(tester, action);
+
+      expect(openedRuns, [same(run)]);
+      expect(cubit.state.phase, ChampionshipPhase.result);
+      expect(cubit.state.run, same(run));
+      expect(
+        find.text('The production sheet could not be opened.'),
+        findsOneWidget,
+      );
+
+      await _tapVisible(tester, action);
+      expect(openedRuns, [same(run), same(run)]);
+      expect(cubit.state.phase, ChampionshipPhase.result);
+      expect(cubit.state.run, same(run));
     },
   );
 }
