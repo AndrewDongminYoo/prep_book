@@ -14,10 +14,9 @@ void main() {
     final gateway = _RecordingLibraryBackupGateway(createResult: expected);
 
     final actual = await CreateLibraryBackup(gateway)();
-    final exposed = actual.bytes..[1] = 8;
 
     expect(actual, same(expected));
-    expect(exposed, [1, 8, 3]);
+    expect(() => actual.bytes[1] = 8, throwsUnsupportedError);
     expect(actual.bytes, [1, 2, 3]);
     expect(gateway.createCalls, 1);
   });

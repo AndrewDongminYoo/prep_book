@@ -38,6 +38,7 @@ void main() {
         },
       );
       expect(decoded.databaseBytes, databaseBytes);
+      expect(() => decoded.databaseBytes[0] = 9, throwsUnsupportedError);
       expect(decoded.databaseSchemaVersion, 1);
       expect(decoded.createdAtUtc, createdAtUtc);
     });

@@ -21,8 +21,8 @@ final class DecodedLibraryBackup {
 
   final Uint8List _databaseBytes;
 
-  /// A defensive copy of the SQLite database bytes.
-  Uint8List get databaseBytes => Uint8List.fromList(_databaseBytes);
+  /// An unmodifiable view of the owned SQLite database bytes.
+  Uint8List get databaseBytes => _databaseBytes.asUnmodifiableView();
 
   /// The schema version declared by the manifest.
   final int databaseSchemaVersion;

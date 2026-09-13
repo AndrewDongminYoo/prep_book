@@ -38,8 +38,8 @@ final class LibraryBackupFile {
 
   final Uint8List _bytes;
 
-  /// A defensive copy of the encoded archive.
-  Uint8List get bytes => Uint8List.fromList(_bytes);
+  /// An unmodifiable view of the owned encoded archive.
+  Uint8List get bytes => _bytes.asUnmodifiableView();
 
   /// The filename offered to the native save interface.
   final String suggestedName;
