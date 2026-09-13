@@ -8,8 +8,10 @@ environment:
   flutter: ^3.44.0
 
 dependencies:
+  archive: ^4.0.9
   bloc: ^9.2.1
   decimal: ^3.2.6
+  file_picker: ^12.3.0
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1
