@@ -592,7 +592,7 @@ piece` -> exact calculation. Assert `15` batches and checked totals. Assert
 `docs/notes/2026-09-20-ai-championship-submission.md`; change copy only when
 runtime evidence proves a defect.
 
-- [ ] **7.1 Correct repository status.** Update README so production-sheet
+- [x] **7.1 Correct repository status.** Update README so production-sheet
       export is no longer described as unimplemented. Add a championship section
       explaining optional variant, offline normal flavors, live-provider boundary,
       sample fallback, entrypoint/build command, and design/plan links. Add one
