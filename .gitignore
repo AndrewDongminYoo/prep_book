@@ -118,3 +118,6 @@ lib/l10n/gen/
 
 # Agent scratch workspace (ledgers, briefs, review packages)
 .superpowers/
+
+# API Keys
+.env
