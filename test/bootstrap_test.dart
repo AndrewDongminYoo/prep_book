@@ -323,6 +323,62 @@ void main() {
     },
   );
 
+  test('restored root shares the in-flight backup operation guard', () async {
+    RestoreLibraryBackup? restoreOperation;
+    Future<Object?>? concurrentCreateResult;
+    final archive = await _backupArchive(
+      '${directory.path}/source.db',
+      ingredientId: 'restored',
+    );
+
+    await bootstrap(
+      builder:
+          ({
+            required recipes,
+            required ingredients,
+            required runs,
+            required createLibraryBackup,
+            required restoreLibraryBackup,
+            required restored,
+            required restoreFailure,
+          }) {
+            restoreOperation ??= restoreLibraryBackup;
+            if (restored) {
+              concurrentCreateResult = createLibraryBackup().then<Object?>(
+                (_) => null,
+                onError: (Object error) => error,
+              );
+            }
+            return const SizedBox();
+          },
+      resolveDatabasePath: () async => databasePath,
+      factory: factory,
+      mount: (_) {},
+    );
+
+    await restoreOperation!(archive);
+
+    final result = await concurrentCreateResult;
+    expect(
+      result,
+      isA<LibraryBackupException>()
+          .having(
+            (error) => error.kind,
+            'kind',
+            LibraryBackupFailureKind.saveFailed,
+          )
+          .having(
+            (error) => error.cause,
+            'cause',
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'A library backup operation is already running.',
+            ),
+          ),
+    );
+  });
+
   testWidgets('restore replaces retained root state', (tester) async {
     final previousFlutterError = FlutterError.onError;
     addTearDown(() => FlutterError.onError = previousFlutterError);

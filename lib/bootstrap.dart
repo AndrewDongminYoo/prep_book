@@ -155,6 +155,7 @@ Future<void> _runStartup({
     final validator = BackupDatabaseValidator(factory: factory);
     const codec = BackupArchiveCodec();
     late DatabaseSession session;
+    late final DatabaseLibraryBackupGateway gateway;
     var hasMountedRoot = false;
 
     Future<void> buildAndMount(
@@ -167,19 +168,6 @@ Future<void> _runStartup({
       required bool restored,
       required LibraryBackupFailureKind? restoreFailure,
     }) async {
-      final gateway = DatabaseLibraryBackupGateway(
-        createSnapshot: () => DatabaseSnapshotter(
-          connection: session.connection,
-          databasePath: databasePath,
-          factory: factory,
-          files: files,
-          validateCandidate: validator.validate,
-        ).create(),
-        encodeArchive: codec.encode,
-        decodeArchive: codec.decode,
-        restoreDatabase: session.restore,
-        now: DateTime.now,
-      );
       final root = await builder(
         recipes: repositories.recipes,
         ingredients: repositories.ingredients,
@@ -217,6 +205,19 @@ Future<void> _runStartup({
       validateCandidate: validator.validate,
       activate: activate,
       mountRecoveryFailure: mountFailure,
+    );
+    gateway = DatabaseLibraryBackupGateway(
+      createSnapshot: () => DatabaseSnapshotter(
+        connection: session.connection,
+        databasePath: databasePath,
+        factory: factory,
+        files: files,
+        validateCandidate: validator.validate,
+      ).create(),
+      encodeArchive: codec.encode,
+      decodeArchive: codec.decode,
+      restoreDatabase: session.restore,
+      now: DateTime.now,
     );
     final repositories = _repositories(initialConnection);
     await prepare?.call(
