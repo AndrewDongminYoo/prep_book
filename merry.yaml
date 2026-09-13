@@ -64,6 +64,11 @@ coverage:
   (description): Runs the suite with coverage the way CI decides it.
   (scripts): very_good test --coverage --test-randomize-ordering-seed random
 
+api:
+  test:
+    (description): Runs the dependency-free extraction endpoint tests.
+    (scripts): npm run test:api
+
 postcoverage:
   (description): Generates an HTML coverage report from the coverage data.
   (scripts): genhtml coverage/lcov.info -o coverage/html --quiet

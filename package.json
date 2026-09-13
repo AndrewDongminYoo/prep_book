@@ -1,0 +1,8 @@
+{
+  "name": "prep-book-ai-endpoint",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:api": "node --test api/lib/extract-recipe-handler_test.mjs"
+  }
+}

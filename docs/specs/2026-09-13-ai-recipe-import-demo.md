@@ -109,7 +109,7 @@ rate-limited, or unconfigured.
 ### Image
 
 - Exactly one `image/jpeg`, `image/png`, or `image/webp` file.
-- Maximum decoded size `8 MiB`.
+- Maximum decoded size `3 MiB`, which keeps its base64 JSON request below the [Vercel Function `4.5 MB` payload limit](https://vercel.com/docs/functions/limitations#request-body-size).
 - The browser reads the file into memory and sends one data URL.
 - The browser does not retain the file after reset or page close.
 
@@ -275,18 +275,18 @@ Calculation remains disabled until all of these conditions hold:
 The competition adapter resolves only a small explicit alias table.
 It does not guess from an ingredient name.
 
-| Input aliases | Domain unit |
-| --- | --- |
-| `mg`, `milligram`, `밀리그램` | `Unit.milligram` |
-| `g`, `gram`, `grams`, `그램` | `Unit.gram` |
-| `kg`, `kilogram`, `kilograms`, `킬로그램` | `Unit.kilogram` |
-| `ml`, `milliliter`, `milliliters`, `밀리리터` | `Unit.milliliter` |
-| `l`, `liter`, `liters`, `L`, `리터` | `Unit.liter` |
-| `tsp`, `teaspoon`, `티스푼` | `Unit.teaspoon` |
-| `tbsp`, `tablespoon`, `테이블스푼`, `큰술` | `Unit.tablespoon` |
-| `portion`, `portions`, `인분` | `Unit.portion` |
-| `piece`, `pieces`, `item`, `items`, `ea`, `개` | `Unit.count('piece')` |
-| `tray`, `trays`, `판` | `Unit.namedYield('tray')` |
+| Input aliases                                  | Domain unit               |
+| ---------------------------------------------- | ------------------------- |
+| `mg`, `milligram`, `밀리그램`                  | `Unit.milligram`          |
+| `g`, `gram`, `grams`, `그램`                   | `Unit.gram`               |
+| `kg`, `kilogram`, `kilograms`, `킬로그램`      | `Unit.kilogram`           |
+| `ml`, `milliliter`, `milliliters`, `밀리리터`  | `Unit.milliliter`         |
+| `l`, `liter`, `liters`, `L`, `리터`            | `Unit.liter`              |
+| `tsp`, `teaspoon`, `티스푼`                    | `Unit.teaspoon`           |
+| `tbsp`, `tablespoon`, `테이블스푼`, `큰술`     | `Unit.tablespoon`         |
+| `portion`, `portions`, `인분`                  | `Unit.portion`            |
+| `piece`, `pieces`, `item`, `items`, `ea`, `개` | `Unit.count('piece')`     |
+| `tray`, `trays`, `판`                          | `Unit.namedYield('tray')` |
 
 Unknown text remains unresolved.
 Count and yield-only units convert only to the identical symbol, exactly as the
@@ -370,6 +370,8 @@ The endpoint:
 - returns a stable error code and safe message;
 - uses an abort timeout of `25` seconds;
 - returns `Cache-Control: no-store`.
+
+The configured origin is a browser-origin defense, not authentication. Before public deployment, a Vercel WAF rule rate-limits `POST /api/extract-recipe` so forged clients cannot turn the server-held provider key into unbounded access.
 
 The browser copy must state the precise boundary:
 

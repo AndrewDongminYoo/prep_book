@@ -67,8 +67,7 @@ variant-only until separate kitchen-user validation justifies a product change.
 - Support Flutter Web only for the championship entrypoint.
 - Do not initialize SQLite or use persistence repositories in the variant.
 - Keep source text, image bytes, drafts, and runs in memory only.
-- Accept text up to `20,000` Unicode scalar values or one JPEG, PNG, or WebP
-  image up to `8 MiB` decoded.
+- Accept text up to `20,000` Unicode scalar values or one JPEG, PNG, or WebP image up to `3 MiB` decoded.
 - Exclude PDF, spreadsheet, document, HEIC, URL, camera, and multi-image input.
 - Keep sample mode available when the endpoint is absent, failing, or
   rate-limited.
@@ -84,6 +83,7 @@ variant-only until separate kitchen-user validation justifies a product change.
 - Keep `OPENAI_API_KEY` and `OPENAI_MODEL` server-side.
 - Do not log submitted text, image data, extracted fields, or provider output.
 - Return `Cache-Control: no-store` from the extraction endpoint.
+- Treat `ALLOWED_ORIGIN` as browser-origin defense, not authentication, and require a Vercel WAF rate limit before public deployment.
 - Preserve edits across retryable failures and responsive layout changes.
 - Discard all state on Reset and browser reload.
 - Reuse existing responsive thresholds at `599`, `600`, `839`, and `840` logical
@@ -331,37 +331,36 @@ Return the version `1` draft on success. Return only stable safe error codes:
 `unsupported_source`, `source_too_large`, `service_unconfigured`,
 `service_busy`, `service_timeout`, `invalid_model_output`, or `service_failure`.
 
-- [ ] **3.1 Create the dependency-free Node test surface.** Use ESM and
+- [x] **3.1 Create the dependency-free Node test surface.** Use ESM and
       `node --test api/lib/extract-recipe-handler_test.mjs`; add no runtime package.
 
-- [ ] **3.2 Write failing input-validation tests.** Inject provider fetch,
+- [x] **3.2 Write failing input-validation tests.** Inject provider fetch,
       environment, logger, and timeout. Cover method, content type, malformed/extra
       JSON, empty/over-limit text, unsupported/over-limit image, locale, missing
       key, origin mismatch, and `Cache-Control: no-store`.
 
-- [ ] **3.3 Implement local validation.** Count text with `[...text].length`.
+- [x] **3.3 Implement local validation.** Count text with `[...text].length`.
       Validate an anchored image data URL, decode only its base64 payload, enforce
-      the `8 MiB` decoded limit, and reject invalid requests before provider access.
+      the `3 MiB` decoded limit, and reject invalid requests before provider access.
 
-- [ ] **3.4 Define one strict JSON Schema.** Set
+- [x] **3.4 Define one strict JSON Schema.** Set
       `additionalProperties: false` on every object, require all keys, keep
       quantities nullable strings, and close confidence/behavior enums. The
       instruction must say: use null instead of guessing; copy evidence; report
       ambiguity; do not calculate, scale, convert, infer density, search, or generate
       a new recipe.
 
-- [ ] **3.5 Test and implement the provider request.** POST to Responses API with
+- [x] **3.5 Test and implement the provider request.** POST to Responses API with
       configured model, strict `text.format`, `store: false`, low reasoning effort,
       no tools/files/background/streaming, and either text or one high-detail image.
-      Abort at `25` seconds. Parse only `output_text` message content and revalidate
-      it before returning. Never return the raw provider response.
+      Bound output tokens and abort at `25` seconds, including provider body consumption. Parse only `output_text` message content and revalidate it before returning. Never return the raw provider response.
 
-- [ ] **3.6 Test and implement safe failures and logs.** Map timeout, `429`,
+- [x] **3.6 Test and implement safe failures and logs.** Map timeout, `429`,
       provider failure, missing/malformed output, and unexpected exceptions.
       Permit logs to contain only request id, status, latency, and error category.
       Prove logs contain no source, image data, ingredient names, or output.
 
-- [ ] **3.7 Add endpoint entrypoint and command.** Export the configured POST
+- [x] **3.7 Add endpoint entrypoint and command.** Export the configured POST
       handler and add `merry api test`. Run:
 
   ```sh
@@ -371,7 +370,7 @@ Return the version `1` draft on success. Return only stable safe error codes:
   node --check api/lib/extract-recipe-handler.mjs
   ```
 
-- [ ] **3.8 Inspect and commit.** Search staged files for `sk-`, environment
+- [x] **3.8 Inspect and commit.** Search staged files for `sk-`, environment
       assignments, source text, and image data. Commit:
 
   ```sh
@@ -613,8 +612,7 @@ runtime evidence proves a defect.
 
 - [ ] **7.3 Configure secrets outside the repository.** Set
       `OPENAI_API_KEY`, approved `OPENAI_MODEL`, and final `ALLOWED_ORIGIN`
-      interactively without echoing the key. Search tracked and untracked files for
-      key patterns before deployment.
+      interactively without echoing the key. Configure and verify a Vercel WAF rate limit for `POST /api/extract-recipe`. Search tracked and untracked files for key patterns before deployment.
 
 - [ ] **7.4 Deploy prebuilt output.** Run:
 
