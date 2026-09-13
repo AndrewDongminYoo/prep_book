@@ -548,7 +548,10 @@ piece` -> exact calculation. Assert `15` batches and checked totals. Assert
   suppressed, Blob `13044` bytes), Back preserving the run, and `0` requests to
   `/api/` over `24` server requests. The first pass found the preview failing
   after a window resize and share producing a `0` byte PDF; commit `09a8f30`
-  fixes both. Left for the operator, because the OS print dialog blocks browser
+  fixes both in `lib/presentation/production_sheet/view/production_sheet_platform.dart`,
+  the one change on this branch outside the variant fence, because the defect
+  is in the shipping adapter and only shows on the web. Left for the operator,
+  because the OS print dialog blocks browser
   automation: serve `build/web`, run the sample to Result, open the production
   sheet, press 인쇄, and cancel at the system dialog.
 
