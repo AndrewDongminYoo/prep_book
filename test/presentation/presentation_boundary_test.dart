@@ -24,11 +24,15 @@ const _allowedUriPrefixes = <String>[
   'package:bloc/',
   'package:flutter/',
   'package:flutter_bloc/',
+  'package:file_picker/',
   'package:intl/',
   'package:meta/',
   'package:printing/',
   'package:prep_book/export/',
 ];
+
+const _filePickerAdapterPath =
+    'lib/presentation/library_backup/view/library_backup_platform.dart';
 
 /// Matches a whole `import`/`export` directive, from the keyword to its
 /// terminating `;`. A conditional directive
@@ -138,5 +142,15 @@ void main() {
       }
     }
     expect(offenders, isEmpty);
+  });
+
+  test('only the native backup adapter imports file_picker', () {
+    final importers = <String>[];
+    for (final file in _dartFilesUnder('lib/presentation')) {
+      if (file.readAsStringSync().contains('package:file_picker/')) {
+        importers.add(file.path);
+      }
+    }
+    expect(importers, [_filePickerAdapterPath]);
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/persistence/database.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -136,4 +138,27 @@ void main() {
       expect(rows, hasLength(2));
     },
   );
+
+  test('singleInstance false opens independently owned handles', () async {
+    final directory = await Directory.systemTemp.createTemp('prep-book-db-');
+    addTearDown(() => directory.delete(recursive: true));
+    final databasePath = '${directory.path}/library.db';
+    final first = await openPrepBookDatabase(
+      path: databasePath,
+      factory: databaseFactoryFfi,
+      singleInstance: false,
+    );
+    final second = await openPrepBookDatabase(
+      path: databasePath,
+      factory: databaseFactoryFfi,
+      singleInstance: false,
+    );
+    addTearDown(() async {
+      if (second.isOpen) await second.close();
+    });
+
+    expect(second, isNot(same(first)));
+    await first.close();
+    expect(await second.getVersion(), currentSchemaVersion);
+  });
 }

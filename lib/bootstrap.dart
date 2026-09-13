@@ -5,6 +5,8 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:prep_book/app/app.dart';
 import 'package:prep_book/application/application.dart';
+import 'package:prep_book/backup/backup.dart';
+import 'package:prep_book/backup/backup_files.dart';
 import 'package:prep_book/persistence/persistence.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -55,56 +57,85 @@ class AppBlocObserver extends BlocObserver {
 /// it.
 Future<void>? _startupInFlight;
 
-/// Runs the flavor-independent setup, then the widget [builder] returns.
+/// Builds one application root from active repositories and backup use cases.
+typedef PrepBookAppBuilder =
+    FutureOr<Widget> Function({
+      required RecipeRepository recipes,
+      required IngredientRepository ingredients,
+      required ProductionRunRepository runs,
+      required CreateLibraryBackup createLibraryBackup,
+      required RestoreLibraryBackup restoreLibraryBackup,
+      required bool restored,
+      required LibraryBackupFailureKind? restoreFailure,
+    });
+
+/// Performs flavor-specific database preparation during initial startup only.
+typedef PrepareDatabase =
+    FutureOr<void> Function({
+      required RecipeRepository recipes,
+      required IngredientRepository ingredients,
+      required ProductionRunRepository runs,
+    });
+
+/// Resolves the live SQLite file used by one startup attempt.
+typedef ResolveDatabasePath = Future<String> Function();
+
+/// Mounts one complete application root.
+typedef MountRoot = void Function(Widget widget);
+
+/// Opens the database and mounts a rebuildable application root.
 ///
-/// [builder] receives the three repositories rather than the open database
-/// or a bare path, because that is what every current caller needs: the app
-/// builds its use cases from them and the development entrypoint seeds
-/// through them. Opening the database here rather than in an entrypoint is
-/// what keeps the three flavors from each carrying a copy of that, and it
-/// is what keeps `sqflite` out of them.
-///
-/// Everything that can fail before a widget tree exists is caught here and
-/// answered with [StartupFailureApp]. `FlutterError.onError` does not cover
-/// it: that handler is for errors the framework raises while building,
-/// laying out or painting, and none of this has reached a frame yet. Left
-/// uncaught, the exception escapes `main`, `runApp` is never called, and
-/// the launch screen stays up with no message and no way out.
-///
-/// A call made while another run is still in flight joins that run instead
-/// of starting a second one; see [_startupInFlight].
-Future<void> bootstrap(
-  FutureOr<Widget> Function(
-    RecipeRepository recipes,
-    IngredientRepository ingredients,
-    ProductionRunRepository runs,
-  )
-  builder,
-) {
+/// A call made while another startup run is in flight joins that run.
+Future<void> bootstrap({
+  required PrepBookAppBuilder builder,
+  PrepareDatabase? prepare,
+  ResolveDatabasePath? resolveDatabasePath,
+  DatabaseFactory? factory,
+  MountRoot? mount,
+}) {
   final inFlight = _startupInFlight;
   if (inFlight != null) return inFlight;
 
-  final run = _runStartup(builder);
+  final activeFactory = factory ?? databaseFactory;
+  final pathResolver =
+      resolveDatabasePath ??
+      () async =>
+          '${await activeFactory.getDatabasesPath()}/$_databaseFileName';
+  final rootMount = mount ?? runApp;
+  late final VoidCallback retry;
+  retry = () {
+    unawaited(
+      bootstrap(
+        builder: builder,
+        prepare: prepare,
+        resolveDatabasePath: resolveDatabasePath,
+        factory: factory,
+        mount: mount,
+      ),
+    );
+  };
+  final run = _runStartup(
+    builder: builder,
+    prepare: prepare,
+    resolveDatabasePath: pathResolver,
+    factory: activeFactory,
+    mount: rootMount,
+    retry: retry,
+  );
   _startupInFlight = run;
   return run.whenComplete(() {
     _startupInFlight = null;
   });
 }
 
-/// The startup sequence itself. Separate from [bootstrap] so the guard
-/// there reads as one statement and cannot be skipped by an early return
-/// inside the sequence.
-Future<void> _runStartup(
-  FutureOr<Widget> Function(
-    RecipeRepository recipes,
-    IngredientRepository ingredients,
-    ProductionRunRepository runs,
-  )
-  builder,
-) async {
-  // Resolving the databases directory is a platform-channel call, so the
-  // binding has to exist before it. `runApp` initializes it too, but that
-  // is after the database is already open.
+Future<void> _runStartup({
+  required PrepBookAppBuilder builder,
+  required PrepareDatabase? prepare,
+  required ResolveDatabasePath resolveDatabasePath,
+  required DatabaseFactory factory,
+  required MountRoot mount,
+  required VoidCallback retry,
+}) async {
   WidgetsFlutterBinding.ensureInitialized();
 
   FlutterError.onError = (details) {
@@ -113,39 +144,103 @@ Future<void> _runStartup(
 
   Bloc.observer = const AppBlocObserver();
 
-  final Widget app;
+  Database? initialConnection;
   try {
-    // Joined with a literal separator rather than through `package:path`,
-    // which this project does not depend on directly. Both supported
-    // platforms are POSIX.
-    final databasesPath = await getDatabasesPath();
-    final db = await openPrepBookDatabase(
-      path: '$databasesPath/$_databaseFileName',
+    final databasePath = await resolveDatabasePath();
+    initialConnection = await openPrepBookDatabase(
+      path: databasePath,
+      factory: factory,
     );
-    // Inside the guard as well as the open, because the development
-    // entrypoint seeds here and a failed seed leaves the same blank
-    // screen. `runApp` itself stays outside it: once a tree is mounted,
-    // replacing it with a failure screen would be worse than the failure.
-    app = await builder(
-      SqfliteRecipeRepository(db),
-      SqfliteIngredientRepository(db),
-      SqfliteProductionRunRepository(db),
-    );
-  } on Object catch (error, stackTrace) {
-    log('startup failed', error: error, stackTrace: stackTrace);
-    runApp(
-      StartupFailureApp(
-        onRetry: () {
-          // Whole sequence again, not just the open: the retry has to end
-          // in a `runApp`, and this is the function that does one. Through
-          // `bootstrap` rather than `_runStartup`, because that is where
-          // the in-flight guard is and repeated taps arrive here.
-          unawaited(bootstrap(builder));
-        },
-      ),
-    );
-    return;
-  }
+    const files = IoBackupFiles();
+    final validator = BackupDatabaseValidator(factory: factory);
+    const codec = BackupArchiveCodec();
+    late DatabaseSession session;
+    var hasMountedRoot = false;
 
-  runApp(app);
+    Future<void> buildAndMount(
+      ({
+        RecipeRepository recipes,
+        IngredientRepository ingredients,
+        ProductionRunRepository runs,
+      })
+      repositories, {
+      required bool restored,
+      required LibraryBackupFailureKind? restoreFailure,
+    }) async {
+      final gateway = DatabaseLibraryBackupGateway(
+        createSnapshot: () => DatabaseSnapshotter(
+          connection: session.connection,
+          databasePath: databasePath,
+          factory: factory,
+          files: files,
+          validateCandidate: validator.validate,
+        ).create(),
+        encodeArchive: codec.encode,
+        decodeArchive: codec.decode,
+        restoreDatabase: session.restore,
+        now: DateTime.now,
+      );
+      final root = await builder(
+        recipes: repositories.recipes,
+        ingredients: repositories.ingredients,
+        runs: repositories.runs,
+        createLibraryBackup: CreateLibraryBackup(gateway),
+        restoreLibraryBackup: RestoreLibraryBackup(gateway),
+        restored: restored,
+        restoreFailure: restoreFailure,
+      );
+      final mountedRoot = hasMountedRoot
+          ? KeyedSubtree(key: UniqueKey(), child: root)
+          : root;
+      hasMountedRoot = true;
+      mount(mountedRoot);
+    }
+
+    Future<void> activate(Database connection, {required bool restored}) =>
+        buildAndMount(
+          _repositories(connection),
+          restored: restored,
+          restoreFailure: restored
+              ? null
+              : LibraryBackupFailureKind.restoreFailed,
+        );
+
+    void mountFailure() {
+      mount(StartupFailureApp(onRetry: retry));
+    }
+
+    session = DatabaseSession(
+      connection: initialConnection,
+      databasePath: databasePath,
+      factory: factory,
+      files: files,
+      validateCandidate: validator.validate,
+      activate: activate,
+      mountRecoveryFailure: mountFailure,
+    );
+    final repositories = _repositories(initialConnection);
+    await prepare?.call(
+      recipes: repositories.recipes,
+      ingredients: repositories.ingredients,
+      runs: repositories.runs,
+    );
+    await buildAndMount(repositories, restored: false, restoreFailure: null);
+  } on Object catch (error, stackTrace) {
+    if (initialConnection?.isOpen ?? false) {
+      await initialConnection!.close();
+    }
+    log('startup failed', error: error, stackTrace: stackTrace);
+    mount(StartupFailureApp(onRetry: retry));
+  }
 }
+
+({
+  RecipeRepository recipes,
+  IngredientRepository ingredients,
+  ProductionRunRepository runs,
+})
+_repositories(Database db) => (
+  recipes: SqfliteRecipeRepository(db),
+  ingredients: SqfliteIngredientRepository(db),
+  runs: SqfliteProductionRunRepository(db),
+);
