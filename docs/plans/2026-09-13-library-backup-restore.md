@@ -28,7 +28,7 @@ The composition root owns the live connection and remount callback, while one pr
 
 ## Global Constraints
 
-- Work in `/Users/dongminyu/Development/01_personal/prep_book` without creating a task worktree.
+- Work in the repository root without creating a task worktree.
 - Do not stage, commit, push, merge, publish, or install on a physical device without separate authority.
 - Keep the archive to exactly `manifest.json` and `library.db` as regular root files.
 - Limit both the selected archive and uncompressed database entry to `256 MiB` before materialization.
@@ -422,7 +422,7 @@ Run:
 flutter test test/backup/database_session_test.dart
 ```
 
-## Task 6: Compose the gateway and make bootstrap rebuildable
+## Task 6: Compose the gateway and rebuild after restore
 
 **Files:**
 
@@ -718,9 +718,9 @@ Keep the edit limited to backup and restore status and verification evidence.
 Run:
 
 ```sh
-git -C /Users/dongminyu/Development/01_personal/prep_book status --short
-git -C /Users/dongminyu/Development/01_personal/prep_book diff --stat
-git -C /Users/dongminyu/Development/01_personal/prep_book diff --check
+git status --short
+git diff --stat
+git diff --check
 ```
 
 Inspect staged, unstaged, and untracked paths separately.
