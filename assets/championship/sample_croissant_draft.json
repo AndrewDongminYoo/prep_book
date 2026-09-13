@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "sourceKind": "sample",
+  "recipe": {
+    "name": {
+      "value": "Croissant dough",
+      "evidence": "Croissant dough",
+      "confidence": "high",
+      "issues": []
+    },
+    "baseYield": {
+      "amount": {
+        "value": "24",
+        "evidence": "Makes 24 croissants.",
+        "confidence": "high",
+        "issues": []
+      },
+      "unit": {
+        "value": "piece",
+        "evidence": "Makes 24 croissants.",
+        "confidence": "high",
+        "issues": []
+      }
+    },
+    "maxBatchYield": {
+      "amount": {
+        "value": "12",
+        "evidence": "Maximum batch: 12 pieces.",
+        "confidence": "high",
+        "issues": []
+      },
+      "unit": {
+        "value": "piece",
+        "evidence": "Maximum batch: 12 pieces.",
+        "confidence": "high",
+        "issues": []
+      }
+    },
+    "preparationNotes": [
+      {
+        "value": "Rest 20 minutes between folds.",
+        "evidence": "Rest 20 minutes between folds.",
+        "confidence": "high",
+        "issues": []
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": {
+        "value": "Flour",
+        "evidence": "Flour 1000 g",
+        "confidence": "high",
+        "issues": []
+      },
+      "amount": {
+        "value": "1000",
+        "evidence": "Flour 1000 g",
+        "confidence": "high",
+        "issues": []
+      },
+      "unit": {
+        "value": "g",
+        "evidence": "Flour 1000 g",
+        "confidence": "high",
+        "issues": []
+      },
+      "behavior": {
+        "value": "proportional",
+        "evidence": "Flour 1000 g",
+        "confidence": "high",
+        "issues": []
+      },
+      "note": null
+    },
+    {
+      "name": {
+        "value": "Butter",
+        "evidence": "Butter 500 g",
+        "confidence": "high",
+        "issues": []
+      },
+      "amount": {
+        "value": "500",
+        "evidence": "Butter 500 g",
+        "confidence": "high",
+        "issues": []
+      },
+      "unit": {
+        "value": "g",
+        "evidence": "Butter 500 g",
+        "confidence": "high",
+        "issues": []
+      },
+      "behavior": {
+        "value": "proportional",
+        "evidence": "Butter 500 g",
+        "confidence": "high",
+        "issues": []
+      },
+      "note": null
+    },
+    {
+      "name": {
+        "value": "Water",
+        "evidence": "Water 480",
+        "confidence": "high",
+        "issues": []
+      },
+      "amount": {
+        "value": "480",
+        "evidence": "Water 480",
+        "confidence": "high",
+        "issues": []
+      },
+      "unit": {
+        "value": null,
+        "evidence": "Water 480",
+        "confidence": "low",
+        "issues": ["The source does not state a unit."]
+      },
+      "behavior": {
+        "value": "proportional",
+        "evidence": "Water 480",
+        "confidence": "medium",
+        "issues": []
+      },
+      "note": null
+    },
+    {
+      "name": {
+        "value": "Flour",
+        "evidence": "Flour for dusting, as needed.",
+        "confidence": "high",
+        "issues": []
+      },
+      "amount": {
+        "value": null,
+        "evidence": "Flour for dusting, as needed.",
+        "confidence": "high",
+        "issues": []
+      },
+      "unit": {
+        "value": null,
+        "evidence": "Flour for dusting, as needed.",
+        "confidence": "high",
+        "issues": []
+      },
+      "behavior": {
+        "value": "manual",
+        "evidence": "Flour for dusting, as needed.",
+        "confidence": "high",
+        "issues": []
+      },
+      "note": {
+        "value": "For dusting the bench, as needed.",
+        "evidence": "Flour for dusting, as needed.",
+        "confidence": "high",
+        "issues": []
+      }
+    }
+  ]
+}

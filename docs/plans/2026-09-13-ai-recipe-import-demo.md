@@ -256,47 +256,47 @@ final class ChampionshipRunBuilder {
 }
 ```
 
-- [ ] **2.1 Add one rights-cleared fixture.** Create version `1` sample JSON for
+- [x] **2.1 Add one rights-cleared fixture.** Create version `1` sample JSON for
       `Croissant dough`: base `24 piece`, maximum batch `12 piece`, flour `1000 g`,
       butter `500 g`, water `480` with null unit and blocking issue, manual dusting
       flour, and one preparation note. Register it as an asset. Production and tests
       must load this exact file; do not duplicate the sample in Dart.
 
-- [ ] **2.2 Write strict decoder tests.** Assert exact fixture values and
+- [x] **2.2 Write strict decoder tests.** Assert exact fixture values and
       round-trip behavior. Reject schema version other than `1`, JSON numeric
       quantities, missing `issues`, unknown confidence/behavior, numeric manual
       amount, and unknown properties. Expected: RED before the model exists.
 
-- [ ] **2.3 Implement immutable extraction models.** Validate exact property
+- [x] **2.3 Implement immutable extraction models.** Validate exact property
       sets, preserve evidence verbatim, keep absent values as null, and return
       unmodifiable issue and component collections.
 
-- [ ] **2.4 Test and implement explicit unit resolution.** Cover every alias in
+- [x] **2.4 Test and implement explicit unit resolution.** Cover every alias in
       the design. Normalize trim and lowercase only. Reject `cup`, `oz`, and unknown
       units. Never infer from ingredient name.
 
-- [ ] **2.5 Test and implement review state.** No field starts confirmed.
+- [x] **2.5 Test and implement review state.** No field starts confirmed.
       Editing clears confirmation. Bulk confirmation accepts only present, locally
       valid, issue-free values. The ambiguous water unit and every manual line
       require explicit operator action.
 
-- [ ] **2.6 Test and implement verification.** Reject blank names, non-positive
+- [x] **2.6 Test and implement verification.** Reject blank names, non-positive
       yield, unsupported/incompatible units, empty components, unconfirmed
       behavior, invalid manual/non-manual quantities, and unresolved issues. Return
       `VerifiedRecipeDraft` only when every required value is confirmed. Do not
       construct domain objects here.
 
-- [ ] **2.7 Test and implement exact domain mapping.** Create stable ordered ids,
+- [x] **2.7 Test and implement exact domain mapping.** Create stable ordered ids,
       parse with `Quantity.parse`, inject timestamps, and map to revision-1 `Recipe`,
       `Ingredient`, and `RecipeComponent` values. Never accept provider ids.
 
-- [ ] **2.8 Test and implement the run builder.** For `180 piece`, assert `15`
+- [x] **2.8 Test and implement the run builder.** For `180 piece`, assert `15`
       batches and totals `7500 g` flour, `3750 g` butter, `3600 g` water, plus a
       manual line with null total. Test invalid decimal, zero target, unsupported or
       incompatible target unit, and more than `1000` batches. Construct an
       in-memory `ProductionRun`; call no application use case or repository.
 
-- [ ] **2.9 Prove the final sample path and commit.** Load through injected
+- [x] **2.9 Prove the final sample path and commit.** Load through injected
       `AssetBundle`, create review state, correct water to `g`, confirm values,
       verify, map, and calculate. Prove zero HTTP/persistence calls. Run:
 

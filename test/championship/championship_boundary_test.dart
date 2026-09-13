@@ -21,12 +21,14 @@ const _championshipBannedSubstrings = <String>[
   'dart:io',
   'package:sqflite',
   'package:prep_book/bootstrap.dart',
+  'package:prep_book/application/',
   'package:prep_book/persistence/',
   'bootstrap(',
   'IngredientRepository',
   'RecipeRepository',
   'ProductionRunRepository',
   'OPENAI_API_KEY',
+  'HttpClient',
 ];
 
 final _directiveStatement = RegExp(r'\b(?:import|export)\b[^;]*;');

@@ -1,3 +1,10 @@
 export 'cubit/championship_demo_cubit.dart';
+export 'import/championship_recipe_mapper.dart';
+export 'import/championship_run_builder.dart';
+export 'import/recipe_draft_verifier.dart';
+export 'import/unit_alias_resolver.dart';
+export 'model/extracted_recipe_draft.dart';
+export 'model/review_recipe_draft.dart';
+export 'sample/championship_sample_loader.dart';
 export 'view/championship_app.dart';
 export 'view/championship_demo_page.dart';
