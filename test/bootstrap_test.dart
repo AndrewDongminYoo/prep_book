@@ -261,6 +261,35 @@ void main() {
     expect(mounts.last, isA<SizedBox>());
   });
 
+  test('database close failure does not suppress startup failure UI', () async {
+    final closeError = StateError('database close failed');
+    final mounts = <Widget>[];
+    final closeFailingFactory = _RecordingDatabaseFactory(
+      databaseFactoryFfi,
+      wrapDatabase: (database) =>
+          _CloseFailingDatabase(database, closeError: closeError),
+    );
+
+    await bootstrap(
+      builder:
+          ({
+            required recipes,
+            required ingredients,
+            required runs,
+            required createLibraryBackup,
+            required restoreLibraryBackup,
+            required restored,
+            required restoreFailure,
+          }) => throw StateError('builder failed'),
+      resolveDatabasePath: () async => databasePath,
+      factory: closeFailingFactory,
+      mount: mounts.add,
+    );
+
+    expect(mounts, hasLength(1));
+    expect(mounts.single, isA<StartupFailureApp>());
+  });
+
   test(
     'restore rebuilds repositories, skips prepare, and mounts fresh root',
     () async {
@@ -548,15 +577,20 @@ Future<Uint8List> _backupArchive(
 }
 
 final class _RecordingDatabaseFactory implements DatabaseFactory {
-  _RecordingDatabaseFactory(this._delegate);
+  _RecordingDatabaseFactory(this._delegate, {this.wrapDatabase});
 
   final DatabaseFactory _delegate;
+  final Database Function(Database database)? wrapDatabase;
   int openCalls = 0;
 
   @override
-  Future<Database> openDatabase(String path, {OpenDatabaseOptions? options}) {
+  Future<Database> openDatabase(
+    String path, {
+    OpenDatabaseOptions? options,
+  }) async {
     openCalls++;
-    return _delegate.openDatabase(path, options: options);
+    final database = await _delegate.openDatabase(path, options: options);
+    return wrapDatabase?.call(database) ?? database;
   }
 
   @override
@@ -579,4 +613,20 @@ final class _RecordingDatabaseFactory implements DatabaseFactory {
   @override
   Future<void> writeDatabaseBytes(String path, Uint8List bytes) =>
       _delegate.writeDatabaseBytes(path, bytes);
+}
+
+final class _CloseFailingDatabase implements Database {
+  const _CloseFailingDatabase(this._delegate, {required this.closeError});
+
+  final Database _delegate;
+  final Object closeError;
+
+  @override
+  bool get isOpen => _delegate.isOpen;
+
+  @override
+  Future<void> close() => Future<void>.error(closeError);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

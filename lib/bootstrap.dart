@@ -228,7 +228,15 @@ Future<void> _runStartup({
     await buildAndMount(repositories, restored: false, restoreFailure: null);
   } on Object catch (error, stackTrace) {
     if (initialConnection?.isOpen ?? false) {
-      await initialConnection!.close();
+      try {
+        await initialConnection!.close();
+      } on Object catch (closeError, closeStackTrace) {
+        log(
+          'startup database close failed',
+          error: closeError,
+          stackTrace: closeStackTrace,
+        );
+      }
     }
     log('startup failed', error: error, stackTrace: stackTrace);
     mount(StartupFailureApp(onRetry: retry));
