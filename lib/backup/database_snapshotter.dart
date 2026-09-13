@@ -51,20 +51,25 @@ final class DatabaseSnapshotter {
 
   /// Returns validated bytes from one complete live-database state.
   Future<Uint8List> create() async {
-    await _connection.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
-    final bytes = await _connection.transaction((txn) async {
-      await txn.rawQuery('SELECT 1');
-      if (await _files.length(_databasePath) > maxLibraryBackupBytes) {
-        throw LibraryBackupException(
-          LibraryBackupFailureKind.backupTooLarge,
-          cause: const FormatException(
-            'The database exceeds the supported backup size.',
-          ),
-          stackTrace: StackTrace.current,
-        );
-      }
-      return await _factory.readDatabaseBytes(_databasePath);
-    }, exclusive: true);
+    Uint8List? bytes;
+    while (bytes == null) {
+      await _connection.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
+      bytes = await _connection.transaction((txn) async {
+        await txn.rawQuery('SELECT 1');
+        final walLength = await _files.lengthIfExists('$_databasePath-wal');
+        if ((walLength ?? 0) > 0) return null;
+        if (await _files.length(_databasePath) > maxLibraryBackupBytes) {
+          throw LibraryBackupException(
+            LibraryBackupFailureKind.backupTooLarge,
+            cause: const FormatException(
+              'The database exceeds the supported backup size.',
+            ),
+            stackTrace: StackTrace.current,
+          );
+        }
+        return await _factory.readDatabaseBytes(_databasePath);
+      }, exclusive: true);
+    }
 
     final candidatePath = _createCandidatePath();
     try {

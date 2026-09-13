@@ -377,6 +377,9 @@ final class _FaultingBackupFiles implements BackupFiles {
   Future<int> length(String path) => _delegate.length(path);
 
   @override
+  Future<int?> lengthIfExists(String path) => _delegate.lengthIfExists(path);
+
+  @override
   Future<Uint8List> readBytes(String path) => _delegate.readBytes(path);
 
   @override

@@ -97,6 +97,43 @@ void main() {
     },
   );
 
+  test('retries when a write commits after the checkpoint', () async {
+    await db.rawQuery('PRAGMA journal_mode = WAL');
+    await _storeIngredient(db, 'before');
+    var checkpointCalls = 0;
+    final connection = _CheckpointHookDatabase(
+      db,
+      afterCheckpoint: () async {
+        checkpointCalls++;
+        if (checkpointCalls == 1) {
+          await _storeIngredient(db, 'during');
+        }
+      },
+    );
+    final validator = BackupDatabaseValidator(factory: databaseFactoryFfi);
+    final snapshotter = DatabaseSnapshotter(
+      connection: connection,
+      databasePath: databasePath,
+      factory: databaseFactoryFfi,
+      files: const IoBackupFiles(),
+      validateCandidate: validator.validate,
+      createCandidatePath: () => candidatePath,
+    );
+
+    final bytes = await snapshotter.create();
+
+    final capturedPath = '${directory.path}/captured-after-gap.db';
+    await databaseFactoryFfi.writeDatabaseBytes(capturedPath, bytes);
+    final captured = await openPrepBookDatabase(
+      path: capturedPath,
+      factory: databaseFactoryFfi,
+      singleInstance: false,
+    );
+    addTearDown(captured.close);
+    expect(await _ingredientIds(captured), ['before', 'during']);
+    expect(checkpointCalls, 2);
+  });
+
   test(
     'validation failure keeps live open and removes the candidate',
     () async {
@@ -171,6 +208,9 @@ final class _LengthReportingBackupFiles implements BackupFiles {
   Future<int> length(String path) async => reportedLength;
 
   @override
+  Future<int?> lengthIfExists(String path) async => 0;
+
+  @override
   Future<Uint8List> readBytes(String path) => _delegate.readBytes(path);
 
   @override
@@ -229,3 +269,39 @@ final class _ReadHookDatabaseFactory implements DatabaseFactory {
   Future<void> setDatabasesPath(String path) =>
       _delegate.setDatabasesPath(path);
 }
+
+final class _CheckpointHookDatabase implements Database {
+  _CheckpointHookDatabase(this._delegate, {required this.afterCheckpoint});
+
+  final Database _delegate;
+  final Future<void> Function() afterCheckpoint;
+
+  @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
+    final result = await _delegate.rawQuery(sql, arguments);
+    if (sql == 'PRAGMA wal_checkpoint(TRUNCATE)') {
+      await afterCheckpoint();
+    }
+    return result;
+  }
+
+  @override
+  Future<T> transaction<T>(
+    Future<T> Function(Transaction txn) action, {
+    bool? exclusive,
+  }) => _delegate.transaction(action, exclusive: exclusive);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+Future<void> _storeIngredient(Database db, String id) =>
+    db.insert('ingredients', {'id': id, 'name': id, 'default_unit': 'g'});
+
+Future<List<String>> _ingredientIds(Database db) async => [
+  for (final row in await db.query('ingredients', orderBy: 'id'))
+    row['id']! as String,
+];

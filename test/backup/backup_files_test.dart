@@ -22,6 +22,7 @@ void main() {
     await files.writeBytes(target, bytes, flush: true);
 
     expect(await files.length(target), 4);
+    expect(await files.lengthIfExists(target), 4);
     expect(await files.readBytes(target), bytes);
   });
 
@@ -48,7 +49,10 @@ void main() {
   });
 
   test('deleteIfExists is harmless when the path is missing', () async {
-    await files.deleteIfExists('${directory.path}/missing.db');
+    final missingPath = '${directory.path}/missing.db';
+
+    expect(await files.lengthIfExists(missingPath), isNull);
+    await files.deleteIfExists(missingPath);
   });
 
   test('deletes only sidecars for the exact database path', () async {

@@ -5,6 +5,8 @@ import 'dart:typed_data';
 abstract interface class BackupFiles {
   Future<int> length(String path);
 
+  Future<int?> lengthIfExists(String path);
+
   Future<Uint8List> readBytes(String path);
 
   Future<void> writeBytes(String path, Uint8List bytes, {required bool flush});
@@ -24,6 +26,13 @@ final class IoBackupFiles implements BackupFiles {
 
   @override
   Future<int> length(String path) => File(path).length();
+
+  @override
+  Future<int?> lengthIfExists(String path) => Future.sync(() {
+    final file = File(path);
+    if (!file.existsSync()) return null;
+    return file.lengthSync();
+  });
 
   @override
   Future<Uint8List> readBytes(String path) => File(path).readAsBytes();
