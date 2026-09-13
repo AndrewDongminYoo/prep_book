@@ -501,7 +501,7 @@ controller, focus node, or localized string.
 piece` -> exact calculation. Assert `15` batches and checked totals. Assert
       zero import-client calls.
 
-- [ ] **5.10 Verify and commit.** Run:
+- [x] **5.10 Verify and commit.** Run:
 
   ```sh
   flutter pub get
