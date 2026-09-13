@@ -66,6 +66,32 @@ void main() {
     );
   });
 
+  test('stops when a chunk exceeds the resolved length', () async {
+    var chunksRead = 0;
+    final platform = FilePickerLibraryBackupPlatform(
+      maxBackupBytes: 4,
+      openPicker: () async => PickedLibraryBackup(
+        knownLength: 2,
+        resolveLength: () async => 2,
+        openRead: () async* {
+          chunksRead++;
+          yield Uint8List.fromList([1, 2]);
+          chunksRead++;
+          yield Uint8List.fromList([3]);
+          chunksRead++;
+          yield Uint8List.fromList([4]);
+        },
+      ),
+    );
+
+    await expectLater(
+      platform.pickBackup(),
+      throwsA(_failureKind(LibraryBackupFailureKind.restoreFailed)),
+    );
+
+    expect(chunksRead, 2);
+  });
+
   test('open and save cancellation are neutral', () async {
     final platform = FilePickerLibraryBackupPlatform(
       openPicker: () async => null,

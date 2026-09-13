@@ -65,15 +65,19 @@ final class FilePickerLibraryBackupPlatform implements LibraryBackupPlatform {
       final length = picked.knownLength ?? await picked.resolveLength();
       if (length > _maxBackupBytes) _throwTooLarge();
 
-      final builder = BytesBuilder(copy: false);
+      final bytes = Uint8List(length);
+      var offset = 0;
       await for (final chunk in picked.openRead()) {
-        builder.add(chunk);
-        if (builder.length > _maxBackupBytes) _throwTooLarge();
+        if (chunk.length > length - offset) {
+          throw StateError('The selected backup size changed while reading.');
+        }
+        bytes.setRange(offset, offset + chunk.length, chunk);
+        offset += chunk.length;
       }
-      if (builder.length != length) {
+      if (offset != length) {
         throw StateError('The selected backup size changed while reading.');
       }
-      return builder.takeBytes();
+      return bytes;
     } on LibraryBackupException {
       rethrow;
     } on Object catch (error, stackTrace) {
