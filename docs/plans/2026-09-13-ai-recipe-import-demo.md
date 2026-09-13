@@ -96,15 +96,15 @@ variant-only until separate kitchen-user validation justifies a product change.
 
 ## Delivery order and cut line
 
-| Date | Required outcome |
-| --- | --- |
-| 2026-09-13 | Tasks 1 and 2: isolated web shell and deterministic sample pipeline. |
-| 2026-09-14 | Task 3: strict extraction endpoint. |
-| 2026-09-15 | Task 4: Flutter transport and one-image input. |
-| 2026-09-16 to 2026-09-17 | Tasks 5 and 6: reviewed flow and production sheet. |
-| 2026-09-18 | Feature freeze, registration check, stable public URL. |
-| 2026-09-19 | Runtime acceptance, screenshots, and submission copy. |
-| 2026-09-20 | Final verification and submission. |
+| Date                     | Required outcome                                                     |
+| ------------------------ | -------------------------------------------------------------------- |
+| 2026-09-13               | Tasks 1 and 2: isolated web shell and deterministic sample pipeline. |
+| 2026-09-14               | Task 3: strict extraction endpoint.                                  |
+| 2026-09-15               | Task 4: Flutter transport and one-image input.                       |
+| 2026-09-16 to 2026-09-17 | Tasks 5 and 6: reviewed flow and production sheet.                   |
+| 2026-09-18               | Feature freeze, registration check, stable public URL.               |
+| 2026-09-19               | Runtime acceptance, screenshots, and submission copy.                |
+| 2026-09-20               | Final verification and submission.                                   |
 
 If schedule pressure appears, remove scope in this order:
 
@@ -151,14 +151,14 @@ vercel.json
 `test/championship/view/championship_demo_page_test.dart`, and generated `web/`;
 modify `.metadata` and `merry.yaml`.
 
-- [ ] **1.1 Write the failing boundary test.** Recursively scan `lib/app`,
-  `lib/application`, `lib/domain`, `lib/export`, `lib/persistence`,
-  `lib/presentation`, and the three normal entrypoints. Reject
-  `package:prep_book/championship/` in those paths. Require
-  `lib/championship/` to exist and reject `dart:io`, `package:sqflite`,
-  persistence imports, repository interfaces, and `OPENAI_API_KEY` in variant
-  production code. Reuse the complete-import-directive approach from
-  `test/presentation/presentation_boundary_test.dart`.
+- [x] **1.1 Write the failing boundary test.** Recursively scan `lib/app`,
+      `lib/application`, `lib/domain`, `lib/export`, `lib/persistence`,
+      `lib/presentation`, and the three normal entrypoints. Reject
+      `package:prep_book/championship/` in those paths. Require
+      `lib/championship/` to exist and reject `dart:io`, `package:sqflite`,
+      persistence imports, repository interfaces, and `OPENAI_API_KEY` in variant
+      production code. Reuse the complete-import-directive approach from
+      `test/presentation/presentation_boundary_test.dart`.
 
   Run:
 
@@ -168,24 +168,24 @@ modify `.metadata` and `merry.yaml`.
 
   Expected: RED because `lib/championship/` does not exist.
 
-- [ ] **1.2 Restore only the Flutter web host.** Run
-  `flutter create --platforms=web .`. Inspect the complete diff. Permit `web/`
-  and `.metadata`; reject unrelated native or product rewrites. Set title,
-  manifest name, and description to PrepBook AI competition copy. Add no custom
-  service worker or persistent cache.
+- [x] **1.2 Restore only the Flutter web host.** Run
+      `flutter create --platforms=web .`. Inspect the complete diff. Permit `web/`
+      and `.metadata`; reject unrelated native or product rewrites. Set title,
+      manifest name, and description to PrepBook AI competition copy. Add no custom
+      service worker or persistent cache.
 
-- [ ] **1.3 Write the failing shell widget test.** Pump `ChampionshipApp` at
-  widths `390` and `900`. Assert title, boundary statement, four phase labels,
-  Source as the current phase, preserved root state across resize, and no
-  overflow at text scale `3.0`.
+- [x] **1.3 Write the failing shell widget test.** Pump `ChampionshipApp` at
+      widths `390` and `900`. Assert title, boundary statement, four phase labels,
+      Source as the current phase, preserved root state across resize, and no
+      overflow at text scale `3.0`.
 
-- [ ] **1.4 Implement the smallest web shell.** Create a localized Material 3
-  app and responsive placeholder page. The entrypoint calls `runApp` directly;
-  it must not call normal `bootstrap`, initialize SQLite, or create product
-  repositories. Add `merry dev championship` and `merry build
-  championship-web` commands.
+- [x] **1.4 Implement the smallest web shell.** Create a localized Material 3
+      app and responsive placeholder page. The entrypoint calls `runApp` directly;
+      it must not call normal `bootstrap`, initialize SQLite, or create product
+      repositories. Add `merry dev championship` and `merry build
+championship-web` commands.
 
-- [ ] **1.5 Verify and commit.** Run:
+- [x] **1.5 Verify and commit.** Run:
 
   ```sh
   flutter pub get
@@ -257,48 +257,48 @@ final class ChampionshipRunBuilder {
 ```
 
 - [ ] **2.1 Add one rights-cleared fixture.** Create version `1` sample JSON for
-  `Croissant dough`: base `24 piece`, maximum batch `12 piece`, flour `1000 g`,
-  butter `500 g`, water `480` with null unit and blocking issue, manual dusting
-  flour, and one preparation note. Register it as an asset. Production and tests
-  must load this exact file; do not duplicate the sample in Dart.
+      `Croissant dough`: base `24 piece`, maximum batch `12 piece`, flour `1000 g`,
+      butter `500 g`, water `480` with null unit and blocking issue, manual dusting
+      flour, and one preparation note. Register it as an asset. Production and tests
+      must load this exact file; do not duplicate the sample in Dart.
 
 - [ ] **2.2 Write strict decoder tests.** Assert exact fixture values and
-  round-trip behavior. Reject schema version other than `1`, JSON numeric
-  quantities, missing `issues`, unknown confidence/behavior, numeric manual
-  amount, and unknown properties. Expected: RED before the model exists.
+      round-trip behavior. Reject schema version other than `1`, JSON numeric
+      quantities, missing `issues`, unknown confidence/behavior, numeric manual
+      amount, and unknown properties. Expected: RED before the model exists.
 
 - [ ] **2.3 Implement immutable extraction models.** Validate exact property
-  sets, preserve evidence verbatim, keep absent values as null, and return
-  unmodifiable issue and component collections.
+      sets, preserve evidence verbatim, keep absent values as null, and return
+      unmodifiable issue and component collections.
 
 - [ ] **2.4 Test and implement explicit unit resolution.** Cover every alias in
-  the design. Normalize trim and lowercase only. Reject `cup`, `oz`, and unknown
-  units. Never infer from ingredient name.
+      the design. Normalize trim and lowercase only. Reject `cup`, `oz`, and unknown
+      units. Never infer from ingredient name.
 
 - [ ] **2.5 Test and implement review state.** No field starts confirmed.
-  Editing clears confirmation. Bulk confirmation accepts only present, locally
-  valid, issue-free values. The ambiguous water unit and every manual line
-  require explicit operator action.
+      Editing clears confirmation. Bulk confirmation accepts only present, locally
+      valid, issue-free values. The ambiguous water unit and every manual line
+      require explicit operator action.
 
 - [ ] **2.6 Test and implement verification.** Reject blank names, non-positive
-  yield, unsupported/incompatible units, empty components, unconfirmed
-  behavior, invalid manual/non-manual quantities, and unresolved issues. Return
-  `VerifiedRecipeDraft` only when every required value is confirmed. Do not
-  construct domain objects here.
+      yield, unsupported/incompatible units, empty components, unconfirmed
+      behavior, invalid manual/non-manual quantities, and unresolved issues. Return
+      `VerifiedRecipeDraft` only when every required value is confirmed. Do not
+      construct domain objects here.
 
 - [ ] **2.7 Test and implement exact domain mapping.** Create stable ordered ids,
-  parse with `Quantity.parse`, inject timestamps, and map to revision-1 `Recipe`,
-  `Ingredient`, and `RecipeComponent` values. Never accept provider ids.
+      parse with `Quantity.parse`, inject timestamps, and map to revision-1 `Recipe`,
+      `Ingredient`, and `RecipeComponent` values. Never accept provider ids.
 
 - [ ] **2.8 Test and implement the run builder.** For `180 piece`, assert `15`
-  batches and totals `7500 g` flour, `3750 g` butter, `3600 g` water, plus a
-  manual line with null total. Test invalid decimal, zero target, unsupported or
-  incompatible target unit, and more than `1000` batches. Construct an
-  in-memory `ProductionRun`; call no application use case or repository.
+      batches and totals `7500 g` flour, `3750 g` butter, `3600 g` water, plus a
+      manual line with null total. Test invalid decimal, zero target, unsupported or
+      incompatible target unit, and more than `1000` batches. Construct an
+      in-memory `ProductionRun`; call no application use case or repository.
 
 - [ ] **2.9 Prove the final sample path and commit.** Load through injected
-  `AssetBundle`, create review state, correct water to `g`, confirm values,
-  verify, map, and calculate. Prove zero HTTP/persistence calls. Run:
+      `AssetBundle`, create review state, correct water to `g`, confirm values,
+      verify, map, and calculate. Prove zero HTTP/persistence calls. Run:
 
   ```sh
   flutter pub get
@@ -332,37 +332,37 @@ Return the version `1` draft on success. Return only stable safe error codes:
 `service_busy`, `service_timeout`, `invalid_model_output`, or `service_failure`.
 
 - [ ] **3.1 Create the dependency-free Node test surface.** Use ESM and
-  `node --test api/lib/extract-recipe-handler_test.mjs`; add no runtime package.
+      `node --test api/lib/extract-recipe-handler_test.mjs`; add no runtime package.
 
 - [ ] **3.2 Write failing input-validation tests.** Inject provider fetch,
-  environment, logger, and timeout. Cover method, content type, malformed/extra
-  JSON, empty/over-limit text, unsupported/over-limit image, locale, missing
-  key, origin mismatch, and `Cache-Control: no-store`.
+      environment, logger, and timeout. Cover method, content type, malformed/extra
+      JSON, empty/over-limit text, unsupported/over-limit image, locale, missing
+      key, origin mismatch, and `Cache-Control: no-store`.
 
 - [ ] **3.3 Implement local validation.** Count text with `[...text].length`.
-  Validate an anchored image data URL, decode only its base64 payload, enforce
-  the `8 MiB` decoded limit, and reject invalid requests before provider access.
+      Validate an anchored image data URL, decode only its base64 payload, enforce
+      the `8 MiB` decoded limit, and reject invalid requests before provider access.
 
 - [ ] **3.4 Define one strict JSON Schema.** Set
-  `additionalProperties: false` on every object, require all keys, keep
-  quantities nullable strings, and close confidence/behavior enums. The
-  instruction must say: use null instead of guessing; copy evidence; report
-  ambiguity; do not calculate, scale, convert, infer density, search, or generate
-  a new recipe.
+      `additionalProperties: false` on every object, require all keys, keep
+      quantities nullable strings, and close confidence/behavior enums. The
+      instruction must say: use null instead of guessing; copy evidence; report
+      ambiguity; do not calculate, scale, convert, infer density, search, or generate
+      a new recipe.
 
 - [ ] **3.5 Test and implement the provider request.** POST to Responses API with
-  configured model, strict `text.format`, `store: false`, low reasoning effort,
-  no tools/files/background/streaming, and either text or one high-detail image.
-  Abort at `25` seconds. Parse only `output_text` message content and revalidate
-  it before returning. Never return the raw provider response.
+      configured model, strict `text.format`, `store: false`, low reasoning effort,
+      no tools/files/background/streaming, and either text or one high-detail image.
+      Abort at `25` seconds. Parse only `output_text` message content and revalidate
+      it before returning. Never return the raw provider response.
 
 - [ ] **3.6 Test and implement safe failures and logs.** Map timeout, `429`,
-  provider failure, missing/malformed output, and unexpected exceptions.
-  Permit logs to contain only request id, status, latency, and error category.
-  Prove logs contain no source, image data, ingredient names, or output.
+      provider failure, missing/malformed output, and unexpected exceptions.
+      Permit logs to contain only request id, status, latency, and error category.
+      Prove logs contain no source, image data, ingredient names, or output.
 
 - [ ] **3.7 Add endpoint entrypoint and command.** Export the configured POST
-  handler and add `merry api test`. Run:
+      handler and add `merry api test`. Run:
 
   ```sh
   npm run test:api
@@ -372,7 +372,7 @@ Return the version `1` draft on success. Return only stable safe error codes:
   ```
 
 - [ ] **3.8 Inspect and commit.** Search staged files for `sk-`, environment
-  assignments, source text, and image data. Commit:
+      assignments, source text, and image data. Commit:
 
   ```sh
   git commit -m "feat(championship): add guarded recipe extraction endpoint"
@@ -404,22 +404,22 @@ abstract interface class RecipeImagePicker {
 ```
 
 - [ ] **4.1 Add only transport dependencies.** Add compatible pinned `http` and
-  `file_picker` versions, run `flutter pub get`, and inspect native plugin
-  changes. Do not add a provider SDK to Flutter.
+      `file_picker` versions, run `flutter pub get`, and inspect native plugin
+      changes. Do not add a provider SDK to Flutter.
 
 - [ ] **4.2 Test and implement request values.** Cover blank/over-limit text,
-  exact limits, MIME validation, exact JSON keys, and base64 generation only at
-  serialization. Preserve original text except for blank validation.
+      exact limits, MIME validation, exact JSON keys, and base64 generation only at
+      serialization. Preserve original text except for blank validation.
 
 - [ ] **4.3 Test and implement the HTTP client.** Inject `http.Client` and URI.
-  Assert one JSON POST with no authorization header. Apply `27` second client
-  timeout. Decode success through `ExtractedRecipeDraft.fromJson`, map stable
-  endpoint errors, and never auto-retry.
+      Assert one JSON POST with no authorization header. Apply `27` second client
+      timeout. Decode success through `ExtractedRecipeDraft.fromJson`, map stable
+      endpoint errors, and never auto-retry.
 
 - [ ] **4.4 Test and implement the picker.** Request one in-memory custom file
-  with `jpg`, `jpeg`, `png`, or `webp`. Never use a filesystem path. Reject
-  absent bytes, multiple files, MIME/extension mismatch, unsupported extension,
-  and over-limit data. Cancellation returns null.
+      with `jpg`, `jpeg`, `png`, or `webp`. Never use a filesystem path. Reject
+      absent bytes, multiple files, MIME/extension mismatch, unsupported extension,
+      and over-limit data. Cancellation returns null.
 
 - [ ] **4.5 Verify web and normal mobile builds.** Run sequentially:
 
@@ -452,55 +452,55 @@ target strings, failures, and optional run. It owns no `BuildContext`,
 controller, focus node, or localized string.
 
 - [ ] **5.1 Write the failing Cubit suite.** Cover sample without HTTP; text and
-  image loading/success/failure; image cancellation; stale response rejection;
-  Reset invalidation; edit clearing confirmation; ambiguous review blocking;
-  corrected review reaching Target; Back preservation; exact calculation
-  reaching Result; target failures staying in Target; duplicate calculation
-  suppression; Result Back; and zero state changes from responsive resizing.
+      image loading/success/failure; image cancellation; stale response rejection;
+      Reset invalidation; edit clearing confirmation; ambiguous review blocking;
+      corrected review reaching Target; Back preservation; exact calculation
+      reaching Result; target failures staying in Target; duplicate calculation
+      suppression; Result Back; and zero state changes from responsive resizing.
 
 - [ ] **5.2 Implement stale-response-safe orchestration.** Increment one request
-  generation for submission and Reset. Ignore late completion after mismatch.
-  Preserve source on retryable failure. Never retry silently. `calculate()` may
-  call only `ChampionshipRunBuilder`, never extraction.
+      generation for submission and Reset. Ignore late completion after mismatch.
+      Preserve source on retryable failure. Never retry silently. `calculate()` may
+      call only `ChampionshipRunBuilder`, never extraction.
 
 - [ ] **5.3 Add English and Korean copy.** Cover phases, sample/input/privacy,
-  loading/failures, evidence/confidence/issues, confirmation, units/behavior,
-  target, exact result, batches, warnings, reset, and production sheet. Privacy
-  copy must say that PrepBook does not persist input, live input is sent to the
-  configured provider, provider controls apply, and confidential content should
-  use the sample. Do not claim zero provider retention. Run `flutter gen-l10n`.
+      loading/failures, evidence/confidence/issues, confirmation, units/behavior,
+      target, exact result, batches, warnings, reset, and production sheet. Privacy
+      copy must say that PrepBook does not persist input, live input is sent to the
+      configured provider, provider controls apply, and confidential content should
+      use the sample. Do not claim zero provider retention. Run `flutter gen-l10n`.
 
 - [ ] **5.4 Test and implement Source.** No login. Sample requires no consent or
-  HTTP. Live input requires explicit consent. Blank text cannot submit. Image
-  metadata is shown without rendering the source image. Loading prevents
-  duplicates. Failure preserves input and offers Retry and Sample. Verify
-  keyboard order and compact text scale `3.0`.
+      HTTP. Live input requires explicit consent. Blank text cannot submit. Image
+      metadata is shown without rendering the source image. Loading prevents
+      duplicates. Failure preserves input and offers Retry and Sample. Verify
+      keyboard order and compact text scale `3.0`.
 
 - [ ] **5.5 Test and implement Review.** Every field shows proposal, evidence,
-  confidence, extraction issues, local issues, current value, edited state, and
-  confirmation. Use stable path keys. Manual lines have no amount input. Units
-  come from the explicit resolver plus unresolved state. Color is not the sole
-  status indicator. Resize must preserve edits and confirmations.
+      confidence, extraction issues, local issues, current value, edited state, and
+      confirmation. Use stable path keys. Manual lines have no amount input. Units
+      come from the explicit resolver plus unresolved state. Color is not the sole
+      status indicator. Resize must preserve edits and confirmations.
 
 - [ ] **5.6 Test and implement Target.** Show verified recipe/base yield. Start
-  with empty amount and compatible unit. Calculate only on button press. Back
-  returns to identical review state.
+      with empty amount and compatible unit. Calculate only on button press. Back
+      returns to identical review state.
 
 - [ ] **5.7 Test and implement Result.** Show exact-calculation boundary, recipe,
-  target, batch plan, stored totals, stored per-batch values, manual lines, and
-  domain warnings. Read names from `ingredientSnapshot`; do not recalculate in
-  widgets.
+      target, batch plan, stored totals, stored per-batch values, manual lines, and
+      domain warnings. Read names from `ingredientSnapshot`; do not recalculate in
+      widgets.
 
 - [ ] **5.8 Wire production dependencies.** Create HTTP client, import client,
-  picker, sample loader, verifier, and run builder in
-  `main_championship.dart`. Resolve endpoint from
-  `AI_IMPORT_ENDPOINT`, defaulting to `/api/extract-recipe`. Root lifecycle owns
-  and closes HTTP client. Do not initialize SQLite.
+      picker, sample loader, verifier, and run builder in
+      `main_championship.dart`. Resolve endpoint from
+      `AI_IMPORT_ENDPOINT`, defaulting to `/api/extract-recipe`. Root lifecycle owns
+      and closes HTTP client. Do not initialize SQLite.
 
 - [ ] **5.9 Add the real sample integration test.** Drive sample -> bulk confirm
-  -> correct/confirm water -> confirm manual dusting flour -> Target -> `180
-  piece` -> exact calculation. Assert `15` batches and checked totals. Assert
-  zero import-client calls.
+      -> correct/confirm water -> confirm manual dusting flour -> Target -> `180
+piece` -> exact calculation. Assert `15` batches and checked totals. Assert
+      zero import-client calls.
 
 - [ ] **5.10 Verify and commit.** Run:
 
@@ -530,25 +530,25 @@ controller, focus node, or localized string.
 `.vercelignore`, and production-sheet integration tests.
 
 - [ ] **6.1 Write the failing callback test.** Define
-  `OpenChampionshipProductionSheet(BuildContext, ProductionRun)`. Assert the
-  Result action passes the identical in-memory run. Cancellation or callback
-  failure must preserve Result and the run.
+      `OpenChampionshipProductionSheet(BuildContext, ProductionRun)`. Assert the
+      Result action passes the identical in-memory run. Cancellation or callback
+      failure must preserve Result and the run.
 
 - [ ] **6.2 Wire the existing launcher.** Create the existing
-  `ProductionSheetLauncher` at the composition root and pass one callback to
-  Result. Do not modify builder, PDF renderer, production-sheet Cubit, domain,
-  or shipping result UI.
+      `ProductionSheetLauncher` at the composition root and pass one callback to
+      Result. Do not modify builder, PDF renderer, production-sheet Cubit, domain,
+      or shipping result UI.
 
 - [ ] **6.3 Verify web export manually.** Build/serve web, complete sample,
-  inspect batch and total views, invoke download/print preview, and cancel before
-  system print. Confirm no Flutter exception, discarded run, or unexpected
-  request.
+      inspect batch and total views, invoke download/print preview, and cancel before
+      system print. Confirm no Flutter exception, discarded run, or unexpected
+      request.
 
 - [ ] **6.4 Add Vercel configuration.** Use local prebuilt deployment. Configure
-  championship Flutter build, `build/web` output, `30` second endpoint duration,
-  and SPA rewrite excluding `/api/`. Exclude native builds, tests, coverage,
-  docs, environment files, PEM, and local output without excluding source,
-  assets, API, Flutter metadata, or deployment config.
+      championship Flutter build, `build/web` output, `30` second endpoint duration,
+      and SPA rewrite excluding `/api/`. Exclude native builds, tests, coverage,
+      docs, environment files, PEM, and local output without excluding source,
+      assets, API, Flutter metadata, or deployment config.
 
 - [ ] **6.5 Run regressions.** Run:
 
@@ -570,7 +570,7 @@ controller, focus node, or localized string.
   Run native builds sequentially.
 
 - [ ] **6.6 Inspect and commit.** Expect no domain/export-internal or normal
-  entrypoint changes. Commit:
+      entrypoint changes. Commit:
 
   ```sh
   git commit -m "feat(championship): reuse production sheet and deploy web demo"
@@ -585,11 +585,11 @@ controller, focus node, or localized string.
 runtime evidence proves a defect.
 
 - [ ] **7.1 Correct repository status.** Update README so production-sheet
-  export is no longer described as unimplemented. Add a championship section
-  explaining optional variant, offline normal flavors, live-provider boundary,
-  sample fallback, entrypoint/build command, and design/plan links. Add one
-  narrow scope exception to CLAUDE without replacing the approved source of
-  truth.
+      export is no longer described as unimplemented. Add a championship section
+      explaining optional variant, offline normal flavors, live-provider boundary,
+      sample fallback, entrypoint/build command, and design/plan links. Add one
+      narrow scope exception to CLAUDE without replacing the approved source of
+      truth.
 
 - [ ] **7.2 Run one final local gate at one commit.** Run:
 
@@ -612,9 +612,9 @@ runtime evidence proves a defect.
   Record exact results, counts, coverage, output paths, and non-failing warnings.
 
 - [ ] **7.3 Configure secrets outside the repository.** Set
-  `OPENAI_API_KEY`, approved `OPENAI_MODEL`, and final `ALLOWED_ORIGIN`
-  interactively without echoing the key. Search tracked and untracked files for
-  key patterns before deployment.
+      `OPENAI_API_KEY`, approved `OPENAI_MODEL`, and final `ALLOWED_ORIGIN`
+      interactively without echoing the key. Search tracked and untracked files for
+      key patterns before deployment.
 
 - [ ] **7.4 Deploy prebuilt output.** Run:
 
@@ -628,23 +628,23 @@ runtime evidence proves a defect.
   `/api/extract-recipe` reaches the function.
 
 - [ ] **7.5 Perform public runtime acceptance.** With synthetic source, verify
-  Chrome sample with endpoint unavailable, live text, live PNG, mobile width,
-  Safari, forced busy/retry, ambiguity blocking, exact `180 piece` result,
-  production-sheet views, download/print cancellation, Reset, reload, empty
-  browser storage, secret-free requests, and source-free function logs. Keep
-  screenshots/PDF outside the repository.
+      Chrome sample with endpoint unavailable, live text, live PNG, mobile width,
+      Safari, forced busy/retry, ambiguity blocking, exact `180 piece` result,
+      production-sheet views, download/print cancellation, Reset, reload, empty
+      browser storage, secret-free requests, and source-free function logs. Keep
+      screenshots/PDF outside the repository.
 
 - [ ] **7.6 Write the submission note.** Include Service, Problem, Solution, AI
-  use, Deterministic safety boundary, Tools used, Privacy boundary, Demo script,
-  Deployment/judging availability, Existing-service disclosure, and Verification
-  evidence. Distinguish runtime AI from AI-assisted development. State that AI
-  creates a review draft only and existing exact code calculates every quantity.
-  Keep demo script under `90` seconds.
+      use, Deterministic safety boundary, Tools used, Privacy boundary, Demo script,
+      Deployment/judging availability, Existing-service disclosure, and Verification
+      evidence. Distinguish runtime AI from AI-assisted development. State that AI
+      creates a review draft only and existing exact code calculates every quantity.
+      Keep demo script under `90` seconds.
 
 - [ ] **7.7 Record execution evidence.** Only after public acceptance, mark the
-  design `Implemented and publicly verified` and append final commit, toolchain,
-  commands/results, tests, coverage, builds, URL, browser matrix, artifact
-  directory, and any `[PARTIAL]` item with consequence.
+      design `Implemented and publicly verified` and append final commit, toolchain,
+      commands/results, tests, coverage, builds, URL, browser matrix, artifact
+      directory, and any `[PARTIAL]` item with consequence.
 
 - [ ] **7.8 Run repository hygiene review.** Run:
 
