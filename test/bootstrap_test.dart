@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/app/app.dart';
@@ -46,6 +47,17 @@ void main() {
     final after = DateTime.now();
     expect(actual.isBefore(before), isFalse);
     expect(actual.isAfter(after), isFalse);
+  });
+
+  test('AppBlocObserver forwards changes and errors', () async {
+    const observer = AppBlocObserver();
+    final bloc = _ObserverProbe();
+
+    observer
+      ..onChange(bloc, const Change(currentState: 0, nextState: 1))
+      ..onError(bloc, StateError('probe'), StackTrace.current);
+
+    await bloc.close();
   });
 
   test('uses the default factory and database path resolver', () async {
@@ -432,6 +444,10 @@ void main() {
     expect(mounts.last, isA<StartupFailureApp>());
     expect((mounts.last as StartupFailureApp).onRetry, isNotNull);
   });
+}
+
+final class _ObserverProbe extends BlocBase<int> {
+  _ObserverProbe() : super(0);
 }
 
 final class _MountIdentityProbe extends StatefulWidget {
