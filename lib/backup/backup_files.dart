@@ -52,8 +52,15 @@ final class IoBackupFiles implements BackupFiles {
     String destination, {
     required bool flush,
   }) async {
-    final bytes = await File(source).readAsBytes();
-    await File(destination).writeAsBytes(bytes, flush: flush);
+    final output = await File(destination).open(mode: FileMode.write);
+    try {
+      await for (final chunk in File(source).openRead()) {
+        await output.writeFrom(chunk);
+      }
+      if (flush) await output.flush();
+    } finally {
+      await output.close();
+    }
   }
 
   @override
