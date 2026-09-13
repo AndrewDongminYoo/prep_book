@@ -450,53 +450,53 @@ The Cubit owns source, request generation, extracted/review/verified drafts,
 target strings, failures, and optional run. It owns no `BuildContext`,
 controller, focus node, or localized string.
 
-- [ ] **5.1 Write the failing Cubit suite.** Cover sample without HTTP; text and
+- [x] **5.1 Write the failing Cubit suite.** Cover sample without HTTP; text and
       image loading/success/failure; image cancellation; stale response rejection;
       Reset invalidation; edit clearing confirmation; ambiguous review blocking;
       corrected review reaching Target; Back preservation; exact calculation
       reaching Result; target failures staying in Target; duplicate calculation
       suppression; Result Back; and zero state changes from responsive resizing.
 
-- [ ] **5.2 Implement stale-response-safe orchestration.** Increment one request
+- [x] **5.2 Implement stale-response-safe orchestration.** Increment one request
       generation for submission and Reset. Ignore late completion after mismatch.
       Preserve source on retryable failure. Never retry silently. `calculate()` may
       call only `ChampionshipRunBuilder`, never extraction.
 
-- [ ] **5.3 Add English and Korean copy.** Cover phases, sample/input/privacy,
+- [x] **5.3 Add English and Korean copy.** Cover phases, sample/input/privacy,
       loading/failures, evidence/confidence/issues, confirmation, units/behavior,
       target, exact result, batches, warnings, reset, and production sheet. Privacy
       copy must say that PrepBook does not persist input, live input is sent to the
       configured provider, provider controls apply, and confidential content should
       use the sample. Do not claim zero provider retention. Run `flutter gen-l10n`.
 
-- [ ] **5.4 Test and implement Source.** No login. Sample requires no consent or
+- [x] **5.4 Test and implement Source.** No login. Sample requires no consent or
       HTTP. Live input requires explicit consent. Blank text cannot submit. Image
       metadata is shown without rendering the source image. Loading prevents
       duplicates. Failure preserves input and offers Retry and Sample. Verify
       keyboard order and compact text scale `3.0`.
 
-- [ ] **5.5 Test and implement Review.** Every field shows proposal, evidence,
+- [x] **5.5 Test and implement Review.** Every field shows proposal, evidence,
       confidence, extraction issues, local issues, current value, edited state, and
       confirmation. Use stable path keys. Manual lines have no amount input. Units
       come from the explicit resolver plus unresolved state. Color is not the sole
       status indicator. Resize must preserve edits and confirmations.
 
-- [ ] **5.6 Test and implement Target.** Show verified recipe/base yield. Start
+- [x] **5.6 Test and implement Target.** Show verified recipe/base yield. Start
       with empty amount and compatible unit. Calculate only on button press. Back
       returns to identical review state.
 
-- [ ] **5.7 Test and implement Result.** Show exact-calculation boundary, recipe,
+- [x] **5.7 Test and implement Result.** Show exact-calculation boundary, recipe,
       target, batch plan, stored totals, stored per-batch values, manual lines, and
       domain warnings. Read names from `ingredientSnapshot`; do not recalculate in
       widgets.
 
-- [ ] **5.8 Wire production dependencies.** Create HTTP client, import client,
+- [x] **5.8 Wire production dependencies.** Create HTTP client, import client,
       picker, sample loader, verifier, and run builder in
       `main_championship.dart`. Resolve endpoint from
       `AI_IMPORT_ENDPOINT`, defaulting to `/api/extract-recipe`. Root lifecycle owns
       and closes HTTP client. Do not initialize SQLite.
 
-- [ ] **5.9 Add the real sample integration test.** Drive sample -> bulk confirm
+- [x] **5.9 Add the real sample integration test.** Drive sample -> bulk confirm
       -> correct/confirm water -> confirm manual dusting flour -> Target -> `180
 piece` -> exact calculation. Assert `15` batches and checked totals. Assert
       zero import-client calls.

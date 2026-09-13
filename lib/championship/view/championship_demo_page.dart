@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/championship/cubit/championship_demo_cubit.dart';
+import 'package:prep_book/championship/cubit/championship_demo_state.dart';
+import 'package:prep_book/championship/view/championship_result_panel.dart';
+import 'package:prep_book/championship/view/championship_review_panel.dart';
+import 'package:prep_book/championship/view/championship_source_panel.dart';
 import 'package:prep_book/championship/view/championship_strings.dart';
+import 'package:prep_book/championship/view/championship_target_panel.dart';
 import 'package:prep_book/presentation/responsive/window_width_class.dart';
 
 class ChampionshipDemoPage extends StatelessWidget {
@@ -13,18 +18,20 @@ class ChampionshipDemoPage extends StatelessWidget {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final widthClass = windowWidthClassOf(constraints.maxWidth);
-            final compact = widthClass == WindowWidthClass.compact;
+            final expanded = usesMultiplePanesAt(
+              constraints.maxWidth,
+              MediaQuery.textScalerOf(context),
+            );
             return SingleChildScrollView(
               key: const ValueKey('championship-demo-content'),
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? 24 : 48,
+                horizontal: expanded ? 48 : 24,
                 vertical: 40,
               ),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1120),
-                  child: compact
+                  child: !expanded
                       ? const _CompactShell(
                           key: ValueKey('championship-compact-layout'),
                         )
@@ -93,7 +100,7 @@ class _PhasePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = ChampionshipStrings.of(context);
-    final currentPhase = context.watch<ChampionshipDemoCubit>().state;
+    final state = context.watch<ChampionshipDemoCubit>().state;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -104,35 +111,44 @@ class _PhasePanel extends StatelessWidget {
             _PhaseLabel(
               phase: ChampionshipPhase.source,
               label: strings.source,
-              currentPhase: currentPhase,
+              currentPhase: state.phase,
             ),
             _PhaseLabel(
               phase: ChampionshipPhase.review,
               label: strings.review,
-              currentPhase: currentPhase,
+              currentPhase: state.phase,
             ),
             _PhaseLabel(
               phase: ChampionshipPhase.target,
               label: strings.target,
-              currentPhase: currentPhase,
+              currentPhase: state.phase,
             ),
             _PhaseLabel(
               phase: ChampionshipPhase.result,
               label: strings.result,
-              currentPhase: currentPhase,
+              currentPhase: state.phase,
             ),
           ],
         ),
         const SizedBox(height: 24),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(strings.sourcePlaceholder),
-          ),
-        ),
+        _CurrentPanel(state: state),
       ],
     );
   }
+}
+
+class _CurrentPanel extends StatelessWidget {
+  const _CurrentPanel({required this.state});
+
+  final ChampionshipDemoState state;
+
+  @override
+  Widget build(BuildContext context) => switch (state.phase) {
+    ChampionshipPhase.source => const ChampionshipSourcePanel(),
+    ChampionshipPhase.review => const ChampionshipReviewPanel(),
+    ChampionshipPhase.target => const ChampionshipTargetPanel(),
+    ChampionshipPhase.result => const ChampionshipResultPanel(),
+  };
 }
 
 class _PhaseLabel extends StatelessWidget {

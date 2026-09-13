@@ -106,12 +106,12 @@ final class FilePickerRecipeImagePicker implements RecipeImagePicker {
   }
 }
 
+// The browser picker itself is verified by the web acceptance pass. Unit tests
+// inject the normalized file shape so they never open an OS dialog.
+// coverage:ignore-start
 Future<List<RecipeImagePickerFile>> _pickPlatformFiles(
   RecipeImagePickerOptions options,
 ) async {
-  if (options.allowMultiple) {
-    throw ArgumentError.value(options.allowMultiple, 'allowMultiple');
-  }
   final file = await FilePicker.pickFile(
     type: FileType.custom,
     allowedExtensions: options.allowedExtensions,
@@ -129,6 +129,7 @@ Future<List<RecipeImagePickerFile>> _pickPlatformFiles(
     RecipeImagePickerFile(name: file.name, mimeType: mimeType, bytes: bytes),
   ];
 }
+// coverage:ignore-end
 
 String? _extensionOf(String name) {
   final separator = name.lastIndexOf('.');

@@ -151,7 +151,7 @@ void main() {
       expect(() => draft.confirmComponentNote(0), throwsStateError);
     });
 
-    test('revalidates manual component quantity fields after edits', () {
+    test('clears numeric quantity fields when changing to manual', () {
       final draft = ReviewRecipeDraft.fromExtracted(
         _fixture(),
       ).confirmAllUnambiguous();
@@ -163,8 +163,10 @@ void main() {
       );
 
       expect(edited.components[3].unit.activeIssues, isNotEmpty);
-      expect(changedToManual.components[0].amount.activeIssues, isNotEmpty);
-      expect(changedToManual.components[0].unit.activeIssues, isNotEmpty);
+      expect(changedToManual.components[0].amount.value, isNull);
+      expect(changedToManual.components[0].unit.value, isNull);
+      expect(changedToManual.components[0].amount.activeIssues, isEmpty);
+      expect(changedToManual.components[0].unit.activeIssues, isEmpty);
     });
 
     test(

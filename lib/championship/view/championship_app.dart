@@ -6,8 +6,9 @@ import 'package:prep_book/championship/view/championship_strings.dart';
 import 'package:prep_book/l10n/l10n.dart';
 
 class ChampionshipApp extends StatelessWidget {
-  const ChampionshipApp({this.locale, super.key});
+  const ChampionshipApp({required this.cubit, this.locale, super.key});
 
+  final ChampionshipDemoCubit cubit;
   final Locale? locale;
 
   @override
@@ -19,10 +20,15 @@ class ChampionshipApp extends StatelessWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF81552D)),
+        scaffoldBackgroundColor: const Color(0xFFFFF8F1),
+        cardTheme: const CardThemeData(
+          clipBehavior: Clip.antiAlias,
+          margin: EdgeInsets.zero,
+        ),
         useMaterial3: true,
       ),
-      home: BlocProvider(
-        create: (_) => ChampionshipDemoCubit(),
+      home: BlocProvider.value(
+        value: cubit,
         child: const ChampionshipDemoPage(),
       ),
     );

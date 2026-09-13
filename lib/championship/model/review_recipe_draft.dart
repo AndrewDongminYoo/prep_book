@@ -453,15 +453,15 @@ final class ReviewRecipeDraft {
       index,
       component.copyWith(
         amount: component.amount.edit(
-          component.amount.value,
+          isManual ? null : component.amount.value,
           localIssues: isManual
-              ? _manualAmountIssues(component.amount.value)
+              ? const []
               : _positiveAmountIssues(component.amount.value),
         ),
         unit: component.unit.edit(
-          component.unit.value,
+          isManual ? null : component.unit.value,
           localIssues: isManual
-              ? _manualUnitIssues(component.unit.value)
+              ? const []
               : _unitIssues(component.unit.value, units),
         ),
         behavior: component.behavior.edit(

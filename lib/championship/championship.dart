@@ -1,4 +1,5 @@
 export 'cubit/championship_demo_cubit.dart';
+export 'cubit/championship_demo_state.dart';
 export 'import/championship_recipe_mapper.dart';
 export 'import/championship_run_builder.dart';
 export 'import/recipe_draft_verifier.dart';
