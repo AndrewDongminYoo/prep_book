@@ -528,12 +528,12 @@ piece` -> exact calculation. Assert `15` batches and checked totals. Assert
 **Files:** modify Result/app/page/entrypoint; create `vercel.json`,
 `.vercelignore`, and production-sheet integration tests.
 
-- [ ] **6.1 Write the failing callback test.** Define
+- [x] **6.1 Write the failing callback test.** Define
       `OpenChampionshipProductionSheet(BuildContext, ProductionRun)`. Assert the
       Result action passes the identical in-memory run. Cancellation or callback
       failure must preserve Result and the run.
 
-- [ ] **6.2 Wire the existing launcher.** Create the existing
+- [x] **6.2 Wire the existing launcher.** Create the existing
       `ProductionSheetLauncher` at the composition root and pass one callback to
       Result. Do not modify builder, PDF renderer, production-sheet Cubit, domain,
       or shipping result UI.
@@ -543,13 +543,13 @@ piece` -> exact calculation. Assert `15` batches and checked totals. Assert
       system print. Confirm no Flutter exception, discarded run, or unexpected
       request.
 
-- [ ] **6.4 Add Vercel configuration.** Use local prebuilt deployment. Configure
+- [x] **6.4 Add Vercel configuration.** Use local prebuilt deployment. Configure
       championship Flutter build, `build/web` output, `30` second endpoint duration,
       and SPA rewrite excluding `/api/`. Exclude native builds, tests, coverage,
       docs, environment files, PEM, and local output without excluding source,
       assets, API, Flutter metadata, or deployment config.
 
-- [ ] **6.5 Run regressions.** Run:
+- [x] **6.5 Run regressions.** Run:
 
   ```sh
   flutter analyze
@@ -568,7 +568,7 @@ piece` -> exact calculation. Assert `15` batches and checked totals. Assert
 
   Run native builds sequentially.
 
-- [ ] **6.6 Inspect and commit.** Expect no domain/export-internal or normal
+- [x] **6.6 Inspect and commit.** Expect no domain/export-internal or normal
       entrypoint changes. Commit:
 
   ```sh
