@@ -143,7 +143,11 @@ final class DatabaseSession {
       _reportError(error, stackTrace);
       try {
         if (replacement != null && replacement.isOpen) {
-          await replacement.close();
+          try {
+            await replacement.close();
+          } on Object catch (error, stackTrace) {
+            _reportError(error, stackTrace);
+          }
         }
         if (rollbackReady) {
           await _files.copy(rollbackPath, rollbackInstallPath, flush: true);

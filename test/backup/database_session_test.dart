@@ -88,7 +88,11 @@ void main() {
         if (fault == _FaultPoint.rollbackReopen && openCalls == 2) {
           throw StateError('rollback reopen failed');
         }
-        return await _open(path);
+        final opened = await _open(path);
+        if (fault == _FaultPoint.replacementClose && openCalls == 1) {
+          return _CloseFailingDatabase(opened);
+        }
+        return opened;
       },
     );
   }
@@ -207,6 +211,7 @@ void main() {
     _FaultPoint.candidateRename,
     _FaultPoint.replacementReopen,
     _FaultPoint.replacementActivation,
+    _FaultPoint.replacementClose,
     _FaultPoint.diagnosticCopy,
   ]) {
     test('$fault restores and activates the previous library', () async {
@@ -214,7 +219,9 @@ void main() {
       final session = buildSession(
         fault: fault,
         onActivate: (connection, {required restored}) async {
-          if (fault == _FaultPoint.replacementActivation && restored) {
+          if ((fault == _FaultPoint.replacementActivation ||
+                  fault == _FaultPoint.replacementClose) &&
+              restored) {
             throw StateError('replacement activation failed');
           }
           activations.add((restored: restored, ids: await _ids(connection)));
@@ -326,6 +333,7 @@ enum _FaultPoint {
   candidateRename,
   replacementReopen,
   replacementActivation,
+  replacementClose,
   diagnosticCopy,
   rollbackInstall,
   rollbackReopen,
@@ -397,6 +405,22 @@ final class _FaultingBackupFiles implements BackupFiles {
     Uint8List bytes, {
     required bool flush,
   }) => _delegate.writeBytes(path, bytes, flush: flush);
+}
+
+final class _CloseFailingDatabase implements Database {
+  const _CloseFailingDatabase(this._delegate);
+
+  final Database _delegate;
+
+  @override
+  bool get isOpen => _delegate.isOpen;
+
+  @override
+  Future<void> close() =>
+      Future<void>.error(StateError('replacement close failed'));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 Future<Database> _open(String path) => openPrepBookDatabase(
