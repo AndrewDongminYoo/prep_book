@@ -543,6 +543,15 @@ piece` -> exact calculation. Assert `15` batches and checked totals. Assert
       system print. Confirm no Flutter exception, discarded run, or unexpected
       request.
 
+  `[PARTIAL]` 2026-09-14 in Chrome against the release build served from
+  `build/web`: sample to Result, batch and total sheet views, share (download
+  suppressed, Blob `13044` bytes), Back preserving the run, and `0` requests to
+  `/api/` over `24` server requests. The first pass found the preview failing
+  after a window resize and share producing a `0` byte PDF; commit `09a8f30`
+  fixes both. Left for the operator, because the OS print dialog blocks browser
+  automation: serve `build/web`, run the sample to Result, open the production
+  sheet, press 인쇄, and cancel at the system dialog.
+
 - [x] **6.4 Add Vercel configuration.** Use local prebuilt deployment. Configure
       championship Flutter build, `build/web` output, `30` second endpoint duration,
       and SPA rewrite excluding `/api/`. Exclude native builds, tests, coverage,
