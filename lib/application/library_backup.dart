@@ -36,6 +36,13 @@ final class LibraryBackupFile {
   LibraryBackupFile({required Uint8List bytes, required this.suggestedName})
     : _bytes = Uint8List.fromList(bytes);
 
+  /// Creates a backup value by taking ownership of [bytes].
+  /// The caller must not change [bytes] after this call.
+  LibraryBackupFile.takeOwnership({
+    required this._bytes,
+    required this.suggestedName,
+  });
+
   final Uint8List _bytes;
 
   /// An unmodifiable view of the owned encoded archive.

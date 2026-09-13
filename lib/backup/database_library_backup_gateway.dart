@@ -74,7 +74,7 @@ final class DatabaseLibraryBackupGateway implements LibraryBackupGateway {
           databaseSchemaVersion: currentSchemaVersion,
           createdAtUtc: createdAt.toUtc(),
         );
-        return LibraryBackupFile(
+        return LibraryBackupFile.takeOwnership(
           bytes: archiveBytes,
           suggestedName: buildLibraryBackupFilename(createdAt.toLocal()),
         );

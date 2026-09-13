@@ -7,7 +7,7 @@ import 'package:prep_book/backup/backup.dart';
 import 'package:prep_book/persistence/persistence.dart';
 
 void main() {
-  test('create uses one instant for UTC manifest and local filename', () async {
+  test('create transfers encoded bytes and uses one instant', () async {
     var snapshotCalls = 0;
     var encodeCalls = 0;
     var clockCalls = 0;
@@ -53,6 +53,8 @@ void main() {
     expect(encodedCreatedAt, instant.toUtc());
     expect(backup.bytes, archiveBytes);
     expect(backup.suggestedName, 'prepbook-backup-20260913-101112.prepbook');
+    archiveBytes[0] = 9;
+    expect(backup.bytes, [9, 5]);
   });
 
   test('restore rejects the outer limit before decoding', () async {
