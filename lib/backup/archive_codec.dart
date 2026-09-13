@@ -19,6 +19,12 @@ final class DecodedLibraryBackup {
     required this.createdAtUtc,
   }) : _databaseBytes = Uint8List.fromList(databaseBytes);
 
+  DecodedLibraryBackup._owned({
+    required this._databaseBytes,
+    required this.databaseSchemaVersion,
+    required this.createdAtUtc,
+  });
+
   final Uint8List _databaseBytes;
 
   /// An unmodifiable view of the owned SQLite database bytes.
@@ -129,7 +135,7 @@ final class BackupArchiveCodec {
       maxBytes: _maxDatabaseBytes,
     );
     final manifest = _decodeManifest(manifestBytes);
-    return DecodedLibraryBackup(
+    return DecodedLibraryBackup._owned(
       databaseBytes: databaseBytes,
       databaseSchemaVersion: manifest.databaseSchemaVersion,
       createdAtUtc: manifest.createdAtUtc,
