@@ -702,11 +702,25 @@ Save a backup to a system-visible location, change the library, pick the saved b
 Cancel both save and open pickers in separate runs and require the library to remain usable.
 Do not treat an injected widget test as native document-provider evidence.
 
+Acceptance evidence:
+
+- An iPhone 17 Simulator on iOS 26.5 ran the development flavor with bundle identifier `kr.donminzzi.prep-book.dev`.
+- The native save picker created a 3,213-byte `.prepbook` file whose SHA-256 was `255954db4e186120996c8debc6db75f026fca2a3ce94d641f96fdba623cb15b1`, and ZIP integrity inspection found both `manifest.json` and `library.db` intact.
+- Save and open cancellation returned to a usable library.
+- After a recognizable mutation, selecting the saved file and confirming restore replaced the visible library without a restart and showed the localized completion notice.
+
 - [x] **Step 5: Verify the Android Emulator native picker flow**
 
 After the iOS job has fully stopped, check `uptime` again and run one Android Emulator job.
 Repeat save, mutate, pick, confirm, immediate restored-data observation, save cancellation, and open cancellation.
 Record emulator identity, build flavor, observable results, and any platform limitation.
+
+Acceptance evidence:
+
+- A Pixel 10 AVD on Android 37 used the arm64 16 KB image and the development package `kr.donminzzi.prep_book.dev`.
+- The native save picker created `prepbook-backup-20260913-100635.prepbook` in Downloads with a size of 5,652 bytes.
+- Save and open cancellation returned to a usable library.
+- After adding recipe `999` with `1 g`, selecting the saved backup and confirming restore removed that mutation, restored the original three recipes without a restart, and showed the Korean completion notice.
 
 - [x] **Step 6: Update status only after automated and native behavior is green**
 
