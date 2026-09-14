@@ -31,7 +31,7 @@ final class ChampionshipDemoState {
     required this.importFailureMessage,
     required this.extracted,
     required this.review,
-    required List<String> reviewIssues,
+    required List<RecipeDraftVerificationIssue> reviewIssues,
     required this.verified,
     required this.targetAmount,
     required this.targetUnit,
@@ -70,7 +70,7 @@ final class ChampionshipDemoState {
   final String? importFailureMessage;
   final ExtractedRecipeDraft? extracted;
   final ReviewRecipeDraft? review;
-  final List<String> reviewIssues;
+  final List<RecipeDraftVerificationIssue> reviewIssues;
   final VerifiedRecipeDraft? verified;
   final String targetAmount;
   final String targetUnit;
@@ -89,7 +89,7 @@ final class ChampionshipDemoState {
     Object? importFailureMessage = _unset,
     Object? extracted = _unset,
     Object? review = _unset,
-    List<String>? reviewIssues,
+    List<RecipeDraftVerificationIssue>? reviewIssues,
     Object? verified = _unset,
     String? targetAmount,
     String? targetUnit,

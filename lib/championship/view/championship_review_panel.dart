@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/championship/cubit/championship_demo_cubit.dart';
+import 'package:prep_book/championship/cubit/championship_demo_state.dart';
+import 'package:prep_book/championship/import/recipe_draft_verifier.dart';
 import 'package:prep_book/championship/import/unit_alias_resolver.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/championship/model/review_recipe_draft.dart';
@@ -10,8 +12,59 @@ import 'package:prep_book/championship/view/championship_strings.dart';
 /// resolver can map back to a domain unit.
 const _supportedUnits = <String>['', ...UnitAliasResolver.symbols];
 
-class ChampionshipReviewPanel extends StatelessWidget {
+class ChampionshipReviewPanel extends StatefulWidget {
   const ChampionshipReviewPanel({super.key});
+
+  @override
+  State<ChampionshipReviewPanel> createState() =>
+      _ChampionshipReviewPanelState();
+}
+
+class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
+  final _focusNodes = <String, FocusNode>{};
+  final _anchors = <String, GlobalKey>{};
+  final GlobalKey _summaryKey = GlobalKey();
+
+  FocusNode _focusNode(String path) =>
+      _focusNodes.putIfAbsent(path, FocusNode.new);
+
+  GlobalKey _anchor(String path) => _anchors.putIfAbsent(path, GlobalKey.new);
+
+  @override
+  void dispose() {
+    for (final focusNode in _focusNodes.values) {
+      focusNode.dispose();
+    }
+    super.dispose();
+  }
+
+  void _recoverFromFailure(RecipeDraftVerificationIssue issue) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final path = issue.path;
+      final focusNode = path == null ? null : _focusNodes[path];
+      final targetContext = path == null
+          ? null
+          : _anchors[path]?.currentContext;
+      if (focusNode == null || targetContext == null) {
+        final summaryContext = _summaryKey.currentContext;
+        if (summaryContext != null) {
+          await Scrollable.ensureVisible(
+            summaryContext,
+            duration: const Duration(milliseconds: 250),
+            alignment: 0.1,
+          );
+        }
+        return;
+      }
+      await Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 250),
+        alignment: 0.1,
+      );
+      if (mounted) focusNode.requestFocus();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,155 +72,181 @@ class ChampionshipReviewPanel extends StatelessWidget {
     final state = context.watch<ChampionshipDemoCubit>().state;
     final draft = state.review!;
     final strings = ChampionshipStrings.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              strings.reviewHeading,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(strings.reviewIntro),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              key: const ValueKey('review-confirm-all'),
-              onPressed: cubit.confirmAllUnambiguous,
-              icon: const Icon(Icons.done_all),
-              label: Text(strings.confirmAll),
-            ),
-            const SizedBox(height: 24),
-            _SectionHeading(strings.recipeDetails),
-            _StringReviewField(
-              path: 'recipe.name',
-              label: strings.recipeName,
-              field: draft.recipe.name,
-              onEdit: (value) =>
-                  cubit.updateReview((review) => review.editRecipeName(value)),
-              onConfirm: () =>
-                  cubit.updateReview((review) => review.confirmRecipeName()),
-            ),
-            _StringReviewField(
-              path: 'recipe.baseYield.amount',
-              label: strings.baseYieldAmount,
-              field: draft.recipe.baseYield.amount,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+    return BlocListener<ChampionshipDemoCubit, ChampionshipDemoState>(
+      listenWhen: (previous, current) =>
+          current.reviewIssues.isNotEmpty &&
+          !identical(previous.reviewIssues, current.reviewIssues),
+      listener: (context, state) =>
+          _recoverFromFailure(state.reviewIssues.first),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                strings.reviewHeading,
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
-              onEdit: (value) => cubit.updateReview(
-                (review) => review.editBaseYieldAmount(value),
+              const SizedBox(height: 8),
+              Text(strings.reviewIntro),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                key: const ValueKey('review-confirm-all'),
+                onPressed: cubit.confirmAllUnambiguous,
+                icon: const Icon(Icons.done_all),
+                label: Text(strings.confirmAll),
               ),
-              onConfirm: () => cubit.updateReview(
-                (review) => review.confirmBaseYieldAmount(),
-              ),
-            ),
-            _UnitReviewField(
-              path: 'recipe.baseYield.unit',
-              label: strings.baseYieldUnit,
-              field: draft.recipe.baseYield.unit,
-              resolvedValue: draft.units
-                  .resolve(draft.recipe.baseYield.unit.value)
-                  ?.symbol,
-              onEdit: (value) => cubit.updateReview(
-                (review) => review.editBaseYieldUnit(value),
-              ),
-              onConfirm: () =>
-                  cubit.updateReview((review) => review.confirmBaseYieldUnit()),
-            ),
-            if (draft.recipe.maxBatchYield case final maximum?) ...[
+              const SizedBox(height: 24),
+              _SectionHeading(strings.recipeDetails),
               _StringReviewField(
-                path: 'recipe.maxBatchYield.amount',
-                label: strings.maxBatchAmount,
-                field: maximum.amount,
+                path: 'recipe.name',
+                anchorKey: _anchor('recipe.name'),
+                focusNode: _focusNode('recipe.name'),
+                label: strings.recipeName,
+                field: draft.recipe.name,
+                onEdit: (value) => cubit.updateReview(
+                  (review) => review.editRecipeName(value),
+                ),
+                onConfirm: () =>
+                    cubit.updateReview((review) => review.confirmRecipeName()),
+              ),
+              _StringReviewField(
+                path: 'recipe.baseYield.amount',
+                anchorKey: _anchor('recipe.baseYield.amount'),
+                focusNode: _focusNode('recipe.baseYield.amount'),
+                label: strings.baseYieldAmount,
+                field: draft.recipe.baseYield.amount,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
                 onEdit: (value) => cubit.updateReview(
-                  (review) => review.editMaxBatchYieldAmount(value),
+                  (review) => review.editBaseYieldAmount(value),
                 ),
                 onConfirm: () => cubit.updateReview(
-                  (review) => review.confirmMaxBatchYieldAmount(),
+                  (review) => review.confirmBaseYieldAmount(),
                 ),
               ),
               _UnitReviewField(
-                path: 'recipe.maxBatchYield.unit',
-                label: strings.maxBatchUnit,
-                field: maximum.unit,
-                resolvedValue: draft.units.resolve(maximum.unit.value)?.symbol,
+                path: 'recipe.baseYield.unit',
+                anchorKey: _anchor('recipe.baseYield.unit'),
+                focusNode: _focusNode('recipe.baseYield.unit'),
+                label: strings.baseYieldUnit,
+                field: draft.recipe.baseYield.unit,
+                resolvedValue: draft.units
+                    .resolve(draft.recipe.baseYield.unit.value)
+                    ?.symbol,
                 onEdit: (value) => cubit.updateReview(
-                  (review) => review.editMaxBatchYieldUnit(value),
+                  (review) => review.editBaseYieldUnit(value),
                 ),
                 onConfirm: () => cubit.updateReview(
-                  (review) => review.confirmMaxBatchYieldUnit(),
+                  (review) => review.confirmBaseYieldUnit(),
                 ),
+              ),
+              if (draft.recipe.maxBatchYield case final maximum?) ...[
+                _StringReviewField(
+                  path: 'recipe.maxBatchYield.amount',
+                  anchorKey: _anchor('recipe.maxBatchYield.amount'),
+                  focusNode: _focusNode('recipe.maxBatchYield.amount'),
+                  label: strings.maxBatchAmount,
+                  field: maximum.amount,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onEdit: (value) => cubit.updateReview(
+                    (review) => review.editMaxBatchYieldAmount(value),
+                  ),
+                  onConfirm: () => cubit.updateReview(
+                    (review) => review.confirmMaxBatchYieldAmount(),
+                  ),
+                ),
+                _UnitReviewField(
+                  path: 'recipe.maxBatchYield.unit',
+                  anchorKey: _anchor('recipe.maxBatchYield.unit'),
+                  focusNode: _focusNode('recipe.maxBatchYield.unit'),
+                  label: strings.maxBatchUnit,
+                  field: maximum.unit,
+                  resolvedValue: draft.units
+                      .resolve(maximum.unit.value)
+                      ?.symbol,
+                  onEdit: (value) => cubit.updateReview(
+                    (review) => review.editMaxBatchYieldUnit(value),
+                  ),
+                  onConfirm: () => cubit.updateReview(
+                    (review) => review.confirmMaxBatchYieldUnit(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const ValueKey('recipe.maxBatchYield.remove'),
+                  onPressed: () => cubit.updateReview(
+                    (review) => review.removeMaxBatchYield(),
+                  ),
+                  icon: const Icon(Icons.remove_circle_outline),
+                  label: Text(strings.removeMaximumBatch),
+                ),
+              ] else
+                _AbsentMaximumReview(
+                  confirmed: draft.recipe.isMaxBatchYieldAbsentConfirmed,
+                  onConfirm: () => cubit.updateReview(
+                    (review) => review.confirmMaxBatchYieldAbsent(),
+                  ),
+                ),
+              for (
+                var index = 0;
+                index < draft.recipe.preparationNotes.length;
+                index += 1
+              )
+                _StringReviewField(
+                  path: 'recipe.preparationNotes[$index]',
+                  anchorKey: _anchor('recipe.preparationNotes[$index]'),
+                  focusNode: _focusNode('recipe.preparationNotes[$index]'),
+                  label: strings.preparationNote(index),
+                  field: draft.recipe.preparationNotes[index],
+                  onEdit: (value) => cubit.updateReview(
+                    (review) => review.editPreparationNote(index, value),
+                  ),
+                  onConfirm: () => cubit.updateReview(
+                    (review) => review.confirmPreparationNote(index),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              for (var index = 0; index < draft.components.length; index += 1)
+                _ComponentReview(
+                  key: ObjectKey(draft.components[index]),
+                  index: index,
+                  component: draft.components[index],
+                  anchorFor: _anchor,
+                  focusNodeFor: _focusNode,
+                ),
+              if (state.reviewIssues.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _IssueSummary(key: _summaryKey, issues: state.reviewIssues),
+              ],
+              const SizedBox(height: 24),
+              // The same bulk action as at the top, offered again where the
+              // reviewer ends up after correcting the flagged fields, so the
+              // remaining clean values can be confirmed without scrolling back.
+              OutlinedButton.icon(
+                key: const ValueKey('review-confirm-all-bottom'),
+                onPressed: cubit.confirmAllUnambiguous,
+                icon: const Icon(Icons.done_all),
+                label: Text(strings.confirmAll),
               ),
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                key: const ValueKey('recipe.maxBatchYield.remove'),
-                onPressed: () => cubit.updateReview(
-                  (review) => review.removeMaxBatchYield(),
-                ),
-                icon: const Icon(Icons.remove_circle_outline),
-                label: Text(strings.removeMaximumBatch),
+              FilledButton.icon(
+                key: const ValueKey('review-continue'),
+                onPressed: cubit.continueToTarget,
+                icon: const Icon(Icons.arrow_forward),
+                label: Text(strings.continueToTarget),
               ),
-            ] else
-              _AbsentMaximumReview(
-                confirmed: draft.recipe.isMaxBatchYieldAbsentConfirmed,
-                onConfirm: () => cubit.updateReview(
-                  (review) => review.confirmMaxBatchYieldAbsent(),
-                ),
+              TextButton(
+                key: const ValueKey('review-back'),
+                onPressed: cubit.back,
+                child: Text(strings.back),
               ),
-            for (
-              var index = 0;
-              index < draft.recipe.preparationNotes.length;
-              index += 1
-            )
-              _StringReviewField(
-                path: 'recipe.preparationNotes[$index]',
-                label: strings.preparationNote(index),
-                field: draft.recipe.preparationNotes[index],
-                onEdit: (value) => cubit.updateReview(
-                  (review) => review.editPreparationNote(index, value),
-                ),
-                onConfirm: () => cubit.updateReview(
-                  (review) => review.confirmPreparationNote(index),
-                ),
-              ),
-            const SizedBox(height: 12),
-            for (var index = 0; index < draft.components.length; index += 1)
-              _ComponentReview(
-                index: index,
-                component: draft.components[index],
-              ),
-            if (state.reviewIssues.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              _IssueSummary(issues: state.reviewIssues),
             ],
-            const SizedBox(height: 24),
-            // The same bulk action as at the top, offered again where the
-            // reviewer ends up after correcting the flagged fields, so the
-            // remaining clean values can be confirmed without scrolling back.
-            OutlinedButton.icon(
-              key: const ValueKey('review-confirm-all-bottom'),
-              onPressed: cubit.confirmAllUnambiguous,
-              icon: const Icon(Icons.done_all),
-              label: Text(strings.confirmAll),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              key: const ValueKey('review-continue'),
-              onPressed: cubit.continueToTarget,
-              icon: const Icon(Icons.arrow_forward),
-              label: Text(strings.continueToTarget),
-            ),
-            TextButton(
-              key: const ValueKey('review-back'),
-              onPressed: cubit.back,
-              child: Text(strings.back),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -175,10 +254,18 @@ class ChampionshipReviewPanel extends StatelessWidget {
 }
 
 class _ComponentReview extends StatelessWidget {
-  const _ComponentReview({required this.index, required this.component});
+  const _ComponentReview({
+    required this.index,
+    required this.component,
+    required this.anchorFor,
+    required this.focusNodeFor,
+    super.key,
+  });
 
   final int index;
   final ReviewRecipeComponent component;
+  final GlobalKey Function(String path) anchorFor;
+  final FocusNode Function(String path) focusNodeFor;
 
   @override
   Widget build(BuildContext context) {
@@ -192,8 +279,21 @@ class _ComponentReview extends StatelessWidget {
       children: [
         const Divider(height: 40),
         _SectionHeading(strings.component(index)),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          key: ValueKey('$path.remove'),
+          onPressed: draft.components.length > 1
+              ? () => cubit.updateReview(
+                  (review) => review.removeComponent(index),
+                )
+              : null,
+          icon: const Icon(Icons.delete_outline),
+          label: Text(strings.removeComponent),
+        ),
         _StringReviewField(
           path: '$path.name',
+          anchorKey: anchorFor('$path.name'),
+          focusNode: focusNodeFor('$path.name'),
           label: strings.componentName,
           field: component.name,
           onEdit: (value) => cubit.updateReview(
@@ -209,6 +309,8 @@ class _ComponentReview extends StatelessWidget {
         ] else ...[
           _StringReviewField(
             path: '$path.amount',
+            anchorKey: anchorFor('$path.amount'),
+            focusNode: focusNodeFor('$path.amount'),
             label: strings.amount,
             field: component.amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -221,6 +323,8 @@ class _ComponentReview extends StatelessWidget {
           ),
           _UnitReviewField(
             path: '$path.unit',
+            anchorKey: anchorFor('$path.unit'),
+            focusNode: focusNodeFor('$path.unit'),
             label: strings.unit,
             field: component.unit,
             resolvedValue: draft.units.resolve(component.unit.value)?.symbol,
@@ -234,6 +338,8 @@ class _ComponentReview extends StatelessWidget {
         ],
         _BehaviorReviewField(
           path: '$path.behavior',
+          anchorKey: anchorFor('$path.behavior'),
+          focusNode: focusNodeFor('$path.behavior'),
           field: component.behavior,
           onEdit: (value) => cubit.updateReview(
             (review) => review.editComponentBehavior(index, value),
@@ -245,6 +351,8 @@ class _ComponentReview extends StatelessWidget {
         if (component.note case final note?)
           _StringReviewField(
             path: '$path.note',
+            anchorKey: anchorFor('$path.note'),
+            focusNode: focusNodeFor('$path.note'),
             label: strings.note,
             field: note,
             onEdit: (value) => cubit.updateReview(
@@ -262,6 +370,8 @@ class _ComponentReview extends StatelessWidget {
 class _StringReviewField extends StatelessWidget {
   const _StringReviewField({
     required this.path,
+    required this.anchorKey,
+    required this.focusNode,
     required this.label,
     required this.field,
     required this.onEdit,
@@ -270,6 +380,8 @@ class _StringReviewField extends StatelessWidget {
   });
 
   final String path;
+  final GlobalKey anchorKey;
+  final FocusNode focusNode;
   final String label;
   final ReviewField<String> field;
   final ValueChanged<String?> onEdit;
@@ -278,11 +390,13 @@ class _StringReviewField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _ReviewFieldCard(
+    key: anchorKey,
     label: label,
     field: field,
     input: TextFormField(
       key: ValueKey('$path.input'),
       initialValue: field.value,
+      focusNode: focusNode,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: ChampionshipStrings.of(context).currentValue,
@@ -298,6 +412,8 @@ class _StringReviewField extends StatelessWidget {
 class _UnitReviewField extends StatelessWidget {
   const _UnitReviewField({
     required this.path,
+    required this.anchorKey,
+    required this.focusNode,
     required this.label,
     required this.field,
     required this.resolvedValue,
@@ -306,6 +422,8 @@ class _UnitReviewField extends StatelessWidget {
   });
 
   final String path;
+  final GlobalKey anchorKey;
+  final FocusNode focusNode;
   final String label;
   final ReviewField<String> field;
   final String? resolvedValue;
@@ -314,11 +432,13 @@ class _UnitReviewField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _ReviewFieldCard(
+    key: anchorKey,
     label: label,
     field: field,
     input: DropdownButtonFormField<String>(
       key: ValueKey('$path.input'),
       initialValue: resolvedValue ?? '',
+      focusNode: focusNode,
       isExpanded: true,
       decoration: InputDecoration(
         labelText: ChampionshipStrings.of(context).currentValue,
@@ -345,12 +465,16 @@ class _UnitReviewField extends StatelessWidget {
 class _BehaviorReviewField extends StatelessWidget {
   const _BehaviorReviewField({
     required this.path,
+    required this.anchorKey,
+    required this.focusNode,
     required this.field,
     required this.onEdit,
     required this.onConfirm,
   });
 
   final String path;
+  final GlobalKey anchorKey;
+  final FocusNode focusNode;
   final ReviewField<DraftScalingBehavior> field;
   final ValueChanged<DraftScalingBehavior?> onEdit;
   final VoidCallback onConfirm;
@@ -359,12 +483,14 @@ class _BehaviorReviewField extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = ChampionshipStrings.of(context);
     return _ReviewFieldCard(
+      key: anchorKey,
       label: strings.behavior,
       field: field,
       valueLabel: (value) => value == null ? '—' : strings.behaviorName(value),
       input: DropdownButtonFormField<DraftScalingBehavior>(
         key: ValueKey('$path.input'),
         initialValue: field.value,
+        focusNode: focusNode,
         isExpanded: true,
         decoration: InputDecoration(
           labelText: strings.currentValue,
@@ -396,6 +522,7 @@ class _ReviewFieldCard<T> extends StatelessWidget {
     required this.confirmKey,
     required this.onConfirm,
     this.valueLabel,
+    super.key,
   });
 
   final String label;
@@ -569,9 +696,9 @@ class _SectionHeading extends StatelessWidget {
 }
 
 class _IssueSummary extends StatelessWidget {
-  const _IssueSummary({required this.issues});
+  const _IssueSummary({required this.issues, super.key});
 
-  final List<String> issues;
+  final List<RecipeDraftVerificationIssue> issues;
 
   @override
   Widget build(BuildContext context) {
@@ -588,7 +715,8 @@ class _IssueSummary extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(strings.issues, style: TextStyle(color: error)),
-            for (final issue in issues) Text('• $issue'),
+            for (final issue in issues)
+              Text('• ${strings.verificationIssue(issue)}'),
           ],
         ),
       ),

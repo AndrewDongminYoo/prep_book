@@ -14,9 +14,32 @@ final class RecipeDraftVerified extends RecipeDraftVerification {
 }
 
 final class RecipeDraftRejected extends RecipeDraftVerification {
-  RecipeDraftRejected(List<String> issues) : issues = List.unmodifiable(issues);
+  RecipeDraftRejected(List<RecipeDraftVerificationIssue> issues)
+    : issues = List.unmodifiable(issues);
 
-  final List<String> issues;
+  final List<RecipeDraftVerificationIssue> issues;
+}
+
+enum RecipeDraftVerificationIssueKind {
+  confirmationRequired,
+  valueRequired,
+  quantityRequired,
+  quantityNotPositive,
+  quantityNotDecimal,
+  unitRequired,
+  unitUnsupported,
+  maxUnitIncompatible,
+  behaviorRequired,
+  manualHasQuantity,
+  maximumAbsenceConfirmationRequired,
+  atLeastOneComponent,
+}
+
+final class RecipeDraftVerificationIssue {
+  const RecipeDraftVerificationIssue({required this.kind, this.path});
+
+  final RecipeDraftVerificationIssueKind kind;
+  final String? path;
 }
 
 final class VerifiedYieldDraft {
@@ -74,7 +97,7 @@ final class RecipeDraftVerifier {
   final UnitAliasResolver units;
 
   RecipeDraftVerification verify(ReviewRecipeDraft draft) {
-    final issues = <String>[];
+    final issues = <RecipeDraftVerificationIssue>[];
     _requireText(draft.recipe.name, 'recipe.name', issues);
 
     final baseUnit = _requireUnit(
@@ -91,7 +114,13 @@ final class RecipeDraftVerifier {
     final maxBatchYield = draft.recipe.maxBatchYield;
     if (maxBatchYield == null) {
       if (!draft.recipe.isMaxBatchYieldAbsentConfirmed) {
-        issues.add('recipe.maxBatchYield absence must be confirmed.');
+        issues.add(
+          const RecipeDraftVerificationIssue(
+            kind: RecipeDraftVerificationIssueKind
+                .maximumAbsenceConfirmationRequired,
+            path: 'recipe.maxBatchYield',
+          ),
+        );
       }
     } else {
       _requirePositiveAmount(
@@ -107,7 +136,12 @@ final class RecipeDraftVerifier {
       if (baseUnit != null &&
           maxUnit != null &&
           !baseUnit.canConvertTo(maxUnit)) {
-        issues.add('recipe.maxBatchYield.unit must be compatible.');
+        issues.add(
+          const RecipeDraftVerificationIssue(
+            kind: RecipeDraftVerificationIssueKind.maxUnitIncompatible,
+            path: 'recipe.maxBatchYield.unit',
+          ),
+        );
       }
     }
 
@@ -120,7 +154,11 @@ final class RecipeDraftVerifier {
     }
 
     if (draft.components.isEmpty) {
-      issues.add('The recipe must contain at least one component.');
+      issues.add(
+        const RecipeDraftVerificationIssue(
+          kind: RecipeDraftVerificationIssueKind.atLeastOneComponent,
+        ),
+      );
     }
     for (var index = 0; index < draft.components.length; index++) {
       final component = draft.components[index];
@@ -133,7 +171,12 @@ final class RecipeDraftVerifier {
 
       if (component.behavior.value == DraftScalingBehavior.manual) {
         if (component.amount.value != null || component.unit.value != null) {
-          issues.add('$path manual components cannot contain quantities.');
+          issues.add(
+            RecipeDraftVerificationIssue(
+              kind: RecipeDraftVerificationIssueKind.manualHasQuantity,
+              path: '$path.behavior',
+            ),
+          );
         }
       } else {
         _requirePositiveAmount(component.amount, '$path.amount', issues);
@@ -178,61 +221,103 @@ final class RecipeDraftVerifier {
   void _requireText(
     ReviewField<String> field,
     String path,
-    List<String> issues,
+    List<RecipeDraftVerificationIssue> issues,
   ) {
     _requireConfirmed(field, path, issues);
     if (field.value == null || field.value!.trim().isEmpty) {
-      issues.add('$path must not be blank.');
+      issues.add(
+        RecipeDraftVerificationIssue(
+          kind: RecipeDraftVerificationIssueKind.valueRequired,
+          path: path,
+        ),
+      );
     }
   }
 
   void _requirePositiveAmount(
     ReviewField<String> field,
     String path,
-    List<String> issues,
+    List<RecipeDraftVerificationIssue> issues,
   ) {
     _requireConfirmed(field, path, issues);
     final value = field.value;
-    if (value == null) {
-      issues.add('$path must contain a quantity.');
+    if (value == null || value.trim().isEmpty) {
+      issues.add(
+        RecipeDraftVerificationIssue(
+          kind: RecipeDraftVerificationIssueKind.quantityRequired,
+          path: path,
+        ),
+      );
       return;
     }
     try {
       final quantity = Quantity.parse(value, Unit.gram);
-      if (quantity.isZero) issues.add('$path must be greater than zero.');
+      if (quantity.isZero) {
+        issues.add(
+          RecipeDraftVerificationIssue(
+            kind: RecipeDraftVerificationIssueKind.quantityNotPositive,
+            path: path,
+          ),
+        );
+      }
     } on Object {
-      issues.add('$path must be a positive decimal string.');
+      issues.add(
+        RecipeDraftVerificationIssue(
+          kind: RecipeDraftVerificationIssueKind.quantityNotDecimal,
+          path: path,
+        ),
+      );
     }
   }
 
   Unit? _requireUnit(
     ReviewField<String> field,
     String path,
-    List<String> issues,
+    List<RecipeDraftVerificationIssue> issues,
   ) {
     _requireConfirmed(field, path, issues);
     final unit = units.resolve(field.value);
-    if (unit == null) issues.add('$path must contain a supported unit.');
+    if (unit == null) {
+      issues.add(
+        RecipeDraftVerificationIssue(
+          kind: field.value == null || field.value!.trim().isEmpty
+              ? RecipeDraftVerificationIssueKind.unitRequired
+              : RecipeDraftVerificationIssueKind.unitUnsupported,
+          path: path,
+        ),
+      );
+    }
     return unit;
   }
 
   void _requireBehavior(
     ReviewField<DraftScalingBehavior> field,
     String path,
-    List<String> issues,
+    List<RecipeDraftVerificationIssue> issues,
   ) {
     _requireConfirmed(field, path, issues);
-    if (field.value == null) issues.add('$path must contain a behavior.');
+    if (field.value == null) {
+      issues.add(
+        RecipeDraftVerificationIssue(
+          kind: RecipeDraftVerificationIssueKind.behaviorRequired,
+          path: path,
+        ),
+      );
+    }
   }
 
   void _requireConfirmed<T>(
     ReviewField<T> field,
     String path,
-    List<String> issues,
+    List<RecipeDraftVerificationIssue> issues,
   ) {
-    if (!field.isConfirmed) issues.add('$path must be confirmed.');
-    for (final issue in field.activeIssues) {
-      issues.add('$path: $issue');
+    if (!field.isConfirmed) {
+      issues.add(
+        RecipeDraftVerificationIssue(
+          kind: RecipeDraftVerificationIssueKind.confirmationRequired,
+          path: path,
+        ),
+      );
     }
   }
 }

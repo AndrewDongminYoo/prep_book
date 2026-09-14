@@ -46,10 +46,50 @@ void main() {
 
     expect(result, isA<RecipeDraftRejected>());
     final issues = (result as RecipeDraftRejected).issues;
-    expect(issues, contains(contains('recipe.name')));
-    expect(issues, contains(contains('components[2].unit')));
-    expect(issues, contains(contains('components[3].behavior')));
-    expect(() => issues.add('changed'), throwsUnsupportedError);
+    expect(
+      issues,
+      contains(
+        isA<RecipeDraftVerificationIssue>()
+            .having(
+              (issue) => issue.kind,
+              'kind',
+              RecipeDraftVerificationIssueKind.confirmationRequired,
+            )
+            .having((issue) => issue.path, 'path', 'recipe.name'),
+      ),
+    );
+    expect(
+      issues,
+      contains(
+        isA<RecipeDraftVerificationIssue>()
+            .having(
+              (issue) => issue.kind,
+              'kind',
+              RecipeDraftVerificationIssueKind.unitRequired,
+            )
+            .having((issue) => issue.path, 'path', 'components[2].unit'),
+      ),
+    );
+    expect(
+      issues,
+      contains(
+        isA<RecipeDraftVerificationIssue>()
+            .having(
+              (issue) => issue.kind,
+              'kind',
+              RecipeDraftVerificationIssueKind.confirmationRequired,
+            )
+            .having((issue) => issue.path, 'path', 'components[3].behavior'),
+      ),
+    );
+    expect(
+      () => issues.add(
+        const RecipeDraftVerificationIssue(
+          kind: RecipeDraftVerificationIssueKind.atLeastOneComponent,
+        ),
+      ),
+      throwsUnsupportedError,
+    );
   });
 
   test('rejects blank names and non-positive yields', () {
@@ -65,8 +105,30 @@ void main() {
 
     expect(result, isA<RecipeDraftRejected>());
     final issues = (result as RecipeDraftRejected).issues;
-    expect(issues, contains(contains('recipe.name')));
-    expect(issues, contains(contains('recipe.baseYield.amount')));
+    expect(
+      issues,
+      contains(
+        isA<RecipeDraftVerificationIssue>()
+            .having(
+              (issue) => issue.kind,
+              'kind',
+              RecipeDraftVerificationIssueKind.valueRequired,
+            )
+            .having((issue) => issue.path, 'path', 'recipe.name'),
+      ),
+    );
+    expect(
+      issues,
+      contains(
+        isA<RecipeDraftVerificationIssue>()
+            .having(
+              (issue) => issue.kind,
+              'kind',
+              RecipeDraftVerificationIssueKind.quantityNotPositive,
+            )
+            .having((issue) => issue.path, 'path', 'recipe.baseYield.amount'),
+      ),
+    );
   });
 
   test('rejects incompatible maximum yield units', () {
@@ -81,7 +143,13 @@ void main() {
     expect(result, isA<RecipeDraftRejected>());
     expect(
       (result as RecipeDraftRejected).issues,
-      contains(contains('compatible')),
+      contains(
+        isA<RecipeDraftVerificationIssue>().having(
+          (issue) => issue.kind,
+          'kind',
+          RecipeDraftVerificationIssueKind.maxUnitIncompatible,
+        ),
+      ),
     );
   });
 
@@ -93,7 +161,13 @@ void main() {
     expect(result, isA<RecipeDraftRejected>());
     expect(
       (result as RecipeDraftRejected).issues,
-      contains(contains('at least one component')),
+      contains(
+        isA<RecipeDraftVerificationIssue>().having(
+          (issue) => issue.kind,
+          'kind',
+          RecipeDraftVerificationIssueKind.atLeastOneComponent,
+        ),
+      ),
     );
   });
 
@@ -109,7 +183,35 @@ void main() {
     expect(result, isA<RecipeDraftRejected>());
     expect(
       (result as RecipeDraftRejected).issues,
-      contains(contains('components[1].amount')),
+      contains(
+        isA<RecipeDraftVerificationIssue>()
+            .having(
+              (issue) => issue.kind,
+              'kind',
+              RecipeDraftVerificationIssueKind.quantityRequired,
+            )
+            .having((issue) => issue.path, 'path', 'components[1].amount'),
+      ),
+    );
+  });
+
+  test('classifies a blank quantity as required', () {
+    final result = verifier.verify(
+      _completedReview().editComponentAmount(0, '   '),
+    );
+
+    expect(result, isA<RecipeDraftRejected>());
+    expect(
+      (result as RecipeDraftRejected).issues,
+      contains(
+        isA<RecipeDraftVerificationIssue>()
+            .having(
+              (issue) => issue.kind,
+              'kind',
+              RecipeDraftVerificationIssueKind.quantityRequired,
+            )
+            .having((issue) => issue.path, 'path', 'components[0].amount'),
+      ),
     );
   });
 
@@ -122,11 +224,23 @@ void main() {
 
     expect(
       (malformedResult as RecipeDraftRejected).issues,
-      contains(contains('positive decimal string')),
+      contains(
+        isA<RecipeDraftVerificationIssue>().having(
+          (issue) => issue.kind,
+          'kind',
+          RecipeDraftVerificationIssueKind.quantityNotDecimal,
+        ),
+      ),
     );
     expect(
       (behaviorResult as RecipeDraftRejected).issues,
-      contains(contains('must contain a behavior')),
+      contains(
+        isA<RecipeDraftVerificationIssue>().having(
+          (issue) => issue.kind,
+          'kind',
+          RecipeDraftVerificationIssueKind.behaviorRequired,
+        ),
+      ),
     );
   });
 
@@ -138,7 +252,13 @@ void main() {
     expect(result, isA<RecipeDraftRejected>());
     expect(
       (result as RecipeDraftRejected).issues,
-      contains(contains('manual components cannot contain quantities')),
+      contains(
+        isA<RecipeDraftVerificationIssue>().having(
+          (issue) => issue.kind,
+          'kind',
+          RecipeDraftVerificationIssueKind.manualHasQuantity,
+        ),
+      ),
     );
   });
 
@@ -150,7 +270,13 @@ void main() {
     expect(result, isA<RecipeDraftRejected>());
     expect(
       (result as RecipeDraftRejected).issues,
-      contains(contains('absence must be confirmed')),
+      contains(
+        isA<RecipeDraftVerificationIssue>().having(
+          (issue) => issue.kind,
+          'kind',
+          RecipeDraftVerificationIssueKind.maximumAbsenceConfirmationRequired,
+        ),
+      ),
     );
   });
 }

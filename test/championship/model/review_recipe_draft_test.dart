@@ -22,6 +22,33 @@ void main() {
       );
     });
 
+    test('removes one component without changing the remaining components', () {
+      final draft = ReviewRecipeDraft.fromExtracted(_fixture());
+      final expectedComponents = draft.components.sublist(1);
+
+      final removed = draft.removeComponent(0);
+
+      expect(removed.components, hasLength(expectedComponents.length));
+      for (var index = 0; index < expectedComponents.length; index += 1) {
+        expect(removed.components[index], same(expectedComponents[index]));
+      }
+      expect(removed.recipe, same(draft.recipe));
+      expect(removed.units, same(draft.units));
+    });
+
+    test('rejects removing the final component', () {
+      final json =
+          jsonDecode(File(_fixturePath).readAsStringSync())
+              as Map<String, Object?>;
+      final components = json['components']! as List<Object?>;
+      json['components'] = [components.first];
+      final draft = ReviewRecipeDraft.fromExtracted(
+        ExtractedRecipeDraft.fromJson(json),
+      );
+
+      expect(() => draft.removeComponent(0), throwsStateError);
+    });
+
     test('bulk confirmation skips ambiguous and manual decisions', () {
       final draft = ReviewRecipeDraft.fromExtracted(
         _fixture(),

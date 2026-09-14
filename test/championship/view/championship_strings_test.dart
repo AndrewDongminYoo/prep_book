@@ -83,6 +83,7 @@ List<String> _allCopy(ChampionshipStrings strings) => [
   strings.confirmNoMaximumBatch,
   strings.preparationNote(0),
   strings.component(0),
+  strings.removeComponent,
   strings.componentName,
   strings.amount,
   strings.unit,
@@ -94,6 +95,15 @@ List<String> _allCopy(ChampionshipStrings strings) => [
   for (final behavior in DraftScalingBehavior.values)
     strings.behaviorName(behavior),
   for (final issue in ReviewIssue.values) strings.reviewIssue(issue),
+  for (final issue in RecipeDraftVerificationIssueKind.values)
+    strings.verificationIssue(
+      RecipeDraftVerificationIssue(
+        kind: issue,
+        path: issue == RecipeDraftVerificationIssueKind.atLeastOneComponent
+            ? null
+            : 'components[0].name',
+      ),
+    ),
   strings.targetHeading,
   strings.verifiedRecipe,
   strings.targetAmount,
