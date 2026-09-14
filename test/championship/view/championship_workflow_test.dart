@@ -426,6 +426,36 @@ void main() {
     expect(cubit.state.phase, ChampionshipPhase.source);
   });
 
+  testWidgets('a base yield counted in 개 keeps that word through the target', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, size: const Size(1200, 1000));
+
+    expect(
+      _dropdownValues(tester, 'recipe.baseYield.unit.input'),
+      containsAll(['piece', 'ea', '개']),
+    );
+
+    await _editAndConfirmUnit(tester, 'recipe.baseYield.unit', '개');
+    await _editAndConfirmUnit(tester, 'recipe.maxBatchYield.unit', '개');
+    await _editAndConfirmUnit(tester, 'components[2].unit', 'g');
+    await _tapVisible(tester, find.byKey(const ValueKey('review-confirm-all')));
+    await _editAndConfirmBehavior(
+      tester,
+      'components[3].behavior',
+      DraftScalingBehavior.manual,
+    );
+    cubit.continueToTarget();
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.reviewIssues, isEmpty);
+    expect(cubit.state.phase, ChampionshipPhase.target);
+    expect(cubit.state.targetUnit, '개');
+    expect(_dropdownValues(tester, 'target-unit-input'), ['개']);
+  });
+
   testWidgets('review confirms an explicitly absent maximum batch', (
     tester,
   ) async {
@@ -657,6 +687,17 @@ Future<void> _editAndConfirmText(
       ?.call();
   await tester.pump();
 }
+
+List<String?> _dropdownValues(WidgetTester tester, String key) => tester
+    .widget<DropdownButton<String>>(
+      find.descendant(
+        of: find.byKey(ValueKey(key)),
+        matching: find.byType(DropdownButton<String>),
+      ),
+    )
+    .items!
+    .map((item) => item.value)
+    .toList();
 
 Future<void> _editAndConfirmUnit(
   WidgetTester tester,

@@ -276,22 +276,28 @@ Calculation remains disabled until all of these conditions hold:
 The competition adapter resolves only a small explicit alias table.
 It does not guess from an ingredient name.
 
-| Input aliases                                  | Domain unit               |
-| ---------------------------------------------- | ------------------------- |
-| `mg`, `milligram`, `밀리그램`                  | `Unit.milligram`          |
-| `g`, `gram`, `grams`, `그램`                   | `Unit.gram`               |
-| `kg`, `kilogram`, `kilograms`, `킬로그램`      | `Unit.kilogram`           |
-| `ml`, `milliliter`, `milliliters`, `밀리리터`  | `Unit.milliliter`         |
-| `l`, `liter`, `liters`, `L`, `리터`            | `Unit.liter`              |
-| `tsp`, `teaspoon`, `티스푼`                    | `Unit.teaspoon`           |
-| `tbsp`, `tablespoon`, `테이블스푼`, `큰술`     | `Unit.tablespoon`         |
-| `portion`, `portions`, `인분`                  | `Unit.portion`            |
-| `piece`, `pieces`, `item`, `items`, `ea`, `개` | `Unit.count('piece')`     |
-| `tray`, `trays`, `판`                          | `Unit.namedYield('tray')` |
+| Input aliases                                 | Domain unit               |
+| --------------------------------------------- | ------------------------- |
+| `mg`, `milligram`, `밀리그램`                 | `Unit.milligram`          |
+| `g`, `gram`, `grams`, `그램`                  | `Unit.gram`               |
+| `kg`, `kilogram`, `kilograms`, `킬로그램`     | `Unit.kilogram`           |
+| `ml`, `milliliter`, `milliliters`, `밀리리터` | `Unit.milliliter`         |
+| `l`, `liter`, `liters`, `L`, `리터`           | `Unit.liter`              |
+| `tsp`, `teaspoon`, `티스푼`                   | `Unit.teaspoon`           |
+| `tbsp`, `tablespoon`, `테이블스푼`, `큰술`    | `Unit.tablespoon`         |
+| `portion`, `portions`, `인분`                 | `Unit.portion`            |
+| `piece`, `pieces`                             | `Unit.count('piece')`     |
+| `ea`, `each`, `item`, `items`                 | `Unit.count('ea')`        |
+| `개`                                          | `Unit.count('개')`        |
+| `tray`, `trays`, `판`                         | `Unit.namedYield('tray')` |
 
 Unknown text remains unresolved.
 Count and yield-only units convert only to the identical symbol, exactly as the
 existing domain requires.
+A count unit therefore keeps the word the source used: `복숭아 4개` counts whole
+peaches and `4 pieces` may count cuts of one, so the adapter never folds one
+count word into another, and the review and target pickers offer each count
+symbol separately.
 
 ## Deterministic mapping and calculation
 

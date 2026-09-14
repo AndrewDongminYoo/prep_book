@@ -15,7 +15,9 @@ void main() {
       Unit.teaspoon: ['tsp', 'teaspoon', '티스푼'],
       Unit.tablespoon: ['tbsp', 'tablespoon', '테이블스푼', '큰술'],
       Unit.portion: ['portion', 'portions', '인분'],
-      Unit.count('piece'): ['piece', 'pieces', 'item', 'items', 'ea', '개'],
+      Unit.count('piece'): ['piece', 'pieces'],
+      Unit.count('ea'): ['ea', 'each', 'item', 'items'],
+      Unit.count('개'): ['개'],
       Unit.namedYield('tray'): ['tray', 'trays', '판'],
     };
 
@@ -24,6 +26,30 @@ void main() {
         expect(resolver.resolve(alias), unit, reason: alias);
       }
     }
+  });
+
+  test('count units keep the word the source used and never convert', () {
+    final whole = resolver.resolve('개')!;
+    final each = resolver.resolve('ea')!;
+    final piece = resolver.resolve('piece')!;
+
+    expect(whole.symbol, '개');
+    expect(each.symbol, 'ea');
+    expect(piece.symbol, 'piece');
+    expect(whole.canConvertTo(piece), isFalse);
+    expect(each.canConvertTo(piece), isFalse);
+    expect(whole.canConvertTo(resolver.resolve(' 개 ')!), isTrue);
+  });
+
+  test('lists one display symbol per resolvable unit, in table order', () {
+    for (final symbol in UnitAliasResolver.symbols) {
+      expect(resolver.resolve(symbol)?.symbol, symbol, reason: symbol);
+    }
+    expect(UnitAliasResolver.symbols, containsAll(['piece', 'ea', '개']));
+    expect(
+      UnitAliasResolver.symbols.toSet().length,
+      UnitAliasResolver.symbols.length,
+    );
   });
 
   test('normalizes only surrounding whitespace and letter case', () {

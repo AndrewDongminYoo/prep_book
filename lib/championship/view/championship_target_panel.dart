@@ -101,22 +101,10 @@ class ChampionshipTargetPanel extends StatelessWidget {
 }
 
 List<String> _compatibleUnits(String source) {
-  const aliases = <String>[
-    'mg',
-    'g',
-    'kg',
-    'ml',
-    'L',
-    'tsp',
-    'tbsp',
-    'portion',
-    'piece',
-    'tray',
-  ];
   const resolver = UnitAliasResolver();
   final sourceUnit = resolver.resolve(source)!;
   return [
-    for (final alias in aliases)
-      if (sourceUnit.canConvertTo(resolver.resolve(alias)!)) alias,
+    for (final symbol in UnitAliasResolver.symbols)
+      if (sourceUnit.canConvertTo(resolver.resolve(symbol)!)) symbol,
   ];
 }

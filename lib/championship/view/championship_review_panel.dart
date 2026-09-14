@@ -1,23 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/championship/cubit/championship_demo_cubit.dart';
+import 'package:prep_book/championship/import/unit_alias_resolver.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/championship/model/review_recipe_draft.dart';
 import 'package:prep_book/championship/view/championship_strings.dart';
 
-const _supportedUnits = <String>[
-  '',
-  'mg',
-  'g',
-  'kg',
-  'ml',
-  'L',
-  'tsp',
-  'tbsp',
-  'portion',
-  'piece',
-  'tray',
-];
+/// The unit choices offered to the reviewer: no unit, then every symbol the
+/// resolver can map back to a domain unit.
+const _supportedUnits = <String>['', ...UnitAliasResolver.symbols];
 
 class ChampionshipReviewPanel extends StatelessWidget {
   const ChampionshipReviewPanel({super.key});
