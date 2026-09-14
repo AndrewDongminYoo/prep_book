@@ -11,7 +11,7 @@ Offline-first production recipe scaling for small restaurant and bakery kitchens
 An owner or head chef picks a saved recipe, enters the target yield for the day, and reviews the calculated batches, per-batch ingredients, sub-recipes, and rounding warnings.
 The result is saved as an immutable production run and exported as a one-page PDF production sheet that kitchen staff can print or receive.
 
-The application works entirely offline. It requires no account, no subscription, and no backend.
+The mobile application works entirely offline. It requires no account, no subscription, and no backend; the competition web variant described below is the one exception, and it is not part of the release.
 
 ## Status
 

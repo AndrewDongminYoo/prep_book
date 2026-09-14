@@ -155,4 +155,4 @@ iOS and Android are the supported targets, across phone, tablet, landscape, and 
 Responsive behavior keys off current window width, never device type.
 
 `macos/` is retained as a scaffold but is not a supported target and has no design coverage.
-The web target was removed; restore it with `flutter create --platforms=web .` if it is ever needed.
+The web host under `web/` exists only for the competition variant described under the scope fence; the three mobile flavors have no web target, and the design has no web coverage.
