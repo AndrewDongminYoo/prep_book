@@ -1,0 +1,78 @@
+name: deploy-championship
+
+# Builds the competition web variant here and hands Vercel the prebuilt
+# output. Vercel's own builders have no Flutter, so its Git integration cannot
+# build this project (every push fails at `flutter pub get`); vercel.json turns
+# that integration off and this workflow is the deployment path instead.
+#
+# Needs three repository secrets: VERCEL_TOKEN, VERCEL_ORG_ID, and
+# VERCEL_PROJECT_ID. The last two are the orgId and projectId that
+# `vercel link` writes to .vercel/project.json.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-championship-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # A push to main deploys production; a manual run from any branch deploys
+      # a preview, whose URL the run's log prints. Inputs are deliberately
+      # absent so no parameter can steer the build (checkov CKV_GHA_7).
+      DEPLOY_TARGET: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # main.yaml owns the Flutter version pin; read it rather than restating it.
+      - name: Read the Flutter version pinned by main.yaml
+        id: flutter
+        run: |
+          version="$(sed -n 's/^ *flutter_version: *//p' .github/workflows/main.yaml | head -n 1)"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Install the Vercel CLI
+        run: npm install --global vercel@59.16.0
+
+      - name: Pull the Vercel project settings and environment
+        run: vercel pull --yes --environment="$DEPLOY_TARGET" --token="$VERCEL_TOKEN"
+
+      - name: Build with the project's install and build commands
+        run: |
+          if [ "$DEPLOY_TARGET" = production ]; then
+            vercel build --prod --token="$VERCEL_TOKEN"
+          else
+            vercel build --token="$VERCEL_TOKEN"
+          fi
+
+      - name: Deploy the prebuilt output
+        run: |
+          if [ "$DEPLOY_TARGET" = production ]; then
+            vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+          else
+            vercel deploy --prebuilt --token="$VERCEL_TOKEN"
+          fi

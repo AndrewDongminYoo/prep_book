@@ -627,7 +627,14 @@ runtime evidence proves a defect.
       `OPENAI_API_KEY`, approved `OPENAI_MODEL`, and final `ALLOWED_ORIGIN`
       interactively without echoing the key. Configure and verify a Vercel WAF rate limit for `POST /api/extract-recipe`. Search tracked and untracked files for key patterns before deployment.
 
-- [ ] **7.4 Deploy prebuilt output.** Run:
+- [ ] **7.4 Deploy prebuilt output.** Added 2026-09-14: Vercel's Git
+      integration fails every push at `flutter pub get` because its builders
+      have no Flutter, so `vercel.json` disables it and
+      `.github/workflows/deploy-championship.yaml` deploys instead (production
+      on push to `main`, preview on manual dispatch). The workflow needs the
+      `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets and has
+      not run on a runner yet; its `vercel build` step was exercised locally.
+      By hand, run:
 
   ```sh
   vercel pull --yes --environment=production

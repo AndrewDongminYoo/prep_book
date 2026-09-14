@@ -424,7 +424,15 @@ Vercel hosts:
 - the single extraction function;
 - no database or object storage.
 
-The production deployment is built locally with the pinned Flutter toolchain:
+The production deployment is built with the pinned Flutter toolchain and
+handed to Vercel prebuilt, because Vercel's builders have no Flutter and its
+Git integration cannot build this project; `vercel.json` turns that
+integration off.
+`.github/workflows/deploy-championship.yaml` runs the three commands below on
+every push to `main` (production) and on manual dispatch from any branch
+(preview), reading the Flutter pin from `main.yaml` and authenticating with the
+`VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` repository secrets.
+The same commands run by hand when a deployment must not wait for a merge:
 
 ```sh
 vercel pull --yes --environment=production
