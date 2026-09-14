@@ -55,4 +55,31 @@ void main() {
       expect(ignored, isNot(contains(requiredInput)));
     }
   });
+
+  test('normal CI gates the endpoint and championship release build', () {
+    final workflow = File('.github/workflows/main.yaml').readAsStringSync();
+    final config =
+        jsonDecode(File('vercel.json').readAsStringSync())
+            as Map<String, Object?>;
+    final buildJob = RegExp(
+      r'^  build:\n(.*?)(?=^  [\w-]+:\n|\z)',
+      multiLine: true,
+      dotAll: true,
+    ).firstMatch(workflow)?.group(1);
+
+    expect(buildJob, isNotNull);
+    final setupBlocks = RegExp(
+      r'^ {6}setup: \|\n((?: {8}.+(?:\n|$))+)',
+      multiLine: true,
+    ).allMatches(buildJob!).toList();
+
+    expect(setupBlocks, hasLength(1));
+    final setupCommands = setupBlocks.single
+        .group(1)!
+        .split('\n')
+        .where((line) => line.trim().isNotEmpty)
+        .map((line) => line.trim())
+        .toList();
+    expect(setupCommands, ['npm run test:api', config['buildCommand']]);
+  });
 }
