@@ -37,7 +37,7 @@ The Cubit remains responsible for workflow state, while widgets remain responsib
 - Modify: `test/championship/import/championship_recipe_mapper_test.dart`
 - Modify: `lib/championship/model/review_recipe_draft.dart`
 
-### Red
+### Red: Component-removal invariant
 
 Add a model test that removes the first component from a two-component draft and asserts that the remaining component keeps its full value, confirmation, evidence, and issue state.
 Add a model test that expects `StateError` when code attempts to remove the only component.
@@ -51,7 +51,7 @@ flutter test test/championship/model/review_recipe_draft_test.dart test/champion
 
 Expected red result: the tests fail because `ReviewRecipeDraft.removeComponent` does not exist.
 
-### Green
+### Green: Component-removal invariant
 
 Add `ReviewRecipeDraft.removeComponent(int index)`.
 Reject an out-of-range index through the existing list behavior and throw `StateError` when the draft contains one component.
@@ -68,7 +68,7 @@ Rerun the narrow test command and require all selected tests to pass.
 - Modify: `lib/championship/view/championship_review_panel.dart`
 - Modify: `lib/championship/cubit/championship_demo_cubit.dart` only if the widget cannot update the draft through an existing public method
 
-### Red
+### Red: Review remove control
 
 Render a two-component review draft, activate the localized remove action for the first component, and assert that only the second component remains.
 Render a one-component draft and assert that its remove action is visible but disabled.
@@ -81,7 +81,7 @@ flutter test test/championship/view/championship_workflow_test.dart
 
 Expected red result: the remove action cannot be found.
 
-### Green
+### Green: Review remove control
 
 Add the smallest Cubit or existing-state update seam needed to apply `removeComponent`.
 Render one localized outlined remove button per component.
@@ -102,7 +102,7 @@ Rerun the narrow test and require it to pass.
 - Modify: `lib/championship/view/championship_strings.dart`
 - Modify: `lib/championship/view/championship_review_panel.dart`
 
-### Red
+### Red: Structured verification issues
 
 Change verifier expectations from English strings to ordered structured issues with a kind and optional field path.
 Render a failed Korean review and assert that the summary contains localized field labels but does not contain `recipe.`, `components[`, `must`, or `required`.
@@ -116,7 +116,7 @@ flutter test test/championship/import/recipe_draft_verifier_test.dart test/champ
 
 Expected red result: the verifier still exposes raw strings and the widget still renders them.
 
-### Green
+### Green: Structured verification issues
 
 Introduce one small immutable verification-issue value type and one issue-kind enum in `recipe_draft_verifier.dart`.
 Replace raw validation messages with ordered structured issues while preserving all existing validation rules.
@@ -133,7 +133,7 @@ Rerun the narrow test command and require all selected tests to pass.
 - Modify: `test/championship/view/championship_workflow_test.dart`
 - Modify: `lib/championship/view/championship_review_panel.dart`
 
-### Red
+### Red: Focus and viewport reveal
 
 Build a review fixture tall enough to require scrolling.
 Scroll to Continue, activate it with unresolved fields, and assert that the first issue's editable control owns primary focus and that its render box is inside the scrollable viewport after settling.
@@ -147,7 +147,7 @@ flutter test test/championship/view/championship_workflow_test.dart --plain-name
 
 Expected red result: focus stays on Continue or the first field remains outside the visible viewport.
 
-### Green
+### Green: Focus and viewport reveal
 
 Convert the review panel to stateful presentation only as needed.
 Own and dispose stable focus nodes for editable paths.
@@ -166,7 +166,7 @@ Rerun the named test, then rerun the complete workflow test file.
 - Modify: `lib/championship/view/championship_app.dart`
 - Modify: `lib/main_championship.dart`
 
-### Red
+### Red: HTML document language
 
 Add a widget test that records the optional resolved-locale callback, pumps the app in English and Korean, and asserts that it reports the locale selected by Flutter after localization resolves.
 Add a browser-platform test that calls the entrypoint DOM adapter for English and Korean and reads `document.documentElement.lang` after each call.
@@ -181,7 +181,7 @@ flutter test --platform chrome test/championship/view/championship_document_lang
 
 Expected red result: `ChampionshipApp` has no resolved-locale callback.
 
-### Green
+### Green: HTML document language
 
 Add an optional `ValueChanged<Locale>` callback to `ChampionshipApp`.
 Use a small stateful widget below `MaterialApp` to observe `Localizations.localeOf(context)` and report only resolved-locale changes after the frame.
