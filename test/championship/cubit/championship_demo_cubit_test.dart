@@ -409,6 +409,56 @@ void main() {
     },
   );
 
+  test(
+    'the target unit starts as the picker symbol of the base yield',
+    () async {
+      final cubit = _cubit();
+      addTearDown(cubit.close);
+      await cubit.loadSample();
+      _completeSampleReview(cubit);
+      cubit.updateReview(
+        (draft) => draft
+            .editBaseYieldUnit('pieces')
+            .confirmBaseYieldUnit()
+            .editMaxBatchYieldUnit('pieces')
+            .confirmMaxBatchYieldUnit(),
+      );
+
+      cubit.continueToTarget();
+
+      expect(cubit.state.phase, ChampionshipPhase.target);
+      expect(cubit.state.verified?.recipe.baseYield.unit, 'pieces');
+      expect(cubit.state.targetUnit, 'piece');
+    },
+  );
+
+  test('a failed replacement clears the previously prepared image', () async {
+    var call = 0;
+    final picker = _FakeImagePicker(() async {
+      call += 1;
+      if (call == 1) {
+        return SelectedRecipeImage(
+          name: 'first.png',
+          mimeType: 'image/png',
+          bytes: Uint8List.fromList([137, 80, 78, 71]),
+        );
+      }
+      throw const RecipeImagePickerException(
+        RecipeImagePickerFailure.unsupportedMimeType,
+      );
+    });
+    final cubit = _cubit(picker: picker);
+    addTearDown(cubit.close);
+
+    await cubit.pickImage();
+    expect(cubit.state.preparedImage?.image.name, 'first.png');
+
+    await cubit.pickImage();
+
+    expect(cubit.state.preparedImage, isNull);
+    expect(cubit.state.sourceFailure, ChampionshipSourceFailure.imageSelection);
+  });
+
   test('invalid target stays in Target with the verified draft', () async {
     final cubit = _cubit();
     addTearDown(cubit.close);

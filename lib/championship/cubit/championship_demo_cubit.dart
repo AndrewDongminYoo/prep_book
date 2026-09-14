@@ -123,16 +123,20 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
       emit(state.copyWith(preparedImage: prepared));
     } on RecipeImagePickerException {
       if (generation != _requestGeneration) return;
-      emit(
-        state.copyWith(sourceFailure: ChampionshipSourceFailure.imageSelection),
-      );
+      emit(_imageSelectionFailed());
     } on RecipeImageReducerException {
       if (generation != _requestGeneration) return;
-      emit(
-        state.copyWith(sourceFailure: ChampionshipSourceFailure.imageSelection),
-      );
+      emit(_imageSelectionFailed());
     }
   }
+
+  /// A failed selection also drops the image picked before it: the visitor
+  /// meant to replace it, and an error shown over a still-submittable old
+  /// image would send the wrong source.
+  ChampionshipDemoState _imageSelectionFailed() => state.copyWith(
+    preparedImage: null,
+    sourceFailure: ChampionshipSourceFailure.imageSelection,
+  );
 
   Future<void> submitText({required String locale}) async {
     if (!_requireLiveConsent()) return;
@@ -202,7 +206,11 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
             verified: draft,
             reviewIssues: const [],
             targetAmount: '',
-            targetUnit: draft.recipe.baseYield.unit,
+            // The verifier resolved this unit, so the symbol exists; the
+            // picker offers symbols, and the state must name what it shows.
+            targetUnit: review.units
+                .resolve(draft.recipe.baseYield.unit)!
+                .symbol,
             targetFailure: null,
             run: null,
           ),
