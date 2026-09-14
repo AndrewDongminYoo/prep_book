@@ -169,6 +169,43 @@ void main() {
       expect(changedToManual.components[0].unit.activeIssues, isEmpty);
     });
 
+    test('keeps a confirmed amount and unit across numeric behaviors', () {
+      final draft = ReviewRecipeDraft.fromExtracted(
+        _fixture(),
+      ).confirmAllUnambiguous();
+
+      final perBatch = draft.editComponentBehavior(
+        0,
+        DraftScalingBehavior.perBatch,
+      );
+      final component = perBatch.components[0];
+
+      expect(component.behavior.value, DraftScalingBehavior.perBatch);
+      expect(component.behavior.isConfirmed, isFalse);
+      expect(component.amount.value, '1000');
+      expect(component.amount.isConfirmed, isTrue);
+      expect(component.unit.value, 'g');
+      expect(component.unit.isConfirmed, isTrue);
+    });
+
+    test('leaving manual reinstates the proposal for confirmation', () {
+      final draft = ReviewRecipeDraft.fromExtracted(
+        _fixture(),
+      ).confirmAllUnambiguous();
+
+      final restored = draft
+          .editComponentBehavior(0, DraftScalingBehavior.manual)
+          .editComponentBehavior(0, DraftScalingBehavior.proportional);
+      final component = restored.components[0];
+
+      expect(component.amount.value, '1000');
+      expect(component.amount.isConfirmed, isFalse);
+      expect(component.amount.activeIssues, isEmpty);
+      expect(component.unit.value, 'g');
+      expect(component.unit.isConfirmed, isFalse);
+      expect(component.unit.activeIssues, isEmpty);
+    });
+
     test(
       'retains the proposal while explicitly confirming no maximum yield',
       () {

@@ -487,31 +487,49 @@ final class ReviewRecipeDraft {
         ),
       );
 
+  /// Changes a component's scaling behavior.
+  ///
+  /// The amount and unit are only touched when the change moves the component
+  /// across the manual boundary: becoming manual clears them, because a manual
+  /// component carries no quantity, and leaving manual brings the model's
+  /// proposal back for confirmation. Between two numeric behaviors the
+  /// quantity means the same thing, so a confirmed amount and unit stay
+  /// confirmed.
   ReviewRecipeDraft editComponentBehavior(
     int index,
     DraftScalingBehavior? value,
   ) {
     final component = components[index];
+    final wasManual = component.behavior.value == DraftScalingBehavior.manual;
     final isManual = value == DraftScalingBehavior.manual;
+    final behavior = component.behavior.edit(
+      value,
+      localIssues: _requiredBehaviorIssues(value),
+    );
+    if (isManual == wasManual) {
+      return _replaceComponent(index, component.copyWith(behavior: behavior));
+    }
+    if (isManual) {
+      return _replaceComponent(
+        index,
+        component.copyWith(
+          amount: component.amount.edit(null),
+          unit: component.unit.edit(null),
+          behavior: behavior,
+        ),
+      );
+    }
+    final amount = component.amount.sourceValue;
+    final unit = component.unit.sourceValue;
     return _replaceComponent(
       index,
       component.copyWith(
         amount: component.amount.edit(
-          isManual ? null : component.amount.value,
-          localIssues: isManual
-              ? const []
-              : _positiveAmountIssues(component.amount.value),
+          amount,
+          localIssues: _positiveAmountIssues(amount),
         ),
-        unit: component.unit.edit(
-          isManual ? null : component.unit.value,
-          localIssues: isManual
-              ? const []
-              : _unitIssues(component.unit.value, units),
-        ),
-        behavior: component.behavior.edit(
-          value,
-          localIssues: _requiredBehaviorIssues(value),
-        ),
+        unit: component.unit.edit(unit, localIssues: _unitIssues(unit, units)),
+        behavior: behavior,
       ),
     );
   }
