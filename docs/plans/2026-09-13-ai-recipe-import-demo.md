@@ -67,7 +67,7 @@ variant-only until separate kitchen-user validation justifies a product change.
 - Support Flutter Web only for the championship entrypoint.
 - Do not initialize SQLite or use persistence repositories in the variant.
 - Keep source text, image bytes, drafts, and runs in memory only.
-- Accept text up to `20,000` Unicode scalar values or one JPEG, PNG, or WebP image up to `3 MiB` decoded.
+- Accept text up to `20,000` Unicode scalar values or one JPEG, PNG, or WebP image up to `32 MiB` as selected, reduced in the browser to at most `3 MiB` before upload (Task 8); the endpoint keeps the `3 MiB` decoded limit.
 - Exclude PDF, spreadsheet, document, HEIC, URL, camera, and multi-image input.
 - Keep sample mode available when the endpoint is absent, failing, or
   rate-limited.
@@ -102,6 +102,7 @@ variant-only until separate kitchen-user validation justifies a product change.
 | 2026-09-14               | Task 3: strict extraction endpoint.                                  |
 | 2026-09-15               | Task 4: Flutter transport and one-image input.                       |
 | 2026-09-16 to 2026-09-17 | Tasks 5 and 6: reviewed flow and production sheet.                   |
+| 2026-09-14 to 2026-09-17 | Task 8: browser-side image reduction (added 2026-09-14).             |
 | 2026-09-18               | Feature freeze, registration check, stable public URL.               |
 | 2026-09-19               | Runtime acceptance, screenshots, and submission copy.                |
 | 2026-09-20               | Final verification and submission.                                   |
@@ -676,6 +677,92 @@ runtime evidence proves a defect.
   ```
 
   Do not open or merge a pull request without separate approval.
+
+---
+
+## Task 8: Reduce large images in the browser before upload
+
+Added 2026-09-14 after the operator judged the `3 MiB` selection limit too
+tight for camera photos. The `3 MiB` figure is derived from the Vercel Function
+`4.5 MB` request body limit (verified against the limits page on 2026-09-14),
+not from the legibility a recipe photo needs, so the browser now reduces the
+image before the limit applies. The provider's high-detail mode spends at most
+`2,500` patches of `32` px, so a longest edge of `2,048` px loses nothing it
+would have kept.
+
+**Files:** create `lib/championship/input/recipe_image_reducer.dart` (policy
+over a `RecipeImageCodec` interface) and
+`lib/championship/input/web_recipe_image_codec.dart` (`package:web`
+implementation wired only in `lib/main_championship.dart`); modify the picker
+limit, the Cubit's `pickImage`, the Source panel metadata, strings, the spec's
+Image section, README, `pubspec.yaml` (`web` as a direct dependency), and the
+lockfile; mirror tests under `test/championship/input` and
+`test/championship/cubit`.
+
+**Policy:**
+
+- The picker accepts up to `32 MiB` as selected; above that it fails
+  `sourceTooLarge` without decoding.
+- An image at most `3 MiB` whose longest edge is at most `2,048` px is sent
+  unchanged, so a PNG screenshot stays lossless.
+- Otherwise the reducer scales the longest edge to `2,048` px and encodes JPEG
+  at quality `0.85`; if the result still exceeds `3 MiB` it retries at
+  `1,600` px / `0.80`, then `1,280` px / `0.75`, then fails `sourceTooLarge`.
+- Reduction runs inside `pickImage()` before `selectedImage` is emitted, so the
+  metadata shown is what will be sent; the request-side `3 MiB` check stays as
+  the last guard.
+- Transparent pixels are flattened onto white; EXIF orientation is applied at
+  decode.
+
+- [x] **8.1 Write the failing reducer tests.** Drive `RecipeImageReducer` with
+      a fake codec that scripts dimensions and encoded sizes. Cover the unchanged
+      path, the single-step reduction, the ladder, exhaustion, a decode failure,
+      and that the original bytes are never mutated. Expected: RED because the
+      class does not exist.
+
+- [x] **8.2 Implement the reducer and codec interface.** Pure Dart, no
+      `package:web`; the ladder is a constant list.
+
+- [x] **8.3 Test and raise the picker limit.** The picker rejects above `32 MiB`
+      and accepts a `4 MiB` file it used to reject; the reducer, not the picker,
+      owns the `3 MiB` outcome.
+
+- [x] **8.4 Test and wire the Cubit.** `pickImage()` reduces after picking, emits
+      the reduced image with its pixel size and whether it was reduced, maps
+      reducer failure to the image-selection failure, and still ignores a stale
+      completion. Submitting sends the reduced bytes.
+
+- [x] **8.5 Test and show the metadata.** The Source panel shows name, MIME,
+      bytes, pixel size, and a reduced marker; strings in English and Korean.
+
+- [x] **8.6 Implement the web codec.** `createImageBitmap` with EXIF orientation
+      and high-quality resize, draw onto white, `OffscreenCanvas.convertToBlob`
+      as JPEG. Wire it in `main_championship.dart` only. No test imports it, so
+      it is absent from `lcov.info` like `bootstrap.dart`.
+
+- [x] **8.7 Update the spec, README, and strings, then verify.** Run:
+
+  ```sh
+  flutter pub get
+  flutter test test/championship/input test/championship/cubit \
+    test/championship/view
+  flutter test test/championship/championship_boundary_test.dart
+  flutter analyze
+  dart run bloc_tools:bloc lint .
+  very_good test --coverage --test-randomize-ordering-seed random
+  lcov --summary coverage/lcov.info
+  flutter build web --release --target lib/main_championship.dart \
+    --dart-define=AI_IMPORT_ENDPOINT=/api/extract-recipe --tree-shake-icons
+  ```
+
+- [x] **8.8 Verify in Chrome and commit.** Serve `build/web`, pick a JPEG wider
+      than `2,048` px and larger than `3 MiB`, and confirm the metadata shows the
+      reduced size under `3 MiB`; pick a small PNG and confirm it is unchanged.
+      Commit:
+
+  ```sh
+  git commit -m "feat(championship): reduce large images in the browser"
+  ```
 
 ## Completion criteria
 
