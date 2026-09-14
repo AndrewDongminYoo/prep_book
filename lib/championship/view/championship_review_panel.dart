@@ -452,7 +452,11 @@ class _ReviewFieldCard<T> extends StatelessWidget {
               if (field.activeIssues.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(strings.issues, style: TextStyle(color: colors.error)),
-                for (final issue in field.activeIssues)
+                for (final issue in [
+                  ...field.activeSourceIssues,
+                  for (final issue in field.activeLocalIssues)
+                    strings.reviewIssue(issue),
+                ])
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

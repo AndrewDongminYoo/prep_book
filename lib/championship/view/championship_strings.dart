@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:prep_book/championship/cubit/championship_demo_state.dart';
 import 'package:prep_book/championship/input/recipe_import_client.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
+import 'package:prep_book/championship/model/review_recipe_draft.dart';
 
 final class ChampionshipStrings {
   const ChampionshipStrings._({required this.isKorean});
@@ -143,6 +144,36 @@ final class ChampionshipStrings {
   String get evidence => isKorean ? '원문 근거' : 'Evidence';
   String get currentValue => isKorean ? '현재 값' : 'Current value';
   String get issues => isKorean ? '확인할 문제' : 'Issues';
+
+  String reviewIssue(ReviewIssue issue) => switch (issue) {
+    ReviewIssue.valueRequired =>
+      isKorean ? '값을 입력하세요.' : 'A value is required.',
+    ReviewIssue.quantityRequired =>
+      isKorean ? '수량을 입력하세요.' : 'A quantity is required.',
+    ReviewIssue.quantityNotPositive =>
+      isKorean ? '수량은 0보다 커야 합니다.' : 'The quantity must be greater than zero.',
+    ReviewIssue.quantityNotDecimal =>
+      isKorean
+          ? '수량은 양의 십진수여야 합니다.'
+          : 'The quantity must be a positive decimal string.',
+    ReviewIssue.unitRequired => isKorean ? '단위를 선택하세요.' : 'A unit is required.',
+    ReviewIssue.unitUnsupported =>
+      isKorean ? '지원되지 않는 단위입니다.' : 'The unit is unsupported.',
+    ReviewIssue.maxUnitIncompatible =>
+      isKorean
+          ? '최대 배치 수율 단위가 기준 단위와 호환되지 않습니다.'
+          : 'The maximum yield unit is incompatible.',
+    ReviewIssue.manualHasQuantity =>
+      isKorean
+          ? '수동 구성 요소에는 수량을 넣을 수 없습니다.'
+          : 'A manual component cannot contain a quantity.',
+    ReviewIssue.manualHasUnit =>
+      isKorean
+          ? '수동 구성 요소에는 단위를 넣을 수 없습니다.'
+          : 'A manual component cannot contain a unit.',
+    ReviewIssue.behaviorRequired =>
+      isKorean ? '계산 방식을 선택하세요.' : 'A scaling behavior is required.',
+  };
   String get confirm => isKorean ? '이 값 확인' : 'Confirm value';
   String get confirmed => isKorean ? '사용자 확인 완료' : 'Operator confirmed';
   String get edited => isKorean ? '사용자 수정됨' : 'Edited by operator';

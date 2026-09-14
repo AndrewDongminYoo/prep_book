@@ -2,6 +2,34 @@ import 'package:prep_book/championship/import/unit_alias_resolver.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/domain/domain.dart';
 
+/// A validation issue the review layer raises on its own, without the model.
+///
+/// The model reports what the source does or does not say in `sourceIssues`,
+/// in the request's language. Local issues describe what the reviewer still
+/// has to do, so they are codes here and sentences only where they are shown.
+/// [message] is the technical English form the verifier reports against a
+/// field path; the review screen renders each code in the app's locale.
+enum ReviewIssue {
+  valueRequired('A value is required.', isAbsence: true),
+  quantityRequired('A quantity is required.', isAbsence: true),
+  quantityNotPositive('The quantity must be greater than zero.'),
+  quantityNotDecimal('The quantity must be a positive decimal string.'),
+  unitRequired('A unit is required.', isAbsence: true),
+  unitUnsupported('The unit is unsupported.'),
+  maxUnitIncompatible('The maximum yield unit is incompatible.'),
+  manualHasQuantity('A manual component cannot contain a quantity.'),
+  manualHasUnit('A manual component cannot contain a unit.'),
+  behaviorRequired('A scaling behavior is required.', isAbsence: true);
+
+  const ReviewIssue(this.message, {this.isAbsence = false});
+
+  final String message;
+
+  /// Whether the issue says only that the value is missing. A missing value
+  /// the model has already explained is not reported a second time.
+  final bool isAbsence;
+}
+
 final class ReviewField<T> {
   ReviewField({
     required this.sourceValue,
@@ -9,7 +37,7 @@ final class ReviewField<T> {
     required this.evidence,
     required this.confidence,
     required List<String> sourceIssues,
-    required List<String> localIssues,
+    required List<ReviewIssue> localIssues,
     this.isConfirmed = false,
   }) : sourceIssues = List.unmodifiable(sourceIssues),
        localIssues = List.unmodifiable(localIssues);
@@ -19,25 +47,41 @@ final class ReviewField<T> {
   final String evidence;
   final ExtractionConfidence confidence;
   final List<String> sourceIssues;
-  final List<String> localIssues;
+  final List<ReviewIssue> localIssues;
   final bool isConfirmed;
 
   bool get isEdited => value != sourceValue;
 
-  List<String> get activeIssues =>
-      List.unmodifiable([if (!isEdited) ...sourceIssues, ...localIssues]);
+  /// The model's issues that still apply: all of them until the value is
+  /// edited, none afterwards, because they describe the proposal.
+  List<String> get activeSourceIssues =>
+      List.unmodifiable(isEdited ? const <String>[] : sourceIssues);
+
+  /// The local issues that still apply. An absence the model has already
+  /// reported is left to that report, so the same gap is not shown twice.
+  List<ReviewIssue> get activeLocalIssues => List.unmodifiable([
+    for (final issue in localIssues)
+      if (!issue.isAbsence || activeSourceIssues.isEmpty) issue,
+  ]);
+
+  List<String> get activeIssues => List.unmodifiable([
+    ...activeSourceIssues,
+    for (final issue in activeLocalIssues) issue.message,
+  ]);
 
   bool get canConfirm => value != null && activeIssues.isEmpty;
 
-  ReviewField<T> edit(T? nextValue, {List<String> localIssues = const []}) =>
-      ReviewField(
-        sourceValue: sourceValue,
-        value: nextValue,
-        evidence: evidence,
-        confidence: confidence,
-        sourceIssues: sourceIssues,
-        localIssues: localIssues,
-      );
+  ReviewField<T> edit(
+    T? nextValue, {
+    List<ReviewIssue> localIssues = const [],
+  }) => ReviewField(
+    sourceValue: sourceValue,
+    value: nextValue,
+    evidence: evidence,
+    confidence: confidence,
+    sourceIssues: sourceIssues,
+    localIssues: localIssues,
+  );
 
   ReviewField<T> confirm() {
     if (!canConfirm) {
@@ -582,7 +626,7 @@ ReviewYieldDraft _reviewMaxYield(
 
 ReviewField<T> _reviewField<T>(
   ExtractedField<T> source,
-  List<String> Function(T? value) validate,
+  List<ReviewIssue> Function(T? value) validate,
 ) => ReviewField(
   sourceValue: source.value,
   value: source.value,
@@ -602,29 +646,35 @@ ReviewField<Object?> _asObjectField<T>(ReviewField<T> field) => ReviewField(
   isConfirmed: field.isConfirmed,
 );
 
-List<String> _requiredTextIssues(String? value) =>
-    value == null || value.trim().isEmpty ? const ['A value is required.'] : [];
+List<ReviewIssue> _requiredTextIssues(String? value) =>
+    value == null || value.trim().isEmpty
+    ? const [ReviewIssue.valueRequired]
+    : const [];
 
-List<String> _positiveAmountIssues(String? value) {
+List<ReviewIssue> _positiveAmountIssues(String? value) {
   if (value == null || value.trim().isEmpty) {
-    return const ['A quantity is required.'];
+    return const [ReviewIssue.quantityRequired];
   }
   try {
     if (Quantity.parse(value, Unit.gram).isZero || value.startsWith('-')) {
-      return const ['The quantity must be greater than zero.'];
+      return const [ReviewIssue.quantityNotPositive];
     }
   } on Object {
-    return const ['The quantity must be a positive decimal string.'];
+    return const [ReviewIssue.quantityNotDecimal];
   }
   return const [];
 }
 
-List<String> _unitIssues(String? value, UnitAliasResolver units) =>
-    units.resolve(value) == null
-    ? const ['The unit is unsupported.']
-    : const [];
+List<ReviewIssue> _unitIssues(String? value, UnitAliasResolver units) {
+  if (value == null || value.trim().isEmpty) {
+    return const [ReviewIssue.unitRequired];
+  }
+  return units.resolve(value) == null
+      ? const [ReviewIssue.unitUnsupported]
+      : const [];
+}
 
-List<String> _maximumUnitIssues(
+List<ReviewIssue> _maximumUnitIssues(
   String? baseValue,
   String? maxValue,
   UnitAliasResolver units,
@@ -635,16 +685,14 @@ List<String> _maximumUnitIssues(
   final maxUnit = units.resolve(maxValue)!;
   return baseUnit == null || baseUnit.canConvertTo(maxUnit)
       ? const []
-      : const ['The maximum yield unit is incompatible.'];
+      : const [ReviewIssue.maxUnitIncompatible];
 }
 
-List<String> _manualAmountIssues(String? value) => value == null
-    ? const []
-    : const ['A manual component cannot contain a quantity.'];
+List<ReviewIssue> _manualAmountIssues(String? value) =>
+    value == null ? const [] : const [ReviewIssue.manualHasQuantity];
 
-List<String> _manualUnitIssues(String? value) => value == null
-    ? const []
-    : const ['A manual component cannot contain a unit.'];
+List<ReviewIssue> _manualUnitIssues(String? value) =>
+    value == null ? const [] : const [ReviewIssue.manualHasUnit];
 
-List<String> _requiredBehaviorIssues(DraftScalingBehavior? value) =>
-    value == null ? const ['A scaling behavior is required.'] : const [];
+List<ReviewIssue> _requiredBehaviorIssues(DraftScalingBehavior? value) =>
+    value == null ? const [ReviewIssue.behaviorRequired] : const [];

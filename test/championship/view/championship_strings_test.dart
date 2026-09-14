@@ -93,6 +93,7 @@ List<String> _allCopy(ChampionshipStrings strings) => [
     strings.confidence(confidence),
   for (final behavior in DraftScalingBehavior.values)
     strings.behaviorName(behavior),
+  for (final issue in ReviewIssue.values) strings.reviewIssue(issue),
   strings.targetHeading,
   strings.verifiedRecipe,
   strings.targetAmount,
@@ -113,6 +114,16 @@ List<String> _allCopy(ChampionshipStrings strings) => [
 ];
 
 void main() {
+  testWidgets('translates every local review issue', (tester) async {
+    final english = await _stringsFor(tester, const Locale('en'));
+    final korean = await _stringsFor(tester, const Locale('ko'));
+
+    for (final issue in ReviewIssue.values) {
+      expect(english.reviewIssue(issue), issue.message, reason: '$issue');
+      expect(korean.reviewIssue(issue), isNot(issue.message), reason: '$issue');
+    }
+  });
+
   for (final locale in const [Locale('en'), Locale('ko')]) {
     testWidgets('provides complete ${locale.languageCode} workflow copy', (
       tester,

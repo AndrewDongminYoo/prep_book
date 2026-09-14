@@ -185,4 +185,53 @@ void main() {
       },
     );
   });
+
+  group('local issues', () {
+    test('an absent unit is required, an unknown unit is unsupported', () {
+      final draft = ReviewRecipeDraft.fromExtracted(
+        _fixtureWithoutWaterUnitIssue(),
+      );
+
+      final absent = draft.components[2].unit;
+      final unknown = draft.editComponentUnit(0, 'cup').components[0].unit;
+
+      expect(absent.value, isNull);
+      expect(absent.activeLocalIssues, [ReviewIssue.unitRequired]);
+      expect(absent.activeIssues, ['A unit is required.']);
+      expect(unknown.activeLocalIssues, [ReviewIssue.unitUnsupported]);
+      expect(unknown.activeIssues, ['The unit is unsupported.']);
+    });
+
+    test('an absence the model already reported is not reported twice', () {
+      final draft = ReviewRecipeDraft.fromExtracted(_fixture());
+
+      final unit = draft.components[2].unit;
+
+      expect(unit.value, isNull);
+      expect(unit.sourceIssues, ['The source does not state a unit.']);
+      expect(unit.activeLocalIssues, isEmpty);
+      expect(unit.activeIssues, ['The source does not state a unit.']);
+      expect(unit.canConfirm, isFalse);
+    });
+
+    test('a value edited to empty is required again', () {
+      final draft = ReviewRecipeDraft.fromExtracted(_fixture());
+
+      final amount = draft.editBaseYieldAmount('').recipe.baseYield.amount;
+
+      expect(amount.isEdited, isTrue);
+      expect(amount.activeLocalIssues, [ReviewIssue.quantityRequired]);
+      expect(amount.activeIssues, ['A quantity is required.']);
+    });
+  });
+}
+
+ExtractedRecipeDraft _fixtureWithoutWaterUnitIssue() {
+  final json =
+      jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
+  final components = json['components']! as List<Object?>;
+  final water = components[2]! as Map<String, Object?>;
+  final unit = water['unit']! as Map<String, Object?>;
+  unit['issues'] = <Object?>[];
+  return ExtractedRecipeDraft.fromJson(json);
 }

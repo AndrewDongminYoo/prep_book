@@ -12,6 +12,7 @@ Future<void> _pumpApp(
   WidgetTester tester,
   ChampionshipDemoCubit cubit, {
   Size size = const Size(900, 1000),
+  Locale locale = const Locale('en'),
 }) async {
   tester.view
     ..physicalSize = size
@@ -22,7 +23,7 @@ Future<void> _pumpApp(
     ChampionshipApp(
       cubit: cubit,
       openProductionSheet: ignoreChampionshipProductionSheet,
-      locale: const Locale('en'),
+      locale: locale,
     ),
   );
   await tester.pumpAndSettle();
@@ -96,6 +97,32 @@ void main() {
     cubit.continueToTarget();
     await tester.pumpAndSettle();
     expect(find.text('• recipe.name must be confirmed.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('local review issues follow the locale and never repeat the '
+      'model', (tester) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, locale: const Locale('ko'));
+
+    // The water unit is absent and the model already said so; the local
+    // check must not add a second line, in either language.
+    expect(find.text('The source does not state a unit.'), findsOneWidget);
+    expect(find.text('The unit is unsupported.'), findsNothing);
+    expect(find.text('지원되지 않는 단위입니다.'), findsNothing);
+    expect(find.text('단위를 선택하세요.'), findsNothing);
+
+    tester
+        .widget<TextFormField>(
+          find.byKey(const ValueKey('recipe.baseYield.amount.input')),
+        )
+        .onChanged
+        ?.call('');
+    await tester.pumpAndSettle();
+
+    expect(find.text('수량을 입력하세요.'), findsOneWidget);
+    expect(find.text('A quantity is required.'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
