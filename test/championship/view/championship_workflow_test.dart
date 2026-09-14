@@ -456,6 +456,29 @@ void main() {
     expect(_dropdownValues(tester, 'target-unit-input'), ['개']);
   });
 
+  testWidgets('bulk confirmation is also offered where the review ends', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, size: const Size(900, 600));
+
+    final top = find.byKey(const ValueKey('review-confirm-all'));
+    final bottom = find.byKey(const ValueKey('review-confirm-all-bottom'));
+    final continueButton = find.byKey(const ValueKey('review-continue'));
+    expect(top, findsOneWidget);
+    expect(cubit.state.review!.recipe.name.isConfirmed, isFalse);
+
+    await _tapVisible(tester, bottom);
+
+    expect(cubit.state.review!.recipe.name.isConfirmed, isTrue);
+    expect(cubit.state.review!.components[2].unit.isConfirmed, isFalse);
+    expect(
+      tester.getTopLeft(bottom).dy,
+      lessThan(tester.getTopLeft(continueButton).dy),
+    );
+  });
+
   testWidgets('review confirms an explicitly absent maximum batch', (
     tester,
   ) async {

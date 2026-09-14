@@ -146,6 +146,16 @@ class ChampionshipReviewPanel extends StatelessWidget {
               _IssueSummary(issues: state.reviewIssues),
             ],
             const SizedBox(height: 24),
+            // The same bulk action as at the top, offered again where the
+            // reviewer ends up after correcting the flagged fields, so the
+            // remaining clean values can be confirmed without scrolling back.
+            OutlinedButton.icon(
+              key: const ValueKey('review-confirm-all-bottom'),
+              onPressed: cubit.confirmAllUnambiguous,
+              icon: const Icon(Icons.done_all),
+              label: Text(strings.confirmAll),
+            ),
+            const SizedBox(height: 12),
             FilledButton.icon(
               key: const ValueKey('review-continue'),
               onPressed: cubit.continueToTarget,
