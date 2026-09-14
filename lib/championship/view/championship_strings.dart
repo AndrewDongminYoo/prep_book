@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:prep_book/championship/cubit/championship_demo_state.dart';
+import 'package:prep_book/championship/import/recipe_draft_verifier.dart';
 import 'package:prep_book/championship/input/recipe_import_client.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/championship/model/review_recipe_draft.dart';
@@ -174,6 +175,93 @@ final class ChampionshipStrings {
     ReviewIssue.behaviorRequired =>
       isKorean ? '계산 방식을 선택하세요.' : 'A scaling behavior is required.',
   };
+
+  String verificationIssue(RecipeDraftVerificationIssue issue) {
+    final label = _verificationFieldLabel(issue.path);
+    return switch (issue.kind) {
+      RecipeDraftVerificationIssueKind.confirmationRequired =>
+        isKorean ? '$label: 이 값을 확인하세요.' : '$label: Confirm this value.',
+      RecipeDraftVerificationIssueKind.valueRequired =>
+        isKorean ? '$label: 값을 입력하세요.' : '$label: Enter a value.',
+      RecipeDraftVerificationIssueKind.quantityRequired =>
+        isKorean ? '$label: 수량을 입력하세요.' : '$label: Enter a quantity.',
+      RecipeDraftVerificationIssueKind.quantityNotPositive =>
+        isKorean
+            ? '$label: 0보다 큰 수량을 입력하세요.'
+            : '$label: Enter a quantity greater than zero.',
+      RecipeDraftVerificationIssueKind.quantityNotDecimal =>
+        isKorean
+            ? '$label: 올바른 십진수 수량을 입력하세요.'
+            : '$label: Enter a valid decimal quantity.',
+      RecipeDraftVerificationIssueKind.unitRequired =>
+        isKorean ? '$label: 단위를 선택하세요.' : '$label: Select a unit.',
+      RecipeDraftVerificationIssueKind.unitUnsupported =>
+        isKorean
+            ? '$label: 지원되는 단위를 선택하세요.'
+            : '$label: Select a supported unit.',
+      RecipeDraftVerificationIssueKind.maxUnitIncompatible =>
+        isKorean
+            ? '$label: 기준 단위와 호환되는 단위를 선택하세요.'
+            : '$label: Select a unit compatible with the base yield.',
+      RecipeDraftVerificationIssueKind.behaviorRequired =>
+        isKorean
+            ? '$label: 계산 방식을 선택하세요.'
+            : '$label: Select a scaling behavior.',
+      RecipeDraftVerificationIssueKind.manualHasQuantity =>
+        isKorean
+            ? '$label: 수동 재료의 수량을 비우세요.'
+            : '$label: Clear the quantity for a manual component.',
+      RecipeDraftVerificationIssueKind.manualHasUnit =>
+        isKorean
+            ? '$label: 수동 재료의 단위를 비우세요.'
+            : '$label: Clear the unit for a manual component.',
+      RecipeDraftVerificationIssueKind.maximumAbsenceConfirmationRequired =>
+        isKorean
+            ? '$label: 최대 배치 제한이 없음을 확인하세요.'
+            : '$label: Confirm that no maximum batch applies.',
+      RecipeDraftVerificationIssueKind.atLeastOneComponent =>
+        isKorean
+            ? '레시피에는 재료가 하나 이상 필요합니다.'
+            : 'The recipe needs at least one component.',
+    };
+  }
+
+  String _verificationFieldLabel(String? path) {
+    final componentMatch = path == null
+        ? null
+        : RegExp(r'^components\[(\d+)\](?:\.(\w+))?$').firstMatch(path);
+    if (componentMatch != null) {
+      final index = int.parse(componentMatch.group(1)!);
+      final componentLabel = component(index);
+      return switch (componentMatch.group(2)) {
+        'name' => isKorean ? '$componentLabel 이름' : '$componentLabel name',
+        'amount' => isKorean ? '$componentLabel 수량' : '$componentLabel amount',
+        'unit' => isKorean ? '$componentLabel 단위' : '$componentLabel unit',
+        'behavior' =>
+          isKorean
+              ? '$componentLabel 계산 방식'
+              : '$componentLabel scaling behavior',
+        'note' => isKorean ? '$componentLabel 메모' : '$componentLabel note',
+        _ => componentLabel,
+      };
+    }
+    final noteMatch = path == null
+        ? null
+        : RegExp(r'^recipe\.preparationNotes\[(\d+)\]$').firstMatch(path);
+    if (noteMatch != null) {
+      return preparationNote(int.parse(noteMatch.group(1)!));
+    }
+    return switch (path) {
+      'recipe.name' => recipeName,
+      'recipe.baseYield.amount' => baseYieldAmount,
+      'recipe.baseYield.unit' => baseYieldUnit,
+      'recipe.maxBatchYield' => isKorean ? '최대 배치 제한' : 'Maximum batch yield',
+      'recipe.maxBatchYield.amount' => maxBatchAmount,
+      'recipe.maxBatchYield.unit' => maxBatchUnit,
+      _ => isKorean ? '검토 항목' : 'Review field',
+    };
+  }
+
   String get confirm => isKorean ? '이 값 확인' : 'Confirm value';
   String get confirmed => isKorean ? '사용자 확인 완료' : 'Operator confirmed';
   String get edited => isKorean ? '사용자 수정됨' : 'Edited by operator';
@@ -193,6 +281,7 @@ final class ChampionshipStrings {
       isKorean ? '준비 메모 ${index + 1}' : 'Preparation note ${index + 1}';
   String component(int index) =>
       isKorean ? '재료 ${index + 1}' : 'Component ${index + 1}';
+  String get removeComponent => isKorean ? '재료 삭제' : 'Remove component';
   String get componentName => isKorean ? '재료 이름' : 'Component name';
   String get amount => isKorean ? '수량' : 'Amount';
   String get unit => isKorean ? '단위' : 'Unit';

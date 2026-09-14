@@ -579,6 +579,22 @@ final class ReviewRecipeDraft {
     );
   }
 
+  ReviewRecipeDraft removeComponent(int index) {
+    RangeError.checkValidIndex(index, components);
+    if (components.length == 1) {
+      throw StateError('A recipe must contain at least one component.');
+    }
+    return ReviewRecipeDraft._(
+      sourceKind: sourceKind,
+      recipe: recipe,
+      components: [
+        for (var itemIndex = 0; itemIndex < components.length; itemIndex += 1)
+          if (itemIndex != index) components[itemIndex],
+      ],
+      units: units,
+    );
+  }
+
   ReviewRecipeDraft _replaceRecipe(ReviewRecipeDetails nextRecipe) =>
       ReviewRecipeDraft._(
         sourceKind: sourceKind,
@@ -684,9 +700,11 @@ List<ReviewIssue> _positiveAmountIssues(String? value) {
     return const [ReviewIssue.quantityRequired];
   }
   try {
-    if (Quantity.parse(value, Unit.gram).isZero || value.startsWith('-')) {
+    if (Quantity.parse(value, Unit.gram).isZero) {
       return const [ReviewIssue.quantityNotPositive];
     }
+  } on NegativeQuantityError {
+    return const [ReviewIssue.quantityNotPositive];
   } on Object {
     return const [ReviewIssue.quantityNotDecimal];
   }

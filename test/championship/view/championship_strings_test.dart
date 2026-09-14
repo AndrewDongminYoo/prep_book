@@ -83,6 +83,7 @@ List<String> _allCopy(ChampionshipStrings strings) => [
   strings.confirmNoMaximumBatch,
   strings.preparationNote(0),
   strings.component(0),
+  strings.removeComponent,
   strings.componentName,
   strings.amount,
   strings.unit,
@@ -94,6 +95,15 @@ List<String> _allCopy(ChampionshipStrings strings) => [
   for (final behavior in DraftScalingBehavior.values)
     strings.behaviorName(behavior),
   for (final issue in ReviewIssue.values) strings.reviewIssue(issue),
+  for (final issue in RecipeDraftVerificationIssueKind.values)
+    strings.verificationIssue(
+      RecipeDraftVerificationIssue(
+        kind: issue,
+        path: issue == RecipeDraftVerificationIssueKind.atLeastOneComponent
+            ? null
+            : 'components[0].name',
+      ),
+    ),
   strings.targetHeading,
   strings.verifiedRecipe,
   strings.targetAmount,
@@ -122,6 +132,33 @@ void main() {
       expect(english.reviewIssue(issue), issue.message, reason: '$issue');
       expect(korean.reviewIssue(issue), isNot(issue.message), reason: '$issue');
     }
+  });
+
+  testWidgets('distinguishes manual quantity and unit verification issues', (
+    tester,
+  ) async {
+    final english = await _stringsFor(tester, const Locale('en'));
+    final korean = await _stringsFor(tester, const Locale('ko'));
+    const quantityIssue = RecipeDraftVerificationIssue(
+      kind: RecipeDraftVerificationIssueKind.manualHasQuantity,
+      path: 'components[0].behavior',
+    );
+    const unitIssue = RecipeDraftVerificationIssue(
+      kind: RecipeDraftVerificationIssueKind.manualHasUnit,
+      path: 'components[0].behavior',
+    );
+
+    expect(
+      english.verificationIssue(quantityIssue),
+      'Component 1 scaling behavior: Clear the quantity for a manual '
+      'component.',
+    );
+    expect(
+      english.verificationIssue(unitIssue),
+      'Component 1 scaling behavior: Clear the unit for a manual component.',
+    );
+    expect(korean.verificationIssue(quantityIssue), contains('수량을 비우세요'));
+    expect(korean.verificationIssue(unitIssue), contains('단위를 비우세요'));
   });
 
   for (final locale in const [Locale('en'), Locale('ko')]) {

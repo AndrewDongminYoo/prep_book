@@ -10,7 +10,7 @@ const _fixturePath = 'assets/championship/sample_croissant_draft.json';
 Map<String, Object?> _fixtureJson() =>
     jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
 
-VerifiedRecipeDraft _verifiedDraft([Map<String, Object?>? json]) {
+ReviewRecipeDraft _reviewDraft([Map<String, Object?>? json]) {
   final extracted = ExtractedRecipeDraft.fromJson(json ?? _fixtureJson());
   var review = ReviewRecipeDraft.fromExtracted(
     extracted,
@@ -24,6 +24,11 @@ VerifiedRecipeDraft _verifiedDraft([Map<String, Object?>? json]) {
       review = review.confirmComponentBehavior(index);
     }
   }
+  return review;
+}
+
+VerifiedRecipeDraft _verifiedDraft([Map<String, Object?>? json]) {
+  final review = _reviewDraft(json);
   final result = const RecipeDraftVerifier().verify(review);
   return (result as RecipeDraftVerified).draft;
 }
@@ -139,5 +144,37 @@ void main() {
     );
 
     expect(bundle.ingredients.single.defaultUnit, Unit.count('manual'));
+  });
+
+  test('excludes a component removed before verification', () {
+    final review = _reviewDraft().removeComponent(0);
+    final result = const RecipeDraftVerifier().verify(review);
+    final verified = (result as RecipeDraftVerified).draft;
+
+    final bundle = const ChampionshipRecipeMapper().map(
+      verified,
+      modifiedAt: DateTime.utc(2026, 9, 14),
+    );
+
+    expect(bundle.recipe.components, hasLength(3));
+    expect(bundle.ingredients.map((ingredient) => ingredient.name), [
+      'Butter',
+      'Water',
+      'Flour',
+    ]);
+    expect(
+      bundle.recipe.components[0].baseQuantity,
+      Quantity.parse('500', Unit.gram),
+    );
+    expect(
+      bundle.recipe.components[1].baseQuantity,
+      Quantity.parse('480', Unit.gram),
+    );
+    expect(bundle.recipe.components[2].baseQuantity, isNull);
+    expect(bundle.recipe.components[2].behavior, ScalingBehavior.manual);
+    expect(
+      bundle.recipe.components[2].note,
+      'For dusting the bench, as needed.',
+    );
   });
 }

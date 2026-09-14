@@ -54,6 +54,21 @@ Future<void> _tabTo(WidgetTester tester, Key key) async {
   fail('Tab did not reach $key.');
 }
 
+bool _hasPrimaryFocus(Finder finder) {
+  final target = finder.evaluate().single;
+  final focused = FocusManager.instance.primaryFocus?.context;
+  if (focused == null) return false;
+  if (identical(focused, target)) return true;
+  var containsFocus = false;
+  if (focused case final Element focusedElement) {
+    focusedElement.visitAncestorElements((ancestor) {
+      containsFocus = identical(ancestor, target);
+      return !containsFocus;
+    });
+  }
+  return containsFocus;
+}
+
 List<Key> _enabledButtonKeys() => [
   for (final element
       in find
@@ -96,8 +111,119 @@ void main() {
     expect(find.text('Needs confirmation'), findsWidgets);
     cubit.continueToTarget();
     await tester.pumpAndSettle();
-    expect(find.text('• recipe.name must be confirmed.'), findsOneWidget);
+    expect(find.text('• Recipe name: Confirm this value.'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('verification summary localizes fields without internal paths', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, locale: const Locale('ko'));
+
+    cubit.continueToTarget();
+    await tester.pumpAndSettle();
+
+    expect(find.text('• 레시피 이름: 이 값을 확인하세요.'), findsOneWidget);
+    expect(find.textContaining('recipe.'), findsNothing);
+    expect(find.textContaining('components['), findsNothing);
+    expect(find.textContaining('must'), findsNothing);
+    expect(find.textContaining('required'), findsNothing);
+  });
+
+  testWidgets(
+    'failed Continue focuses and reveals the first unresolved field',
+    (tester) async {
+      final cubit = buildChampionshipTestCubit();
+      await cubit.loadSample();
+      await _pumpApp(tester, cubit, size: const Size(390, 844));
+      final firstInput = find.byKey(const ValueKey('recipe.name.input'));
+      final continueButton = find.byKey(const ValueKey('review-continue'));
+      final scrollView = find.byType(SingleChildScrollView);
+
+      await tester.ensureVisible(continueButton);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(firstInput).bottom,
+        lessThan(tester.getRect(scrollView).top),
+      );
+
+      await tester.tap(continueButton);
+      await tester.pumpAndSettle();
+
+      final inputRect = tester.getRect(firstInput);
+      final viewportRect = tester.getRect(scrollView);
+      expect(_hasPrimaryFocus(firstInput), isTrue);
+      expect(inputRect.top, greaterThanOrEqualTo(viewportRect.top));
+      expect(inputRect.bottom, lessThanOrEqualTo(viewportRect.bottom));
+    },
+  );
+
+  testWidgets('newer summary-only failure prevents stale recovery focus', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, size: const Size(390, 844));
+    final continueButton = find.byKey(const ValueKey('review-continue'));
+    final firstInput = find.byKey(const ValueKey('recipe.name.input'));
+
+    await tester.ensureVisible(continueButton);
+    await tester.pumpAndSettle();
+    cubit.continueToTarget();
+    await tester.pump();
+
+    cubit
+      ..confirmAllUnambiguous()
+      ..updateReview(
+        (draft) => draft.editComponentUnit(2, 'g').confirmComponentUnit(2),
+      )
+      ..updateReview((draft) => draft.confirmComponentBehavior(3))
+      ..updateReview((draft) => draft.removeMaxBatchYield())
+      ..continueToTarget();
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.reviewIssues.first.path, 'recipe.maxBatchYield');
+    expect(_hasPrimaryFocus(firstInput), isFalse);
+  });
+
+  testWidgets('editing during recovery prevents stale focus', (tester) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, size: const Size(390, 844));
+    final continueButton = find.byKey(const ValueKey('review-continue'));
+    final firstInput = find.byKey(const ValueKey('recipe.name.input'));
+
+    await tester.ensureVisible(continueButton);
+    await tester.pumpAndSettle();
+    cubit.continueToTarget();
+    await tester.pump();
+
+    cubit.updateReview((draft) => draft.editRecipeName('Corrected recipe'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.reviewIssues, isEmpty);
+    expect(_hasPrimaryFocus(firstInput), isFalse);
+  });
+
+  testWidgets('keyboard Continue focuses the first unresolved field', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, size: const Size(390, 844));
+    const continueKey = ValueKey('review-continue');
+    final firstInput = find.byKey(const ValueKey('recipe.name.input'));
+
+    await _tabTo(tester, continueKey);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.reviewIssues, isNotEmpty);
+    expect(_hasPrimaryFocus(firstInput), isTrue);
   });
 
   testWidgets('local review issues follow the locale and never repeat the '
@@ -512,6 +638,39 @@ void main() {
     expect(cubit.state.review?.recipe.isMaxBatchYieldAbsentConfirmed, isTrue);
   });
 
+  testWidgets('failed Continue reveals an issue without an editable field', (
+    tester,
+  ) async {
+    final source = championshipDraft(RecipeImportSourceKind.text).toJson();
+    final recipe = Map<String, Object?>.from(
+      source['recipe']! as Map<String, Object?>,
+    )..['maxBatchYield'] = null;
+    final withoutMaximum = ExtractedRecipeDraft.fromJson({
+      ...source,
+      'recipe': recipe,
+    });
+    final client = RecordingRecipeImportClient((_, _) async => withoutMaximum);
+    final cubit = buildChampionshipTestCubit(client: client)
+      ..setSourceText('No maximum batch')
+      ..setLiveConsent(value: true);
+    await cubit.submitText(locale: 'en');
+    await _pumpApp(tester, cubit);
+
+    cubit.confirmAllUnambiguous();
+    await tester.pumpAndSettle();
+    cubit.continueToTarget();
+    await tester.pumpAndSettle();
+
+    final issue = find.text(
+      '• Maximum batch yield: Confirm that no maximum batch applies.',
+    );
+    final viewport = find.byType(SingleChildScrollView);
+    final issueRect = tester.getRect(issue);
+    final viewportRect = tester.getRect(viewport);
+    expect(issueRect.top, greaterThanOrEqualTo(viewportRect.top));
+    expect(issueRect.bottom, lessThanOrEqualTo(viewportRect.bottom));
+  });
+
   testWidgets(
     'review can remove a proposed maximum batch and confirm absence',
     (tester) async {
@@ -539,6 +698,52 @@ void main() {
       expect(cubit.state.review?.recipe.isMaxBatchYieldAbsentConfirmed, isTrue);
     },
   );
+
+  testWidgets('review removes an incorrect extracted component', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit);
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('components[0].remove')),
+    );
+
+    expect(cubit.state.review?.components, hasLength(3));
+    expect(cubit.state.review?.components.first.name.value, 'Butter');
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(const ValueKey('components[0].name.input')),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .controller
+          .text,
+      'Butter',
+    );
+    expect(find.text('Component 4'), findsNothing);
+  });
+
+  testWidgets('review keeps the final component remove action disabled', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    cubit.updateReview(
+      (draft) => draft.removeComponent(0).removeComponent(0).removeComponent(0),
+    );
+    await _pumpApp(tester, cubit);
+
+    final action = tester.widget<OutlinedButton>(
+      find.byKey(const ValueKey('components[0].remove')),
+    );
+    expect(action.onPressed, isNull);
+    expect(find.text('Remove component'), findsOneWidget);
+  });
 
   testWidgets('changing a numeric component to manual clears hidden quantity', (
     tester,
