@@ -222,9 +222,12 @@ class ProductionSheetPdfRenderer {
       children: [
         ..._pairedTableRows(
           left: section.recipeName,
-          right:
-              '${labels.sectionTarget}: ${section.targetYield}\n'
-              '${labels.sectionBatchCount}: ${section.batchCount}',
+          right: [
+            '${labels.sectionTarget}: ${section.targetYield}',
+            if (section.baseYield case final baseYield?)
+              '${labels.sectionBaseYield}: $baseYield',
+            '${labels.sectionBatchCount}: ${section.batchCount}',
+          ].join('\n'),
           repeatFirst: true,
           decoration: const pw.BoxDecoration(color: PdfColors.grey200),
           leftBold: true,
@@ -395,6 +398,10 @@ class ProductionSheetPdfRenderer {
       yield section.recipeName;
       yield labels.sectionTarget;
       yield section.targetYield;
+      if (section.baseYield case final baseYield?) {
+        yield labels.sectionBaseYield;
+        yield baseYield;
+      }
       yield labels.sectionBatchCount;
       yield '${section.batchCount}';
       yield labels.preparationNotes;
@@ -412,6 +419,7 @@ class ProductionSheetPdfRenderer {
           if (row.note case final note?) yield note;
           yield row.calculated;
           if (row.exact case final exact?) yield exact;
+          if (row.base case final base?) yield base;
           if (row.actualWholeRun case final actual?) yield actual;
         }
       }
@@ -422,6 +430,7 @@ class ProductionSheetPdfRenderer {
     return [
       '${labels.calculatedAmount}: ${row.calculated}',
       if (row.exact case final exact?) '${labels.exactAmount}: $exact',
+      if (row.base case final base?) '${labels.baseAmount}: $base',
       if (row.actualWholeRun case final actual?)
         '${labels.wholeRunActual}: $actual',
     ].join('\n');

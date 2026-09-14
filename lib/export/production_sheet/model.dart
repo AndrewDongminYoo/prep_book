@@ -45,6 +45,7 @@ final class ProductionSheetSection {
     required this.depth,
     required this.recipeName,
     required this.targetYield,
+    required this.baseYield,
     required this.batchCount,
     required List<String> preparationNotes,
     required List<ProductionSheetTable> tables,
@@ -55,6 +56,11 @@ final class ProductionSheetSection {
   final int depth;
   final String recipeName;
   final String targetYield;
+
+  /// The yield the recipe's base amounts are written for, so a cook can read
+  /// each row's base amount against it. Null when the recipe snapshot is
+  /// unavailable and only its identifier is known.
+  final String? baseYield;
   final int batchCount;
   final List<String> preparationNotes;
   final List<ProductionSheetTable> tables;
@@ -82,6 +88,7 @@ final class ProductionSheetRow {
     required this.note,
     required this.calculated,
     required this.exact,
+    required this.base,
     required this.actualWholeRun,
   });
 
@@ -89,6 +96,11 @@ final class ProductionSheetRow {
   final String? note;
   final String calculated;
   final String? exact;
+
+  /// The recipe's own amount for this component at the section's base yield,
+  /// printed beside the calculated one so a cook can weigh the scaling by eye
+  /// and adjust from experience. Null for a manual component.
+  final String? base;
   final String? actualWholeRun;
 }
 
@@ -114,6 +126,8 @@ final class ProductionSheetLabels {
     required this.calculatedAmount,
     required this.batchYield,
     required this.exactAmount,
+    required this.baseAmount,
+    required this.sectionBaseYield,
     required this.wholeRunActual,
     required this.manualAmount,
     required this.draft,
@@ -138,6 +152,8 @@ final class ProductionSheetLabels {
   final String calculatedAmount;
   final String batchYield;
   final String exactAmount;
+  final String baseAmount;
+  final String sectionBaseYield;
   final String wholeRunActual;
   final String manualAmount;
   final String draft;

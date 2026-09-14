@@ -27,6 +27,8 @@ final class _EnglishSheetLocalizations implements ProductionSheetLocalizations {
     calculatedAmount: 'Calculated',
     batchYield: 'Batch yield',
     exactAmount: 'Exact',
+    baseAmount: 'Base',
+    sectionBaseYield: 'Base yield',
     wholeRunActual: 'Whole-run actual',
     manualAmount: 'Manual amount',
     draft: 'DRAFT',
@@ -81,6 +83,24 @@ void main() {
       expect(flour.note, 'Sift first.');
       expect(flour.calculated, '6 g');
       expect(flour.exact, '4 g');
+    });
+
+    test('carries the recipe base yield and each base amount', () {
+      final sheet = _builder.build(
+        run: buildProductionSheetRun(),
+        organization: ProductionSheetOrganization.batch,
+        localizations: _localizations,
+      );
+
+      final root = sheet.sections.first;
+      expect(root.baseYield, '10 g');
+      expect(root.tables.first.rows.first.base, '10 g');
+      expect(root.tables.first.rows.last.label, 'Sea salt');
+      expect(root.tables.first.rows.last.base, isNull);
+      final starter = sheet.sections[1];
+      expect(starter.recipeName, 'Starter');
+      expect(starter.baseYield, '1 g');
+      expect(starter.tables.first.rows.first.base, '2 g');
     });
 
     test('uses stored totals and preserves manual and override meaning', () {

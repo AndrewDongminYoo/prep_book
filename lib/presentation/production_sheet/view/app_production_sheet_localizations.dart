@@ -36,6 +36,8 @@ final class AppProductionSheetLocalizations
     calculatedAmount: localizations.productionSheetCalculatedAmount,
     batchYield: localizations.productionSheetBatchYield,
     exactAmount: localizations.productionSheetExactAmount,
+    baseAmount: localizations.productionSheetBaseAmount,
+    sectionBaseYield: localizations.productionSheetSectionBaseYield,
     wholeRunActual: localizations.productionSheetWholeRunActual,
     manualAmount: localizations.productionSheetManualAmount,
     draft: localizations.productionSheetDraft,

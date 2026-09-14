@@ -38,6 +38,8 @@ void main() {
     expect(localizations.labels.documentTitle, 'Production sheet');
     expect(localizations.labels.draft, 'DRAFT');
     expect(localizations.labels.exactAmount, 'Exact');
+    expect(localizations.labels.baseAmount, 'Base');
+    expect(localizations.labels.sectionBaseYield, 'Base yield');
     expect(localizations.labels.wholeRunActual, 'Whole-run actual');
     expect(localizations.labels.pagePattern, 'Page {current} of {total}');
     expect(localizations.batch(2), 'Batch 2');
@@ -87,6 +89,8 @@ void main() {
     expect(localizations.labels.documentTitle, '생산표');
     expect(localizations.labels.draft, '초안');
     expect(localizations.labels.exactAmount, '정확한 값');
+    expect(localizations.labels.baseAmount, '기준값');
+    expect(localizations.labels.sectionBaseYield, '기준 생산량');
     expect(localizations.labels.wholeRunActual, '전체 작업 실제 사용량');
     expect(localizations.labels.pagePattern, '{current}/{total}페이지');
     expect(localizations.batch(2), '배치 2');
