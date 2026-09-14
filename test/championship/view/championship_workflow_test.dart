@@ -633,10 +633,14 @@ void main() {
     expect(cubit.state.review?.components.first.name.value, 'Butter');
     expect(
       tester
-          .widget<TextFormField>(
-            find.byKey(const ValueKey('components[0].name.input')),
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(const ValueKey('components[0].name.input')),
+              matching: find.byType(EditableText),
+            ),
           )
-          .initialValue,
+          .controller
+          .text,
       'Butter',
     );
     expect(find.text('Component 4'), findsNothing);

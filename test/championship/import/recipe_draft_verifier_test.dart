@@ -215,6 +215,26 @@ void main() {
     );
   });
 
+  test('classifies a negative quantity as non-positive', () {
+    final result = verifier.verify(
+      _completedReview().editComponentAmount(0, '-1'),
+    );
+
+    expect(result, isA<RecipeDraftRejected>());
+    expect(
+      (result as RecipeDraftRejected).issues,
+      contains(
+        isA<RecipeDraftVerificationIssue>()
+            .having(
+              (issue) => issue.kind,
+              'kind',
+              RecipeDraftVerificationIssueKind.quantityNotPositive,
+            )
+            .having((issue) => issue.path, 'path', 'components[0].amount'),
+      ),
+    );
+  });
+
   test('rejects edited malformed amounts and absent behaviors', () {
     final malformed = _completedReview().editComponentAmount(0, 'many');
     final absentBehavior = _completedReview().editComponentBehavior(0, null);

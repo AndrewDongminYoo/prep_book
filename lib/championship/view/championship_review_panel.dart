@@ -24,11 +24,23 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
   final _focusNodes = <String, FocusNode>{};
   final _anchors = <String, GlobalKey>{};
   final GlobalKey _summaryKey = GlobalKey();
+  var _componentListRevision = 0;
+  int? _componentCount;
+
+  String _fieldStateKey(String path) => '$_componentListRevision:$path';
 
   FocusNode _focusNode(String path) =>
-      _focusNodes.putIfAbsent(path, FocusNode.new);
+      _focusNodes.putIfAbsent(_fieldStateKey(path), FocusNode.new);
 
-  GlobalKey _anchor(String path) => _anchors.putIfAbsent(path, GlobalKey.new);
+  GlobalKey _anchor(String path) =>
+      _anchors.putIfAbsent(_fieldStateKey(path), GlobalKey.new);
+
+  void _syncComponentCount(int count) {
+    if (_componentCount != null && _componentCount != count) {
+      _componentListRevision += 1;
+    }
+    _componentCount = count;
+  }
 
   @override
   void dispose() {
@@ -42,10 +54,13 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final path = issue.path;
-      final focusNode = path == null ? null : _focusNodes[path];
+      final fieldStateKey = path == null ? null : _fieldStateKey(path);
+      final focusNode = fieldStateKey == null
+          ? null
+          : _focusNodes[fieldStateKey];
       final targetContext = path == null
           ? null
-          : _anchors[path]?.currentContext;
+          : _anchors[fieldStateKey]?.currentContext;
       if (focusNode == null || targetContext == null) {
         final summaryContext = _summaryKey.currentContext;
         if (summaryContext != null) {
@@ -72,6 +87,7 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
     final state = context.watch<ChampionshipDemoCubit>().state;
     final draft = state.review!;
     final strings = ChampionshipStrings.of(context);
+    _syncComponentCount(draft.components.length);
     return BlocListener<ChampionshipDemoCubit, ChampionshipDemoState>(
       listenWhen: (previous, current) =>
           current.reviewIssues.isNotEmpty &&

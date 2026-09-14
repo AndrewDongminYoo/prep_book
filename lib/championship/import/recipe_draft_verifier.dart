@@ -260,6 +260,13 @@ final class RecipeDraftVerifier {
           ),
         );
       }
+    } on NegativeQuantityError {
+      issues.add(
+        RecipeDraftVerificationIssue(
+          kind: RecipeDraftVerificationIssueKind.quantityNotPositive,
+          path: path,
+        ),
+      );
     } on Object {
       issues.add(
         RecipeDraftVerificationIssue(
