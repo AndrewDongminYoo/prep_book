@@ -1,3 +1,4 @@
+@Tags(['skip_very_good_optimization'])
 @TestOn('browser')
 library;
 

@@ -334,6 +334,15 @@ void main() {
       expect(amount.activeLocalIssues, [ReviewIssue.quantityRequired]);
       expect(amount.activeIssues, ['A quantity is required.']);
     });
+
+    test('a negative quantity is non-positive instead of malformed', () {
+      final draft = ReviewRecipeDraft.fromExtracted(_fixture());
+
+      final amount = draft.editComponentAmount(0, '-1').components[0].amount;
+
+      expect(amount.activeLocalIssues, [ReviewIssue.quantityNotPositive]);
+      expect(amount.activeIssues, ['The quantity must be greater than zero.']);
+    });
   });
 }
 

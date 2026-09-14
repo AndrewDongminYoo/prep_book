@@ -589,6 +589,39 @@ void main() {
     expect(cubit.state.review?.recipe.isMaxBatchYieldAbsentConfirmed, isTrue);
   });
 
+  testWidgets('failed Continue reveals an issue without an editable field', (
+    tester,
+  ) async {
+    final source = championshipDraft(RecipeImportSourceKind.text).toJson();
+    final recipe = Map<String, Object?>.from(
+      source['recipe']! as Map<String, Object?>,
+    )..['maxBatchYield'] = null;
+    final withoutMaximum = ExtractedRecipeDraft.fromJson({
+      ...source,
+      'recipe': recipe,
+    });
+    final client = RecordingRecipeImportClient((_, _) async => withoutMaximum);
+    final cubit = buildChampionshipTestCubit(client: client)
+      ..setSourceText('No maximum batch')
+      ..setLiveConsent(value: true);
+    await cubit.submitText(locale: 'en');
+    await _pumpApp(tester, cubit);
+
+    cubit.confirmAllUnambiguous();
+    await tester.pumpAndSettle();
+    cubit.continueToTarget();
+    await tester.pumpAndSettle();
+
+    final issue = find.text(
+      '• Maximum batch yield: Confirm that no maximum batch applies.',
+    );
+    final viewport = find.byType(SingleChildScrollView);
+    final issueRect = tester.getRect(issue);
+    final viewportRect = tester.getRect(viewport);
+    expect(issueRect.top, greaterThanOrEqualTo(viewportRect.top));
+    expect(issueRect.bottom, lessThanOrEqualTo(viewportRect.bottom));
+  });
+
   testWidgets(
     'review can remove a proposed maximum batch and confirm absence',
     (tester) async {
