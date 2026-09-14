@@ -144,7 +144,8 @@ void main() {
     await _tapVisible(tester, find.byKey(const ValueKey('source-pick-image')));
 
     expect(find.text('recipe.png'), findsOneWidget);
-    expect(find.text('image/png · 8 B'), findsOneWidget);
+    expect(find.text('image/png · 8 B · 1200×800 px'), findsOneWidget);
+    expect(find.textContaining('Reduced from'), findsNothing);
     expect(find.byType(Image), findsNothing);
 
     await _tapVisible(tester, find.byKey(const ValueKey('source-consent')));
@@ -153,6 +154,34 @@ void main() {
       find.byKey(const ValueKey('source-submit-image')),
     );
     expect(cubit.state.phase, ChampionshipPhase.review);
+  });
+
+  testWidgets('image mode shows the reduced size and marks the reduction', (
+    tester,
+  ) async {
+    const mib = 1024 * 1024;
+    final picker = StubRecipeImagePicker(
+      () async => SelectedRecipeImage(
+        name: 'IMG_0001.jpg',
+        mimeType: 'image/jpeg',
+        bytes: Uint8List(4 * mib)..[0] = 255,
+      ),
+    );
+    final codec = FakeRecipeImageCodec(
+      width: 3024,
+      height: 4032,
+      encodedBytesFor: (_) => mib,
+    );
+    final cubit = buildChampionshipTestCubit(picker: picker, codec: codec);
+    await _pumpApp(tester, cubit);
+
+    await _tapVisible(tester, find.byKey(const ValueKey('source-mode-image')));
+    await _tapVisible(tester, find.byKey(const ValueKey('source-pick-image')));
+
+    expect(find.text('IMG_0001.jpg'), findsOneWidget);
+    expect(find.text('image/jpeg · 1048576 B · 1536×2048 px'), findsOneWidget);
+    expect(find.text('Reduced from 4194304 B.'), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
   });
 
   testWidgets('retryable failure preserves text and offers Retry and Sample', (
@@ -209,7 +238,7 @@ void main() {
     await _tapVisible(tester, find.byKey(const ValueKey('source-mode-image')));
     await _tapVisible(tester, find.byKey(const ValueKey('source-pick-image')));
     expect(
-      find.text('Select one JPEG, PNG, or WebP image no larger than 3 MiB.'),
+      find.text('Select one JPEG, PNG, or WebP image no larger than 32 MiB.'),
       findsOneWidget,
     );
   });

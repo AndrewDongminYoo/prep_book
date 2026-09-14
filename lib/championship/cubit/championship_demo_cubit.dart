@@ -3,6 +3,7 @@ import 'package:prep_book/championship/cubit/championship_demo_state.dart';
 import 'package:prep_book/championship/import/championship_run_builder.dart';
 import 'package:prep_book/championship/import/recipe_draft_verifier.dart';
 import 'package:prep_book/championship/input/recipe_image_picker.dart';
+import 'package:prep_book/championship/input/recipe_image_reducer.dart';
 import 'package:prep_book/championship/input/recipe_import_client.dart';
 import 'package:prep_book/championship/input/recipe_import_request.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
@@ -17,6 +18,7 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
   ChampionshipDemoCubit({
     required RecipeImportClient importClient,
     required RecipeImagePicker imagePicker,
+    required RecipeImageReducer imageReducer,
     required ChampionshipSampleLoader sampleLoader,
     RecipeDraftVerifier verifier = const RecipeDraftVerifier(),
     ChampionshipRunBuilder runBuilder = const ChampionshipRunBuilder(),
@@ -25,6 +27,7 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
   }) : _dependencies = (
          importClient: importClient,
          imagePicker: imagePicker,
+         imageReducer: imageReducer,
          sampleLoader: sampleLoader,
          verifier: verifier,
          runBuilder: runBuilder,
@@ -36,6 +39,7 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
   final ({
     RecipeImportClient importClient,
     RecipeImagePicker imagePicker,
+    RecipeImageReducer imageReducer,
     ChampionshipSampleLoader sampleLoader,
     RecipeDraftVerifier verifier,
     ChampionshipRunBuilder runBuilder,
@@ -112,8 +116,17 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
     try {
       final selected = await _dependencies.imagePicker.pick();
       if (generation != _requestGeneration || selected == null) return;
-      emit(state.copyWith(selectedImage: selected));
+      // Reduce before anything is shown, so the metadata on screen describes
+      // the bytes that will actually be sent.
+      final prepared = await _dependencies.imageReducer.reduce(selected);
+      if (generation != _requestGeneration) return;
+      emit(state.copyWith(preparedImage: prepared));
     } on RecipeImagePickerException {
+      if (generation != _requestGeneration) return;
+      emit(
+        state.copyWith(sourceFailure: ChampionshipSourceFailure.imageSelection),
+      );
+    } on RecipeImageReducerException {
       if (generation != _requestGeneration) return;
       emit(
         state.copyWith(sourceFailure: ChampionshipSourceFailure.imageSelection),
@@ -135,8 +148,8 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
 
   Future<void> submitImage({required String locale}) async {
     if (!_requireLiveConsent()) return;
-    final selected = state.selectedImage;
-    if (selected == null) {
+    final prepared = state.preparedImage;
+    if (prepared == null) {
       emit(
         state.copyWith(sourceFailure: ChampionshipSourceFailure.invalidSource),
       );
@@ -144,8 +157,8 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
     }
     await _extract(
       ImageRecipeImportRequest(
-        bytes: selected.bytes,
-        mimeType: selected.mimeType,
+        bytes: prepared.image.bytes,
+        mimeType: prepared.image.mimeType,
       ),
       locale,
     );

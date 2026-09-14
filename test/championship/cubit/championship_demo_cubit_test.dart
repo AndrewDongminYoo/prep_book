@@ -7,11 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/championship/cubit/championship_demo_cubit.dart';
 import 'package:prep_book/championship/cubit/championship_demo_state.dart';
 import 'package:prep_book/championship/input/recipe_image_picker.dart';
+import 'package:prep_book/championship/input/recipe_image_reducer.dart';
 import 'package:prep_book/championship/input/recipe_import_client.dart';
 import 'package:prep_book/championship/input/recipe_import_request.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/championship/sample/championship_sample_loader.dart';
 import 'package:prep_book/domain/domain.dart';
+
+import '../championship_test_harness.dart';
 
 const _fixturePath = 'assets/championship/sample_croissant_draft.json';
 
@@ -70,6 +73,7 @@ ExtractedRecipeDraft _draft(RecipeImportSourceKind sourceKind) {
 ChampionshipDemoCubit _cubit({
   _FakeImportClient? client,
   _FakeImagePicker? picker,
+  FakeRecipeImageCodec? codec,
   ChampionshipSampleLoader? sampleLoader,
   ChampionshipRunId? createRunId = _fixedRunId,
 }) => ChampionshipDemoCubit(
@@ -77,6 +81,7 @@ ChampionshipDemoCubit _cubit({
       client ??
       _FakeImportClient((_, _) async => _draft(RecipeImportSourceKind.text)),
   imagePicker: picker ?? _FakeImagePicker(() async => null),
+  imageReducer: RecipeImageReducer(codec: codec ?? FakeRecipeImageCodec()),
   sampleLoader:
       sampleLoader ?? ChampionshipSampleLoader(bundle: _FileAssetBundle()),
   now: () => DateTime.utc(2026, 9, 14, 1, 2, 3),
@@ -160,15 +165,113 @@ void main() {
     addTearDown(cubit.close);
 
     await cubit.pickImage();
-    expect(cubit.state.selectedImage, isNull);
+    expect(cubit.state.preparedImage, isNull);
 
     await cubit.pickImage();
-    expect(cubit.state.selectedImage?.name, 'recipe.png');
+    expect(cubit.state.preparedImage?.image.name, 'recipe.png');
+    expect(cubit.state.preparedImage?.wasReduced, isFalse);
     cubit.setLiveConsent(value: true);
     await cubit.submitImage(locale: 'ko');
 
     expect(client.requests.single, isA<ImageRecipeImportRequest>());
     expect(cubit.state.phase, ChampionshipPhase.review);
+  });
+
+  test('reduces a large picked image before it is shown or sent', () async {
+    const mib = 1024 * 1024;
+    final picker = _FakeImagePicker(
+      () async => SelectedRecipeImage(
+        name: 'IMG_0001.jpg',
+        mimeType: 'image/jpeg',
+        bytes: Uint8List(4 * mib)..[0] = 255,
+      ),
+    );
+    final codec = FakeRecipeImageCodec(
+      width: 3024,
+      height: 4032,
+      encodedBytesFor: (_) => mib,
+    );
+    final client = _FakeImportClient(
+      (_, _) async => _draft(RecipeImportSourceKind.image),
+    );
+    final cubit = _cubit(client: client, picker: picker, codec: codec);
+    addTearDown(cubit.close);
+
+    await cubit.pickImage();
+    final prepared = cubit.state.preparedImage!;
+    cubit.setLiveConsent(value: true);
+    await cubit.submitImage(locale: 'en');
+
+    expect(prepared.wasReduced, isTrue);
+    expect(prepared.width, 1536);
+    expect(prepared.height, 2048);
+    expect(prepared.originalByteCount, 4 * mib);
+    expect(prepared.image.bytes.length, mib);
+    expect(prepared.image.mimeType, 'image/jpeg');
+    expect(prepared.image.name, 'IMG_0001.jpg');
+    final dataUrl =
+        client.requests.single.toJson('en')['imageDataUrl']! as String;
+    expect(dataUrl, startsWith('data:image/jpeg;base64,'));
+    expect(
+      dataUrl.length - 'data:image/jpeg;base64,'.length,
+      4 * (mib / 3).ceil(),
+      reason: 'the reduced bytes are what is sent',
+    );
+  });
+
+  test(
+    'reports a reduction that cannot fit as an image selection failure',
+    () async {
+      final picker = _FakeImagePicker(
+        () async => SelectedRecipeImage(
+          name: 'huge.png',
+          mimeType: 'image/png',
+          bytes: Uint8List(9 * 1024 * 1024)..[0] = 137,
+        ),
+      );
+      final codec = FakeRecipeImageCodec(
+        width: 6000,
+        height: 6000,
+        encodedBytesFor: (_) => recipeImportMaxImageBytes + 1,
+      );
+      final cubit = _cubit(picker: picker, codec: codec);
+      addTearDown(cubit.close);
+
+      await cubit.pickImage();
+
+      expect(cubit.state.preparedImage, isNull);
+      expect(
+        cubit.state.sourceFailure,
+        ChampionshipSourceFailure.imageSelection,
+      );
+      expect(codec.encodeCalls, hasLength(3));
+    },
+  );
+
+  test('ignores a reduction that completes after Reset', () async {
+    final gate = Completer<void>();
+    final picker = _FakeImagePicker(
+      () async => SelectedRecipeImage(
+        name: 'recipe.png',
+        mimeType: 'image/png',
+        bytes: Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]),
+      ),
+    );
+    final cubit = _cubit(
+      picker: picker,
+      codec: FakeRecipeImageCodec(decodeGate: gate.future),
+    );
+    addTearDown(cubit.close);
+
+    final pending = cubit.pickImage();
+    await Future<void>.delayed(Duration.zero);
+    cubit.reset();
+    gate.complete();
+    await pending;
+
+    expect(cubit.state.preparedImage, isNull);
+    expect(cubit.state.sourceFailure, isNull);
+    expect(cubit.state.sourceMode, ChampionshipSourceMode.text);
   });
 
   test('ignores a response that completes after Reset', () async {
@@ -266,6 +369,7 @@ void main() {
           (_, _) async => _draft(RecipeImportSourceKind.text),
         ),
         imagePicker: _FakeImagePicker(() async => null),
+        imageReducer: RecipeImageReducer(codec: FakeRecipeImageCodec()),
         sampleLoader: ChampionshipSampleLoader(bundle: _FileAssetBundle()),
         now: () => DateTime.utc(2026, 9, 14, 1, 2, 3),
         createRunId: () => 'run-${++runIds}',

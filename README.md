@@ -45,6 +45,7 @@ Each flavor installs side by side: the Android application ID is suffixed with `
 
 `lib/main_championship.dart` starts an optional Flutter Web variant built for a competition.
 It turns one recipe text or one image into an AI-extracted review draft, requires explicit confirmation of every value before it enters the domain, and then hands the confirmed recipe to the same exact calculator and production-sheet export the mobile app uses.
+A photo larger than 3 MiB or wider than 2,048 px is reduced in the browser before upload, so a camera original can be selected as it is.
 The three mobile flavors never import `lib/championship/`, stay offline, and are unchanged by it; `test/championship/championship_boundary_test.dart` fails the build if that separation breaks.
 
 Only extraction reaches a provider.

@@ -115,10 +115,22 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
                 icon: const Icon(Icons.upload_file_outlined),
                 label: Text(strings.selectImage),
               ),
-              if (state.selectedImage case final image?) ...[
+              if (state.preparedImage case final prepared?) ...[
                 const SizedBox(height: 12),
-                Text(image.name, style: Theme.of(context).textTheme.titleSmall),
-                Text('${image.mimeType} · ${image.bytes.length} B'),
+                Text(
+                  prepared.image.name,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                Text(
+                  strings.imageMetadata(
+                    mimeType: prepared.image.mimeType,
+                    byteCount: prepared.image.bytes.length,
+                    width: prepared.width,
+                    height: prepared.height,
+                  ),
+                ),
+                if (prepared.wasReduced)
+                  Text(strings.imageReduced(prepared.originalByteCount)),
               ],
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -126,7 +138,7 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
                 onPressed:
                     !state.isLoading &&
                         state.hasLiveConsent &&
-                        state.selectedImage != null
+                        state.preparedImage != null
                     ? () => cubit.submitImage(locale: locale)
                     : null,
                 icon: const Icon(Icons.auto_awesome),

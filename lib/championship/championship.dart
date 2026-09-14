@@ -7,6 +7,7 @@ export 'import/unit_alias_resolver.dart';
 export 'input/file_picker_recipe_image_picker.dart';
 export 'input/http_recipe_import_client.dart';
 export 'input/recipe_image_picker.dart';
+export 'input/recipe_image_reducer.dart';
 export 'input/recipe_import_client.dart';
 export 'input/recipe_import_request.dart';
 export 'model/extracted_recipe_draft.dart';

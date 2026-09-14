@@ -54,6 +54,15 @@ final class ChampionshipStrings {
       : 'Paste the recipe name, base yield, ingredients, and quantities.';
 
   String get selectImage => isKorean ? '이미지 선택' : 'Select image';
+  String imageMetadata({
+    required String mimeType,
+    required int byteCount,
+    required int width,
+    required int height,
+  }) => '$mimeType · $byteCount B · $width×$height px';
+  String imageReduced(int originalByteCount) => isKorean
+      ? '원본 $originalByteCount B에서 축소되었습니다.'
+      : 'Reduced from $originalByteCount B.';
   String get importText =>
       isKorean ? '텍스트 검토 초안 만들기' : 'Create text review draft';
   String get importImage =>
@@ -85,8 +94,8 @@ final class ChampionshipStrings {
           : 'Check the supported text or image source.',
     ChampionshipSourceFailure.imageSelection =>
       isKorean
-          ? 'JPEG, PNG 또는 WebP 이미지 한 개를 3 MiB 이하로 선택하세요.'
-          : 'Select one JPEG, PNG, or WebP image no larger than 3 MiB.',
+          ? 'JPEG, PNG 또는 WebP 이미지 한 개를 32 MiB 이하로 선택하세요.'
+          : 'Select one JPEG, PNG, or WebP image no larger than 32 MiB.',
     ChampionshipSourceFailure.sampleUnavailable =>
       isKorean ? '샘플을 불러오지 못했습니다.' : 'The sample could not be loaded.',
   };

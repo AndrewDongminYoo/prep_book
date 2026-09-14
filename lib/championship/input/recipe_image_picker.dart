@@ -1,5 +1,11 @@
 import 'dart:typed_data';
 
+/// The largest file the picker reads into memory.
+///
+/// A camera photo is commonly larger than the upload limit; the reducer brings
+/// it under that limit afterwards, so this bound only protects memory.
+const int recipeImportMaxSelectedImageBytes = 32 * 1024 * 1024;
+
 abstract interface class RecipeImagePicker {
   Future<SelectedRecipeImage?> pick();
 }

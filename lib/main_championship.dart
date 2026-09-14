@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:prep_book/championship/championship.dart';
+import 'package:prep_book/championship/input/web_recipe_image_codec.dart';
 import 'package:prep_book/presentation/production_sheet/view/production_sheet_launcher.dart';
 import 'package:prep_book/presentation/production_sheet/view/production_sheet_platform.dart';
 
@@ -43,6 +44,7 @@ class _ChampionshipRootState extends State<_ChampionshipRoot> {
         endpoint: endpoint,
       ),
       imagePicker: const FilePickerRecipeImagePicker(),
+      imageReducer: const RecipeImageReducer(codec: WebRecipeImageCodec()),
       sampleLoader: ChampionshipSampleLoader(bundle: rootBundle),
     );
   }

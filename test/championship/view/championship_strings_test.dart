@@ -44,6 +44,13 @@ List<String> _allCopy(ChampionshipStrings strings) => [
   strings.recipeText,
   strings.recipeTextHint,
   strings.selectImage,
+  strings.imageMetadata(
+    mimeType: 'image/jpeg',
+    byteCount: 1,
+    width: 2,
+    height: 3,
+  ),
+  strings.imageReduced(4),
   strings.importText,
   strings.importImage,
   strings.liveConsent,

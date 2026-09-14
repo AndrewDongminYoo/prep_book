@@ -108,9 +108,10 @@ rate-limited, or unconfigured.
 
 ### Image
 
-- Exactly one `image/jpeg`, `image/png`, or `image/webp` file.
-- Maximum decoded size `3 MiB`, which keeps its base64 JSON request below the [Vercel Function `4.5 MB` payload limit](https://vercel.com/docs/functions/limitations#request-body-size).
-- The browser reads the file into memory and sends one data URL.
+- Exactly one `image/jpeg`, `image/png`, or `image/webp` file, up to `32 MiB` as selected.
+- Maximum uploaded size `3 MiB`, which keeps its base64 JSON request below the [Vercel Function `4.5 MB` payload limit](https://vercel.com/docs/functions/limitations#request-body-size); the endpoint enforces the same limit on the decoded bytes.
+- The browser reduces a larger or wider image before upload (added 2026-09-14): an image at most `3 MiB` whose longest edge is at most `2,048` px is sent unchanged; otherwise it is scaled to a `2,048` px longest edge and encoded as JPEG at quality `0.85`, retried at `1,600` px / `0.80` and `1,280` px / `0.75` if still too large, and rejected after that. Transparency is flattened onto white and EXIF orientation is applied. The provider's high-detail mode spends at most `2,500` patches of `32` px, so nothing a `2,048` px edge discards would have reached the model.
+- The browser reads the file into memory, reduces it if needed, shows the size it will send, and sends one data URL.
 - The browser does not retain the file after reset or page close.
 
 ### Excluded inputs

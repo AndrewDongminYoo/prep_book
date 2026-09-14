@@ -1,5 +1,5 @@
 import 'package:prep_book/championship/import/recipe_draft_verifier.dart';
-import 'package:prep_book/championship/input/recipe_image_picker.dart';
+import 'package:prep_book/championship/input/recipe_image_reducer.dart';
 import 'package:prep_book/championship/input/recipe_import_client.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/championship/model/review_recipe_draft.dart';
@@ -23,7 +23,7 @@ final class ChampionshipDemoState {
     required this.phase,
     required this.sourceMode,
     required this.sourceText,
-    required this.selectedImage,
+    required this.preparedImage,
     required this.hasLiveConsent,
     required this.isLoading,
     required this.sourceFailure,
@@ -43,7 +43,7 @@ final class ChampionshipDemoState {
     phase: ChampionshipPhase.source,
     sourceMode: ChampionshipSourceMode.text,
     sourceText: '',
-    selectedImage: null,
+    preparedImage: null,
     hasLiveConsent: false,
     isLoading: false,
     sourceFailure: null,
@@ -62,7 +62,7 @@ final class ChampionshipDemoState {
   final ChampionshipPhase phase;
   final ChampionshipSourceMode sourceMode;
   final String sourceText;
-  final SelectedRecipeImage? selectedImage;
+  final PreparedRecipeImage? preparedImage;
   final bool hasLiveConsent;
   final bool isLoading;
   final ChampionshipSourceFailure? sourceFailure;
@@ -81,7 +81,7 @@ final class ChampionshipDemoState {
     ChampionshipPhase? phase,
     ChampionshipSourceMode? sourceMode,
     String? sourceText,
-    Object? selectedImage = _unset,
+    Object? preparedImage = _unset,
     bool? hasLiveConsent,
     bool? isLoading,
     Object? sourceFailure = _unset,
@@ -99,9 +99,9 @@ final class ChampionshipDemoState {
     phase: phase ?? this.phase,
     sourceMode: sourceMode ?? this.sourceMode,
     sourceText: sourceText ?? this.sourceText,
-    selectedImage: selectedImage == _unset
-        ? this.selectedImage
-        : selectedImage as SelectedRecipeImage?,
+    preparedImage: preparedImage == _unset
+        ? this.preparedImage
+        : preparedImage as PreparedRecipeImage?,
     hasLiveConsent: hasLiveConsent ?? this.hasLiveConsent,
     isLoading: isLoading ?? this.isLoading,
     sourceFailure: sourceFailure == _unset

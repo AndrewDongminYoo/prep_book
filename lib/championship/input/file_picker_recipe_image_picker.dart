@@ -74,7 +74,7 @@ final class FilePickerRecipeImagePicker implements RecipeImagePicker {
         RecipeImagePickerFailure.missingBytes,
       );
     }
-    if (bytes.length > recipeImportMaxImageBytes) {
+    if (bytes.length > recipeImportMaxSelectedImageBytes) {
       throw const RecipeImagePickerException(
         RecipeImagePickerFailure.sourceTooLarge,
       );

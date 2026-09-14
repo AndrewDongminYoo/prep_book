@@ -111,16 +111,35 @@ void main() {
     }
   });
 
-  test('rejects images over the decoded size limit', () async {
+  test('rejects images over the selection size limit', () async {
     final picker = FilePickerRecipeImagePicker(
       pickFiles: (_) async => [
-        _file(bytes: Uint8List(recipeImportMaxImageBytes + 1)),
+        _file(bytes: Uint8List(recipeImportMaxSelectedImageBytes + 1)),
       ],
     );
 
     await expectLater(
       picker.pick(),
-      throwsA(isA<RecipeImagePickerException>()),
+      throwsA(
+        isA<RecipeImagePickerException>().having(
+          (e) => e.failure,
+          'failure',
+          RecipeImagePickerFailure.sourceTooLarge,
+        ),
+      ),
     );
+  });
+
+  test('accepts an image over the upload limit for the reducer', () async {
+    final bytes = Uint8List(recipeImportMaxImageBytes + 1)
+      ..setAll(0, _pngBytes());
+    final picker = FilePickerRecipeImagePicker(
+      pickFiles: (_) async => [_file(bytes: bytes)],
+    );
+
+    final selected = await picker.pick();
+
+    expect(selected?.bytes.length, recipeImportMaxImageBytes + 1);
+    expect(recipeImportMaxSelectedImageBytes, 32 * 1024 * 1024);
   });
 }
