@@ -20,6 +20,10 @@ dev:
     (description): Runs the production flavor on the attached device.
     (scripts): flutter run --flavor production --target lib/main_production.dart
 
+  championship:
+    (description): Runs the isolated championship variant in Chrome.
+    (scripts): flutter run --device-id chrome --target lib/main_championship.dart
+
 # --- Quality gates ----------------------------------------------------------
 analyze:
   (description): Static analysis with very_good_analysis (zero tolerance, matches CI).
@@ -59,6 +63,11 @@ coverage:
   # optimization entrypoint to decide a line is genuinely uncovered is in CLAUDE.md.
   (description): Runs the suite with coverage the way CI decides it.
   (scripts): very_good test --coverage --test-randomize-ordering-seed random
+
+api:
+  test:
+    (description): Runs the dependency-free extraction endpoint tests.
+    (scripts): npm run test:api
 
 postcoverage:
   (description): Generates an HTML coverage report from the coverage data.
@@ -118,3 +127,7 @@ build:
   ipa:
     (description): Builds the production release iOS archive and IPA.
     (scripts): flutter build ipa --release --flavor production --target lib/main_production.dart --tree-shake-icons
+
+  championship-web:
+    (description): Builds the isolated championship web release.
+    (scripts): flutter build web --release --target lib/main_championship.dart --tree-shake-icons

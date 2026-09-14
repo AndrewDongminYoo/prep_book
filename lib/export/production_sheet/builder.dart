@@ -66,6 +66,9 @@ class ProductionSheetBuilder {
         depth: depth,
         recipeName: recipe?.name ?? fallbackRecipeId,
         targetYield: localizations.formatQuantity(target),
+        baseYield: recipe == null
+            ? null
+            : localizations.formatQuantity(recipe.baseYield),
         batchCount: result.batchPlan.batchCount,
         preparationNotes: recipe?.preparationNotes ?? const [],
         tables: switch (organization) {
@@ -187,6 +190,10 @@ class ProductionSheetBuilder {
       exact: quantity?.wasRounded ?? false
           ? localizations.formatQuantity(quantity!.exact)
           : null,
+      base: switch (component.source.baseQuantity) {
+        null => null,
+        final base => localizations.formatQuantity(base),
+      },
       actualWholeRun: override == null
           ? null
           : localizations.formatQuantity(override),

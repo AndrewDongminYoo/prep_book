@@ -68,7 +68,11 @@ final class PrintingProductionSheetPlatform implements ProductionSheetPlatform {
     required Widget Function(Object error) onError,
   }) {
     return PdfPreviewCustom(
-      build: (_) => bytes,
+      // The preview rasters again on every resize, and on the web pdf.js
+      // transfers the buffer it is handed to its worker, detaching it. A copy
+      // per raster keeps the stored bytes intact for the next raster, for
+      // share, and for print, which otherwise produce an empty PDF.
+      build: (_) => Uint8List.fromList(bytes),
       loadingWidget: loading,
       onError: (_, error) => onError(error),
     );

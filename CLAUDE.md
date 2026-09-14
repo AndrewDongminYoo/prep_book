@@ -12,14 +12,15 @@ It solves exactly one job: scaling a saved production recipe to today's target y
 
 ## Current state versus target architecture
 
-The tree is the Very Good CLI template with its `counter` sample removed, plus four of the six units the design document names.
-`lib/` contains `app/`, `application/`, `domain/`, `l10n/`, `persistence/`, `presentation/`, `bootstrap.dart`, and the three flavor entrypoints.
+The tree is the Very Good CLI template with its `counter` sample removed, plus five of the six units the design document names.
+`lib/` contains `app/`, `application/`, `domain/`, `export/`, `l10n/`, `persistence/`, `presentation/`, `bootstrap.dart`, and the three flavor entrypoints, plus the competition variant described under the scope fence: `championship/` and `main_championship.dart`.
 
 The design document defines six isolated units as the target layout: presentation, application, domain, persistence, export, and migration.
 `lib/domain/` is complete for units and their conversion table, `Quantity`, rounding, the recipe model, dependency-cycle and missing-dependency validation, batch decomposition, the production calculator, nested sub-recipe expansion, and the immutable production-run snapshot.
 `lib/persistence/` is complete for the version 1 schema and its upgrade path, the repositories for recipes, ingredients, and production runs, and the codecs that store an exact quantity and a run's result payload.
-`lib/application/` holds one class per use case over the repository interfaces, and `lib/presentation/` holds four screens: the recipe library, the recipe editor, production setup, and production result.
-Export and migration are still targets to build, not directories to look for.
+`lib/application/` holds one class per use case over the repository interfaces, and `lib/presentation/` holds five screens: the recipe library, the recipe editor, production setup, production result, and the production-sheet preview that shares or prints the PDF.
+`lib/export/` is complete for the production-sheet document builder, its deterministic filename, and the A4 PDF renderer; `test/export/export_boundary_test.dart` keeps it free of Flutter and of the `printing` plugin, which is imported in exactly one place, `lib/presentation/production_sheet/view/production_sheet_platform.dart`.
+Migration is still a target to build, not a directory to look for.
 
 `test/domain/domain_purity_test.dart` enforces the pure-Dart rule as two independent gates.
 An import allowlist checks every `import`/`export` directive under `lib/domain/` against a short list of permitted `package:` prefixes (`decimal`, `rational`, `meta`, and sibling `lib/domain/` files); anything else, including any `dart:` import, fails the build.
@@ -102,14 +103,21 @@ Do not add any of these as a convenience, a stub field, or a "while we are here"
 A price column on an ingredient is a product decision, not a schema detail.
 If a task appears to require one, stop and ask.
 
+One exception exists, and it is fenced by path rather than by product.
+The competition web variant under `lib/championship/`, started from `lib/main_championship.dart` and served with the Vercel function in `api/`, uses a hosted model to extract a review draft from recipe text or one image; every value then needs explicit confirmation before the existing calculator and production-sheet export take over.
+It is not part of the first release, the three mobile flavors never import it, and `test/championship/championship_boundary_test.dart` fails the build if they do.
+Its design is `docs/specs/2026-09-13-ai-recipe-import-demo.md`; the approved design document's scope, boundaries, and release priorities are unchanged by it.
+
 ## State management and dependencies
 
 `bloc` and `flutter_bloc` are the state-management decision and are already wired through `Bloc.observer` in `lib/bootstrap.dart`.
 Do not introduce a second solution.
 
-The design document names capabilities the project does not yet have dependencies for: PDF rendering, printing, sharing, and file picking.
-Two already have theirs. Exact decimal arithmetic has `decimal` and `rational`, added for `lib/domain/`; transactional SQLite storage has `sqflite`, added for `lib/persistence/`, together with `sqflite_common_ffi` as a dev dependency, which is what makes that layer testable at all — `sqflite` reaches SQLite through a platform channel and does not run under `flutter test`.
-Each remaining capability is a separate decision. Add one package at a time, in the change that first needs it, with a stated reason.
+Each capability the design document names has its own dependency, added in the change that first needed it.
+Exact decimal arithmetic has `decimal` and `rational`, added for `lib/domain/`; transactional SQLite storage has `sqflite`, added for `lib/persistence/`, together with `sqflite_common_ffi` as a dev dependency, which is what makes that layer testable at all — `sqflite` reaches SQLite through a platform channel and does not run under `flutter test`.
+PDF rendering has `pdf`, added for `lib/export/`, and printing and sharing have `printing`, added for `lib/presentation/production_sheet/`.
+`http` and `file_picker` were added for the competition variant alone; no mobile flavor uses them.
+A new capability is a separate decision. Add one package at a time, in the change that first needs it, with a stated reason.
 
 ## Flavors
 
@@ -147,4 +155,4 @@ iOS and Android are the supported targets, across phone, tablet, landscape, and 
 Responsive behavior keys off current window width, never device type.
 
 `macos/` is retained as a scaffold but is not a supported target and has no design coverage.
-The web target was removed; restore it with `flutter create --platforms=web .` if it is ever needed.
+The web host under `web/` exists only for the competition variant described under the scope fence; the three mobile flavors have no web target, and the design has no web coverage.

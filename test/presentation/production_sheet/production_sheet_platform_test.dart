@@ -7,7 +7,7 @@ import 'package:prep_book/presentation/production_sheet/view/production_sheet_pl
 import 'package:printing/printing.dart';
 
 void main() {
-  testWidgets('loads a copied font and previews the identical PDF bytes', (
+  testWidgets('loads a copied font and previews a fresh copy per raster', (
     tester,
   ) async {
     final font = Uint8List.fromList([1, 2, 3]);
@@ -34,7 +34,21 @@ void main() {
     expect(identical(loaded, font), isFalse);
     expect(preview.pageFormat, PdfPageFormat.a4);
     expect(preview.loadingWidget, same(loading));
-    expect(await preview.build(PdfPageFormat.a4), same(bytes));
+    // pdf.js on the web transfers the buffer it is given to its worker, which
+    // detaches it, and the preview rasters again on every resize; each raster
+    // must therefore receive its own copy so the stored bytes stay intact for
+    // the next raster, for share, and for print.
+    final first = await preview.build(PdfPageFormat.a4);
+    final second = await preview.build(PdfPageFormat.a4);
+    expect(first, bytes);
+    expect(second, bytes);
+    first[0] = 0;
+    expect(
+      bytes[0],
+      4,
+      reason: 'a raster copy must not alias the stored bytes',
+    );
+    expect(second[0], 4, reason: 'two rasters must not alias each other');
     await tester.pumpWidget(const MaterialApp(home: SizedBox()));
     final error = preview.onError!(
       tester.element(find.byType(SizedBox)),

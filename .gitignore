@@ -85,14 +85,14 @@ unlinked_spec.ds
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 
+# Testing Related
+test/.test_optimizer.dart
+
 # Coverage
 coverage/
 
 # Submodules
 packages/**/pubspec.lock
-
-# Web related
-lib/generated_plugin_registrant.dart
 
 # Symbolication related
 app.*.symbols
@@ -118,3 +118,7 @@ lib/l10n/gen/
 
 # Agent scratch workspace (ledgers, briefs, review packages)
 .superpowers/
+
+# API Keys
+.env
+.vercel

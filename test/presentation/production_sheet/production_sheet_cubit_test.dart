@@ -29,6 +29,8 @@ const _labels = ProductionSheetLabels(
   calculatedAmount: 'Calculated',
   batchYield: 'Batch yield',
   exactAmount: 'Exact',
+  baseAmount: 'Base',
+  sectionBaseYield: 'Base yield',
   wholeRunActual: 'Whole-run actual',
   manualAmount: 'Manual amount',
   draft: 'DRAFT',

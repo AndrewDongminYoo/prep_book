@@ -25,6 +25,8 @@ const _labels = ProductionSheetLabels(
   calculatedAmount: 'Calculated',
   batchYield: 'Batch yield',
   exactAmount: 'Exact',
+  baseAmount: 'Base',
+  sectionBaseYield: 'Base yield',
   wholeRunActual: 'Whole-run actual',
   manualAmount: 'Manual amount',
   draft: 'DRAFT',
@@ -79,6 +81,7 @@ ProductionSheet _sheet({
               ? sectionRecipeName
               : 'Section ${sectionIndex + 1} dough',
           targetYield: sectionTargetYield ?? '${sectionIndex + 1} kg',
+          baseYield: sectionIndex.isEven ? '${sectionIndex + 1} kg' : null,
           batchCount: 3,
           preparationNotes:
               preparationNotesBySection?[sectionIndex] ?? preparationNotes,
@@ -108,6 +111,9 @@ ProductionSheet _sheet({
                           : 'calc-${sectionIndex + 1}-${rowIndex + 1}',
                       exact: rowIndex.isEven
                           ? 'exact-${sectionIndex + 1}-${rowIndex + 1}'
+                          : null,
+                      base: rowIndex.isEven
+                          ? 'base-${sectionIndex + 1}-${rowIndex + 1}'
                           : null,
                       actualWholeRun: rowIndex == 0 ? '2 g' : null,
                     ),
@@ -490,6 +496,18 @@ void main() {
     final renderedText = pages.expand((page) => page).join(' ');
     expect(renderedText, contains('section-start-'));
     expect(renderedText, contains('-section-end'));
+  });
+
+  test('draws the base yield and base amounts beside the calculated', () async {
+    final bytes = await const ProductionSheetPdfRenderer().renderForTesting(
+      _sheet(isDraft: false, sectionRowCounts: const [2]),
+      fontBytes: fontBytes,
+    );
+
+    final renderedText = _drawnStringsByPage(bytes).expand((p) => p).join(' ');
+    expect(renderedText, contains('Base yield: 1 kg'));
+    expect(renderedText, contains('Base: base-1-1'));
+    expect(renderedText, isNot(contains('Base: base-1-2')));
   });
 
   test('splits oversized amount text across pages', () async {

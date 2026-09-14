@@ -11,11 +11,11 @@ Offline-first production recipe scaling for small restaurant and bakery kitchens
 An owner or head chef picks a saved recipe, enters the target yield for the day, and reviews the calculated batches, per-batch ingredients, sub-recipes, and rounding warnings.
 The result is saved as an immutable production run and exported as a one-page PDF production sheet that kitchen staff can print or receive.
 
-The application works entirely offline. It requires no account, no subscription, and no backend.
+The mobile application works entirely offline. It requires no account, no subscription, and no backend; the competition web variant described below is the one exception, and it is not part of the release.
 
 ## Status
 
-Pre-release, version `0.1.0+1`. The domain, persistence, and application layers are implemented, and the recipe library is the first screen; export and migration are not implemented yet.
+Pre-release, version `0.1.0+1`. The domain, persistence, application, and export layers are implemented, and the recipe library, recipe editor, production setup, production result, and production-sheet screens are in place; migration is not implemented yet.
 Portable library backup and restore are implemented and verified on iOS and Android.
 
 The approved design is `docs/notes/2026-09-06-prepbook-pro-design.md`, which defines the scope, domain model, scaling semantics, screens, testing strategy, and definition of done.
@@ -41,6 +41,32 @@ flutter run --flavor production --target lib/main_production.dart
 ```
 
 Each flavor installs side by side: the Android application ID is suffixed with `.dev` or `.stg`, and the iOS bundle identifier follows the same pattern.
+
+## AI recipe import demo
+
+`lib/main_championship.dart` starts an optional Flutter Web variant built for a competition.
+It turns one recipe text or one image into an AI-extracted review draft, requires explicit confirmation of every value before it enters the domain, and then hands the confirmed recipe to the same exact calculator and production-sheet export the mobile app uses.
+A photo larger than 3 MiB or wider than 2,048 px is reduced in the browser before upload, so a camera original can be selected as it is.
+The three mobile flavors never import `lib/championship/`, stay offline, and are unchanged by it; `test/championship/championship_boundary_test.dart` fails the build if that separation breaks.
+
+Only extraction reaches a provider.
+The browser posts live text or one image to `api/extract-recipe.mjs`, a Vercel function that calls the configured OpenAI model with a strict JSON Schema and returns a versioned draft; the API key stays server-side, and the function never scales, converts, or infers a value.
+PrepBook itself persists nothing from the demo, but live input is sent to the provider and the provider's retention and monitoring policies apply, so confidential recipes should use the sample.
+The checked-in croissant sample runs the whole flow with no network at all and remains available whenever the endpoint is absent, failing, or rate-limited.
+
+```sh
+# Run in Chrome
+flutter run --device-id chrome --target lib/main_championship.dart
+
+# Release build, as vercel.json builds it
+flutter build web --release --target lib/main_championship.dart --dart-define=AI_IMPORT_ENDPOINT=/api/extract-recipe --tree-shake-icons
+
+# Endpoint tests
+npm run test:api
+```
+
+The variant's design is `docs/specs/2026-09-13-ai-recipe-import-demo.md` and its implementation plan is `docs/plans/2026-09-13-ai-recipe-import-demo.md`.
+The approved product design above is unchanged by it.
 
 ## Running tests
 
