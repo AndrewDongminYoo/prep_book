@@ -343,6 +343,17 @@ void main() {
       expect(amount.activeLocalIssues, [ReviewIssue.quantityNotPositive]);
       expect(amount.activeIssues, ['The quantity must be greater than zero.']);
     });
+
+    test('a hyphenated non-number is malformed instead of non-positive', () {
+      final draft = ReviewRecipeDraft.fromExtracted(_fixture());
+
+      final amount = draft.editComponentAmount(0, '-abc').components[0].amount;
+
+      expect(amount.activeLocalIssues, [ReviewIssue.quantityNotDecimal]);
+      expect(amount.activeIssues, [
+        'The quantity must be a positive decimal string.',
+      ]);
+    });
   });
 }
 

@@ -699,13 +699,12 @@ List<ReviewIssue> _positiveAmountIssues(String? value) {
   if (value == null || value.trim().isEmpty) {
     return const [ReviewIssue.quantityRequired];
   }
-  if (value.startsWith('-')) {
-    return const [ReviewIssue.quantityNotPositive];
-  }
   try {
     if (Quantity.parse(value, Unit.gram).isZero) {
       return const [ReviewIssue.quantityNotPositive];
     }
+  } on NegativeQuantityError {
+    return const [ReviewIssue.quantityNotPositive];
   } on Object {
     return const [ReviewIssue.quantityNotDecimal];
   }
