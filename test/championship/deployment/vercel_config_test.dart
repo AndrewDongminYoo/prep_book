@@ -61,10 +61,17 @@ void main() {
     final config =
         jsonDecode(File('vercel.json').readAsStringSync())
             as Map<String, Object?>;
+    final buildJob = RegExp(
+      r'^  build:\n(.*?)(?=^  [\w-]+:\n|\z)',
+      multiLine: true,
+      dotAll: true,
+    ).firstMatch(workflow)?.group(1);
+
+    expect(buildJob, isNotNull);
     final setupBlocks = RegExp(
       r'^ {6}setup: \|\n((?: {8}.+(?:\n|$))+)',
       multiLine: true,
-    ).allMatches(workflow).toList();
+    ).allMatches(buildJob!).toList();
 
     expect(setupBlocks, hasLength(1));
     final setupCommands = setupBlocks.single
