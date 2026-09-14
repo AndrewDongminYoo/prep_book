@@ -9,6 +9,9 @@ class App extends StatelessWidget {
     required this.searchLibrary,
     required this.editor,
     required this.production,
+    required this.libraryBackup,
+    required this.restored,
+    required this.restoreFailure,
     super.key,
   });
 
@@ -26,6 +29,15 @@ class App extends StatelessWidget {
   /// action.
   final ProductionSetupLauncher production;
 
+  /// Opens native backup and restore flows from the library menu.
+  final LibraryBackupLauncher libraryBackup;
+
+  /// Whether this root was mounted after a successful restore.
+  final bool restored;
+
+  /// A recovered restore failure that the new root must report once.
+  final LibraryBackupFailureKind? restoreFailure;
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -42,6 +54,9 @@ class App extends StatelessWidget {
         searchLibrary: searchLibrary,
         editor: editor,
         production: production,
+        libraryBackup: libraryBackup,
+        restored: restored,
+        restoreFailure: restoreFailure,
       ),
     );
   }

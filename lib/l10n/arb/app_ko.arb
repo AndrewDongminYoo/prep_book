@@ -40,6 +40,94 @@
     "@recipeLibraryRetry": {
         "description": "실패한 읽기를 다시 시도하는 버튼의 라벨"
     },
+    "libraryBackupMenu": "라이브러리 백업",
+    "@libraryBackupMenu": {
+        "description": "라이브러리 백업 메뉴의 도움말"
+    },
+    "libraryBackupCreate": "라이브러리 백업하기",
+    "@libraryBackupCreate": {
+        "description": "이동 가능한 라이브러리 백업을 저장하는 메뉴 동작"
+    },
+    "libraryBackupRestore": "백업 복원하기",
+    "@libraryBackupRestore": {
+        "description": "백업에서 라이브러리를 교체하는 메뉴 동작"
+    },
+    "libraryBackupCreating": "백업을 준비하는 중입니다…",
+    "@libraryBackupCreating": {
+        "description": "백업을 만들고 저장하는 동안 표시하는 문구"
+    },
+    "libraryBackupPicking": "백업 파일을 선택하는 중입니다…",
+    "@libraryBackupPicking": {
+        "description": "파일 선택 화면이 열린 동안 표시하는 문구"
+    },
+    "libraryBackupRestoring": "라이브러리를 복원하는 중입니다…",
+    "@libraryBackupRestoring": {
+        "description": "선택한 백업을 복원하는 동안 표시하는 문구"
+    },
+    "libraryBackupConfirmTitle": "현재 라이브러리를 교체할까요?",
+    "@libraryBackupConfirmTitle": {
+        "description": "라이브러리 교체 확인 창의 제목"
+    },
+    "libraryBackupConfirmBody": "선택한 백업으로 모든 레시피와 생산 이력을 교체합니다.",
+    "@libraryBackupConfirmBody": {
+        "description": "라이브러리 교체 확인 창의 설명"
+    },
+    "libraryBackupConfirm": "복원",
+    "@libraryBackupConfirm": {
+        "description": "선택한 백업으로 교체를 실행하는 동작"
+    },
+    "libraryBackupCancel": "취소",
+    "@libraryBackupCancel": {
+        "description": "복원 확인을 취소하거나 창을 닫는 동작"
+    },
+    "libraryBackupSaved": "라이브러리 백업을 저장했습니다.",
+    "@libraryBackupSaved": {
+        "description": "백업을 저장한 뒤 표시하는 알림"
+    },
+    "libraryBackupRestored": "백업에서 라이브러리를 복원했습니다.",
+    "@libraryBackupRestored": {
+        "description": "복원 후 새 화면에서 한 번만 표시하는 알림"
+    },
+    "libraryBackupFailureTitle": "라이브러리 백업 작업을 완료하지 못했습니다",
+    "@libraryBackupFailureTitle": {
+        "description": "백업 또는 복원에 실패했을 때 표시하는 제목"
+    },
+    "libraryBackupFailureCancelled": "파일 선택을 취소했습니다.",
+    "@libraryBackupFailureCancelled": {
+        "description": "플랫폼이 취소를 오류로 전달했을 때 표시하는 예비 문구"
+    },
+    "libraryBackupFailureUnsupportedFormat": "PrepBook 백업 파일을 선택하세요.",
+    "@libraryBackupFailureUnsupportedFormat": {
+        "description": "지원하지 않는 백업 형식에 표시하는 문구"
+    },
+    "libraryBackupFailureInvalidArchive": "백업 파일이 손상되었거나 완전하지 않습니다. 다른 백업을 선택하세요.",
+    "@libraryBackupFailureInvalidArchive": {
+        "description": "유효하지 않은 백업 파일에 표시하는 문구"
+    },
+    "libraryBackupFailureTooLarge": "이 백업은 기기에서 열 수 있는 크기를 초과했습니다.",
+    "@libraryBackupFailureTooLarge": {
+        "description": "지원하는 크기를 초과한 백업에 표시하는 문구"
+    },
+    "libraryBackupFailureInvalidDatabase": "백업에 유효하지 않은 라이브러리 데이터가 있습니다. 다른 백업을 선택하세요.",
+    "@libraryBackupFailureInvalidDatabase": {
+        "description": "백업 데이터베이스 검증이 실패했을 때 표시하는 문구"
+    },
+    "libraryBackupFailureIncompatibleSchema": "이 백업을 복원하려면 PrepBook을 먼저 업데이트하세요.",
+    "@libraryBackupFailureIncompatibleSchema": {
+        "description": "최신 데이터베이스 형식의 백업에 표시하는 문구"
+    },
+    "libraryBackupFailureSave": "백업을 저장하지 못했습니다. 다른 위치를 선택한 뒤 다시 시도하세요.",
+    "@libraryBackupFailureSave": {
+        "description": "플랫폼에서 백업을 저장하지 못했을 때 표시하는 문구"
+    },
+    "libraryBackupFailureRestore": "백업을 복원하지 못했습니다. 현재 라이브러리는 변경되지 않았습니다.",
+    "@libraryBackupFailureRestore": {
+        "description": "복원이 실패하고 기존 라이브러리를 복구했을 때 표시하는 문구"
+    },
+    "libraryBackupFailureRecovery": "라이브러리를 다시 열지 못했습니다. 시작 화면에서 다시 시도할 수 있습니다.",
+    "@libraryBackupFailureRecovery": {
+        "description": "교체한 데이터와 기존 데이터 모두 활성화하지 못했을 때 사용하는 문구"
+    },
     "startupFailureMessage": "레시피 데이터베이스를 열지 못했습니다.",
     "@startupFailureMessage": {
         "description": "화면을 만들기 전에 시작 과정이 실패했을 때 앱 대신 보여 주는 문구"

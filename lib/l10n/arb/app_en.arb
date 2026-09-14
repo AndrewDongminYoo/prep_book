@@ -40,6 +40,94 @@
     "@recipeLibraryRetry": {
         "description": "Label of the button that retries a failed read"
     },
+    "libraryBackupMenu": "Library backup",
+    "@libraryBackupMenu": {
+        "description": "Tooltip for the library backup menu"
+    },
+    "libraryBackupCreate": "Back up library",
+    "@libraryBackupCreate": {
+        "description": "Menu action that saves a portable library backup"
+    },
+    "libraryBackupRestore": "Restore backup",
+    "@libraryBackupRestore": {
+        "description": "Menu action that replaces the library from a backup"
+    },
+    "libraryBackupCreating": "Preparing backup…",
+    "@libraryBackupCreating": {
+        "description": "Progress label shown while a backup is created and saved"
+    },
+    "libraryBackupPicking": "Choose a backup file…",
+    "@libraryBackupPicking": {
+        "description": "Progress label shown while the native open picker is active"
+    },
+    "libraryBackupRestoring": "Restoring library…",
+    "@libraryBackupRestoring": {
+        "description": "Progress label shown while a confirmed backup is restored"
+    },
+    "libraryBackupConfirmTitle": "Replace this library?",
+    "@libraryBackupConfirmTitle": {
+        "description": "Title of the destructive restore confirmation"
+    },
+    "libraryBackupConfirmBody": "This replaces all recipes and production history with the selected backup.",
+    "@libraryBackupConfirmBody": {
+        "description": "Body of the destructive restore confirmation"
+    },
+    "libraryBackupConfirm": "Restore",
+    "@libraryBackupConfirm": {
+        "description": "Action that confirms replacement from the selected backup"
+    },
+    "libraryBackupCancel": "Cancel",
+    "@libraryBackupCancel": {
+        "description": "Action that cancels backup confirmation or closes the dialog"
+    },
+    "libraryBackupSaved": "Library backup saved.",
+    "@libraryBackupSaved": {
+        "description": "Notice shown after a backup is saved"
+    },
+    "libraryBackupRestored": "Library restored from backup.",
+    "@libraryBackupRestored": {
+        "description": "One-time notice shown by the fresh root after restore"
+    },
+    "libraryBackupFailureTitle": "Library backup could not be completed",
+    "@libraryBackupFailureTitle": {
+        "description": "Title shown for a backup or restore failure"
+    },
+    "libraryBackupFailureCancelled": "The file selection was cancelled.",
+    "@libraryBackupFailureCancelled": {
+        "description": "Fallback message for a platform-reported cancellation"
+    },
+    "libraryBackupFailureUnsupportedFormat": "Choose a PrepBook backup file.",
+    "@libraryBackupFailureUnsupportedFormat": {
+        "description": "Message shown for an unsupported backup format"
+    },
+    "libraryBackupFailureInvalidArchive": "This backup file is damaged or incomplete. Choose another backup.",
+    "@libraryBackupFailureInvalidArchive": {
+        "description": "Message shown for an invalid archive"
+    },
+    "libraryBackupFailureTooLarge": "This backup is too large to open on this device.",
+    "@libraryBackupFailureTooLarge": {
+        "description": "Message shown when a backup exceeds the supported size"
+    },
+    "libraryBackupFailureInvalidDatabase": "This backup contains invalid library data. Choose another backup.",
+    "@libraryBackupFailureInvalidDatabase": {
+        "description": "Message shown when the backup database fails validation"
+    },
+    "libraryBackupFailureIncompatibleSchema": "Update PrepBook before restoring this newer backup.",
+    "@libraryBackupFailureIncompatibleSchema": {
+        "description": "Message shown when a backup uses a newer database schema"
+    },
+    "libraryBackupFailureSave": "The backup could not be saved. Choose another location and try again.",
+    "@libraryBackupFailureSave": {
+        "description": "Message shown when native backup saving fails"
+    },
+    "libraryBackupFailureRestore": "The backup could not be restored. Your current library is unchanged.",
+    "@libraryBackupFailureRestore": {
+        "description": "Message shown when restore fails and the previous library is recovered"
+    },
+    "libraryBackupFailureRecovery": "The library could not be reopened. Try again from the startup screen.",
+    "@libraryBackupFailureRecovery": {
+        "description": "Message used when neither replacement nor recovery can be activated"
+    },
     "startupFailureMessage": "The recipe database could not be opened.",
     "@startupFailureMessage": {
         "description": "Shown in place of the app when startup failed before any screen could be built"

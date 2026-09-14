@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
+import 'package:prep_book/presentation/library_backup/library_backup.dart';
 import 'package:prep_book/presentation/production_setup/production_setup.dart';
 import 'package:prep_book/presentation/recipe_editor/recipe_editor.dart';
 import 'package:prep_book/presentation/recipe_library/recipe_library.dart';
@@ -22,6 +23,9 @@ class RecipeLibraryPage extends StatelessWidget {
     required this.searchLibrary,
     required this.editor,
     required this.production,
+    required this.libraryBackup,
+    required this.restored,
+    required this.restoreFailure,
     super.key,
   });
 
@@ -39,6 +43,15 @@ class RecipeLibraryPage extends StatelessWidget {
   /// through.
   final ProductionSetupLauncher production;
 
+  /// Opens backup and restore from the app-bar menu.
+  final LibraryBackupLauncher libraryBackup;
+
+  /// Shows the one-time completion notice for a freshly restored root.
+  final bool restored;
+
+  /// Shows one recovered restore failure in the freshly mounted root.
+  final LibraryBackupFailureKind? restoreFailure;
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -49,7 +62,13 @@ class RecipeLibraryPage extends StatelessWidget {
         unawaited(cubit.load());
         return cubit;
       },
-      child: RecipeLibraryView(editor: editor, production: production),
+      child: RecipeLibraryView(
+        editor: editor,
+        production: production,
+        libraryBackup: libraryBackup,
+        restored: restored,
+        restoreFailure: restoreFailure,
+      ),
     );
   }
 }
@@ -61,6 +80,9 @@ class RecipeLibraryView extends StatefulWidget {
   const RecipeLibraryView({
     required this.editor,
     required this.production,
+    required this.libraryBackup,
+    required this.restored,
+    required this.restoreFailure,
     super.key,
   });
 
@@ -69,6 +91,12 @@ class RecipeLibraryView extends StatefulWidget {
 
   /// Opens production setup for a row's Production Run action.
   final ProductionSetupLauncher production;
+
+  final LibraryBackupLauncher libraryBackup;
+
+  final bool restored;
+
+  final LibraryBackupFailureKind? restoreFailure;
 
   @override
   State<RecipeLibraryView> createState() => _RecipeLibraryViewState();
@@ -79,10 +107,29 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
   final _searchController = TextEditingController();
   RecipeLibraryCubit? _libraryCubit;
   String? _selectedRecipeId;
+  var _backupNoticeScheduled = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final notice = widget.restored
+        ? context.l10n.libraryBackupRestored
+        : switch (widget.restoreFailure) {
+            final failure? => libraryBackupFailureMessage(
+              context.l10n,
+              failure,
+            ),
+            null => null,
+          };
+    if (notice != null && !_backupNoticeScheduled) {
+      _backupNoticeScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(notice)));
+      });
+    }
     final cubit = context.read<RecipeLibraryCubit>();
     if (identical(cubit, _libraryCubit)) return;
     _libraryCubit = cubit;
@@ -105,6 +152,16 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
     setState(() => _selectedRecipeId = recipe.id);
   }
 
+  Future<void> _openLibraryBackup(LibraryBackupAction action) async {
+    final offset = _listController.hasClients ? _listController.offset : null;
+    FocusScope.of(context).unfocus();
+    await widget.libraryBackup.open(context, action);
+    if (!mounted || offset == null || !_listController.hasClients) return;
+    _listController.jumpTo(
+      offset.clamp(0, _listController.position.maxScrollExtent).toDouble(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -123,6 +180,24 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
             tooltip: l10n.recipeLibraryCreate,
             icon: const Icon(Icons.add),
             onPressed: () => _openEditor(context, widget.editor),
+          ),
+          PopupMenuButton<LibraryBackupAction>(
+            key: const ValueKey('library-backup-menu'),
+            tooltip: l10n.libraryBackupMenu,
+            requestFocus: false,
+            onSelected: (action) {
+              unawaited(_openLibraryBackup(action));
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: LibraryBackupAction.create,
+                child: Text(l10n.libraryBackupCreate),
+              ),
+              PopupMenuItem(
+                value: LibraryBackupAction.restore,
+                child: Text(l10n.libraryBackupRestore),
+              ),
+            ],
           ),
         ],
       ),
