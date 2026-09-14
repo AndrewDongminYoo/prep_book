@@ -282,6 +282,34 @@ void main() {
     );
   });
 
+  test('reports a unit edited onto a manual component as a unit issue', () {
+    final review = _completedReview().editComponentUnit(3, 'g');
+
+    final result = verifier.verify(review);
+
+    expect(result, isA<RecipeDraftRejected>());
+    final issues = (result as RecipeDraftRejected).issues;
+    expect(
+      issues,
+      contains(
+        isA<RecipeDraftVerificationIssue>()
+            .having(
+              (issue) => issue.kind,
+              'kind',
+              RecipeDraftVerificationIssueKind.manualHasUnit,
+            )
+            .having((issue) => issue.path, 'path', 'components[3].behavior'),
+      ),
+    );
+    expect(
+      issues.where(
+        (issue) =>
+            issue.kind == RecipeDraftVerificationIssueKind.manualHasQuantity,
+      ),
+      isEmpty,
+    );
+  });
+
   test('rejects removal of maximum yield until absence is confirmed', () {
     final review = _completedReview().removeMaxBatchYield();
 

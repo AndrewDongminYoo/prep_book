@@ -10,20 +10,22 @@ import 'package:prep_book/presentation/production_sheet/view/production_sheet_pl
 import 'package:web/web.dart' as web;
 
 void main() {
-  runApp(const _ChampionshipRoot());
+  runApp(const ChampionshipRoot());
 }
 
 void updateChampionshipDocumentLanguage(Locale locale) =>
     web.document.documentElement?.setAttribute('lang', locale.languageCode);
 
-class _ChampionshipRoot extends StatefulWidget {
-  const _ChampionshipRoot();
+class ChampionshipRoot extends StatefulWidget {
+  const ChampionshipRoot({this.locale, super.key});
+
+  final Locale? locale;
 
   @override
-  State<_ChampionshipRoot> createState() => _ChampionshipRootState();
+  State<ChampionshipRoot> createState() => _ChampionshipRootState();
 }
 
-class _ChampionshipRootState extends State<_ChampionshipRoot> {
+class _ChampionshipRootState extends State<ChampionshipRoot> {
   late final http.Client _httpClient;
   late final ChampionshipDemoCubit _cubit;
   final _productionSheet = const ProductionSheetLauncher(
@@ -65,6 +67,7 @@ class _ChampionshipRootState extends State<_ChampionshipRoot> {
     cubit: _cubit,
     openProductionSheet: (context, run) =>
         _productionSheet.open(context, run: run),
+    locale: widget.locale,
     onResolvedLocale: updateChampionshipDocumentLanguage,
   );
 }

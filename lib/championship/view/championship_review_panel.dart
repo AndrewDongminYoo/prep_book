@@ -25,6 +25,7 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
   final _anchors = <String, GlobalKey>{};
   final GlobalKey _summaryKey = GlobalKey();
   var _componentListRevision = 0;
+  var _recoveryGeneration = 0;
   int? _componentCount;
 
   String _fieldStateKey(String path) => '$_componentListRevision:$path';
@@ -51,8 +52,9 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
   }
 
   void _recoverFromFailure(RecipeDraftVerificationIssue issue) {
+    final generation = ++_recoveryGeneration;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
+      if (!mounted || generation != _recoveryGeneration) return;
       final path = issue.path;
       final fieldStateKey = path == null ? null : _fieldStateKey(path);
       final focusNode = fieldStateKey == null
@@ -77,7 +79,9 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
         duration: const Duration(milliseconds: 250),
         alignment: 0.1,
       );
-      if (mounted) focusNode.requestFocus();
+      if (mounted && generation == _recoveryGeneration) {
+        focusNode.requestFocus();
+      }
     });
   }
 
@@ -90,10 +94,14 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
     _syncComponentCount(draft.components.length);
     return BlocListener<ChampionshipDemoCubit, ChampionshipDemoState>(
       listenWhen: (previous, current) =>
-          current.reviewIssues.isNotEmpty &&
           !identical(previous.reviewIssues, current.reviewIssues),
-      listener: (context, state) =>
-          _recoverFromFailure(state.reviewIssues.first),
+      listener: (context, state) {
+        if (state.reviewIssues.isEmpty) {
+          _recoveryGeneration += 1;
+          return;
+        }
+        _recoverFromFailure(state.reviewIssues.first);
+      },
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(24),

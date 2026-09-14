@@ -160,6 +160,55 @@ void main() {
     },
   );
 
+  testWidgets('newer summary-only failure prevents stale recovery focus', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, size: const Size(390, 844));
+    final continueButton = find.byKey(const ValueKey('review-continue'));
+    final firstInput = find.byKey(const ValueKey('recipe.name.input'));
+
+    await tester.ensureVisible(continueButton);
+    await tester.pumpAndSettle();
+    cubit.continueToTarget();
+    await tester.pump();
+
+    cubit
+      ..confirmAllUnambiguous()
+      ..updateReview(
+        (draft) => draft.editComponentUnit(2, 'g').confirmComponentUnit(2),
+      )
+      ..updateReview((draft) => draft.confirmComponentBehavior(3))
+      ..updateReview((draft) => draft.removeMaxBatchYield())
+      ..continueToTarget();
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.reviewIssues.first.path, 'recipe.maxBatchYield');
+    expect(_hasPrimaryFocus(firstInput), isFalse);
+  });
+
+  testWidgets('editing during recovery prevents stale focus', (tester) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, size: const Size(390, 844));
+    final continueButton = find.byKey(const ValueKey('review-continue'));
+    final firstInput = find.byKey(const ValueKey('recipe.name.input'));
+
+    await tester.ensureVisible(continueButton);
+    await tester.pumpAndSettle();
+    cubit.continueToTarget();
+    await tester.pump();
+
+    cubit.updateReview((draft) => draft.editRecipeName('Corrected recipe'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.reviewIssues, isEmpty);
+    expect(_hasPrimaryFocus(firstInput), isFalse);
+  });
+
   testWidgets('keyboard Continue focuses the first unresolved field', (
     tester,
   ) async {

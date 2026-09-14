@@ -209,8 +209,12 @@ final class ChampionshipStrings {
             : '$label: Select a scaling behavior.',
       RecipeDraftVerificationIssueKind.manualHasQuantity =>
         isKorean
-            ? '$label: 수동 재료의 수량과 단위를 비우세요.'
-            : '$label: Clear the quantity and unit for a manual component.',
+            ? '$label: 수동 재료의 수량을 비우세요.'
+            : '$label: Clear the quantity for a manual component.',
+      RecipeDraftVerificationIssueKind.manualHasUnit =>
+        isKorean
+            ? '$label: 수동 재료의 단위를 비우세요.'
+            : '$label: Clear the unit for a manual component.',
       RecipeDraftVerificationIssueKind.maximumAbsenceConfirmationRequired =>
         isKorean
             ? '$label: 최대 배치 제한이 없음을 확인하세요.'

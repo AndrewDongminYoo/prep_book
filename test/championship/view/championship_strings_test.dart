@@ -134,6 +134,33 @@ void main() {
     }
   });
 
+  testWidgets('distinguishes manual quantity and unit verification issues', (
+    tester,
+  ) async {
+    final english = await _stringsFor(tester, const Locale('en'));
+    final korean = await _stringsFor(tester, const Locale('ko'));
+    const quantityIssue = RecipeDraftVerificationIssue(
+      kind: RecipeDraftVerificationIssueKind.manualHasQuantity,
+      path: 'components[0].behavior',
+    );
+    const unitIssue = RecipeDraftVerificationIssue(
+      kind: RecipeDraftVerificationIssueKind.manualHasUnit,
+      path: 'components[0].behavior',
+    );
+
+    expect(
+      english.verificationIssue(quantityIssue),
+      'Component 1 scaling behavior: Clear the quantity for a manual '
+      'component.',
+    );
+    expect(
+      english.verificationIssue(unitIssue),
+      'Component 1 scaling behavior: Clear the unit for a manual component.',
+    );
+    expect(korean.verificationIssue(quantityIssue), contains('수량을 비우세요'));
+    expect(korean.verificationIssue(unitIssue), contains('단위를 비우세요'));
+  });
+
   for (final locale in const [Locale('en'), Locale('ko')]) {
     testWidgets('provides complete ${locale.languageCode} workflow copy', (
       tester,

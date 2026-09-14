@@ -31,6 +31,7 @@ enum RecipeDraftVerificationIssueKind {
   maxUnitIncompatible,
   behaviorRequired,
   manualHasQuantity,
+  manualHasUnit,
   maximumAbsenceConfirmationRequired,
   atLeastOneComponent,
 }
@@ -170,10 +171,18 @@ final class RecipeDraftVerifier {
       }
 
       if (component.behavior.value == DraftScalingBehavior.manual) {
-        if (component.amount.value != null || component.unit.value != null) {
+        if (component.amount.value != null) {
           issues.add(
             RecipeDraftVerificationIssue(
               kind: RecipeDraftVerificationIssueKind.manualHasQuantity,
+              path: '$path.behavior',
+            ),
+          );
+        }
+        if (component.unit.value != null) {
+          issues.add(
+            RecipeDraftVerificationIssue(
+              kind: RecipeDraftVerificationIssueKind.manualHasUnit,
               path: '$path.behavior',
             ),
           );
