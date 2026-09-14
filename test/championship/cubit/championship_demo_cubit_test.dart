@@ -459,6 +459,33 @@ void main() {
     expect(cubit.state.sourceFailure, ChampionshipSourceFailure.imageSelection);
   });
 
+  test('a retry after consent was withdrawn sends nothing', () async {
+    var calls = 0;
+    final client = _FakeImportClient((_, _) async {
+      calls += 1;
+      throw const RecipeImportException(
+        RecipeImportFailureCode.serviceBusy,
+        'busy',
+      );
+    });
+    final cubit = _cubit(client: client)
+      ..setSourceText('Flour 100 g')
+      ..setLiveConsent(value: true);
+    addTearDown(cubit.close);
+    await cubit.submitText(locale: 'en');
+    expect(calls, 1);
+    expect(cubit.state.importFailure, RecipeImportFailureCode.serviceBusy);
+
+    cubit.setLiveConsent(value: false);
+    await cubit.retryImport();
+
+    expect(calls, 1);
+    expect(
+      cubit.state.sourceFailure,
+      ChampionshipSourceFailure.liveConsentRequired,
+    );
+  });
+
   test('invalid target stays in Target with the verified draft', () async {
     final cubit = _cubit();
     addTearDown(cubit.close);

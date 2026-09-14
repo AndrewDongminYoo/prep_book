@@ -171,6 +171,9 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
   Future<void> retryImport() async {
     final lastImport = _lastImport;
     if (lastImport == null) return;
+    // Consent can be withdrawn between the first attempt and the retry, and
+    // a retry sends the same source to the provider again.
+    if (!_requireLiveConsent()) return;
     await _extract(lastImport.request, lastImport.locale);
   }
 

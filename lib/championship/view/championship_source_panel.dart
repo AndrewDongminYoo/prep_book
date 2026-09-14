@@ -159,7 +159,7 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
             _PrivacyBoundary(text: strings.privacy),
             if (state.isLoading) ...[
               const SizedBox(height: 16),
-              const LinearProgressIndicator(value: 0.5),
+              const LinearProgressIndicator(),
               const SizedBox(height: 8),
               Text(strings.loading),
             ],

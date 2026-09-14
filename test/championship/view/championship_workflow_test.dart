@@ -148,6 +148,13 @@ void main() {
     await tester.pump();
 
     expect(client.requests, hasLength(1));
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
+          .value,
+      isNull,
+      reason: 'the extraction has no known duration, so the bar animates',
+    );
     expect(tester.widget<FilledButton>(submitFinder).onPressed, isNull);
     completion.complete(championshipDraft(RecipeImportSourceKind.text));
     await tester.pumpAndSettle();
