@@ -764,6 +764,49 @@ lockfile; mirror tests under `test/championship/input` and
   git commit -m "feat(championship): reduce large images in the browser"
   ```
 
+## Task 9: Act on the first live run's feedback
+
+Added 2026-09-14 after the operator ran the deployed variant end to end with a
+real recipe and reported six observations from the review screen and the
+exported sheet. Each item was diagnosed to a root cause before it was changed,
+and blocking calculation on a missing base yield, which the design intends,
+was left as it was.
+
+- [x] **9.1 Report an absent value as missing, once, in the app locale.** The
+      local validators treated `null` like an unparseable value and said
+      "unsupported" for a unit the source never stated, in English, under the
+      model's own Korean sentence about the same gap. Local issues are now
+      `ReviewIssue` codes rendered through `ChampionshipStrings`; an absence
+      the model already reported is not repeated. Commit `84c5481`.
+
+- [x] **9.2 Let a count unit keep the word the source used.** `개`, `ea`, and
+      `piece` resolve to three count units instead of one, matching the domain,
+      and `UnitAliasResolver.symbols` now owns the one picker list. The spec's
+      alias table records the rows. Commit `84a28ea`.
+
+- [x] **9.3 Keep confirmed quantities across numeric behaviors.** Changing a
+      component's scaling behavior no longer drops the confirmation on its
+      amount and unit unless the change crosses the manual boundary; leaving
+      manual reinstates the proposal. Commit `ae2d521`.
+
+- [x] **9.4 Offer bulk confirmation where the review ends.** The same action
+      as the top button sits again above "Continue". Commit `0db8ad0`.
+
+- [x] **9.5 Print the base yield and base amounts on the sheet.** Each section
+      header carries the recipe's base yield and each non-manual row carries
+      the recipe's own amount beside the calculated one, so a cook can adjust
+      from experience. This is the second change on this branch outside the
+      variant fence (after `09a8f30`): it touches `lib/export/production_sheet/`
+      and the two ARB files, because the sheet is the shipping export and the
+      feedback is about the printed page, not the variant. Commit `a435ca4`.
+
+- [x] **9.6 Record the filename finding.** The share action already downloads
+      `production-sheet-<recipe>-<UTC time>.pdf` (verified in Chrome on
+      2026-09-14, `filename.dart`); a file named by a UUID comes from the
+      browser's print dialog saving the print frame's Blob URL, which no
+      application code names. No change; the submission note should point at
+      share for a named file.
+
 ## Completion criteria
 
 Implementation is complete only when all seven tasks are committed, the final
