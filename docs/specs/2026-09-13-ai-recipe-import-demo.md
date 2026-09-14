@@ -255,6 +255,10 @@ The review screen provides `Confirm all unambiguous fields`, but that action may
 confirm only fields whose value is present, locally valid, and has no extraction
 issue.
 It never confirms null, unsupported, or inconsistent values.
+A value the model flagged can still be confirmed one field at a time: that
+confirmation records the reviewer's judgment against the source, and the
+model's issue then no longer blocks calculation.
+A null or locally invalid value cannot be confirmed either way.
 
 Calculation remains disabled until all of these conditions hold:
 

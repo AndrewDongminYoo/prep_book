@@ -53,9 +53,12 @@ final class ReviewField<T> {
   bool get isEdited => value != sourceValue;
 
   /// The model's issues that still apply: all of them until the value is
-  /// edited, none afterwards, because they describe the proposal.
-  List<String> get activeSourceIssues =>
-      List.unmodifiable(isEdited ? const <String>[] : sourceIssues);
+  /// edited or explicitly confirmed, none afterwards. An edit replaces the
+  /// proposal they describe; a confirmation records that the reviewer read
+  /// them against the source and accepted the value anyway.
+  List<String> get activeSourceIssues => List.unmodifiable(
+    isEdited || isConfirmed ? const <String>[] : sourceIssues,
+  );
 
   /// The local issues that still apply. An absence the model has already
   /// reported is left to that report, so the same gap is not shown twice.
@@ -69,7 +72,14 @@ final class ReviewField<T> {
     for (final issue in activeLocalIssues) issue.message,
   ]);
 
-  bool get canConfirm => value != null && activeIssues.isEmpty;
+  /// Whether the reviewer may confirm this value one field at a time. A
+  /// present, locally valid value qualifies even when the model flagged it:
+  /// resolving the model's doubt is what the explicit confirmation is for.
+  bool get canConfirm => value != null && activeLocalIssues.isEmpty;
+
+  /// Whether bulk confirmation may take this value: [canConfirm], and the
+  /// model raised nothing against it, so no judgment is being skipped.
+  bool get isUnambiguous => canConfirm && activeIssues.isEmpty;
 
   ReviewField<T> edit(
     T? nextValue, {
@@ -98,7 +108,7 @@ final class ReviewField<T> {
     );
   }
 
-  ReviewField<T> confirmIfUnambiguous() => canConfirm ? confirm() : this;
+  ReviewField<T> confirmIfUnambiguous() => isUnambiguous ? confirm() : this;
 }
 
 final class ReviewYieldDraft {

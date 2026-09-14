@@ -223,6 +223,53 @@ void main() {
     );
   });
 
+  group('flagged proposals', () {
+    test('explicit confirmation accepts a flagged value unchanged', () {
+      final draft = ReviewRecipeDraft.fromExtracted(
+        _fixtureWithFlaggedFlourAmount(),
+      ).confirmAllUnambiguous();
+      final flagged = draft.components[0].amount;
+
+      expect(flagged.value, '1000');
+      expect(flagged.isConfirmed, isFalse);
+      expect(flagged.activeIssues, ['The digits are hard to read.']);
+      expect(flagged.canConfirm, isTrue);
+
+      final confirmed = draft.confirmComponentAmount(0).components[0].amount;
+
+      expect(confirmed.isConfirmed, isTrue);
+      expect(confirmed.activeIssues, isEmpty);
+      expect(confirmed.sourceIssues, ['The digits are hard to read.']);
+    });
+
+    test('a flagged value still blocks the verifier until confirmed', () {
+      var draft = ReviewRecipeDraft.fromExtracted(
+        _fixtureWithFlaggedFlourAmount(),
+      ).confirmAllUnambiguous();
+      draft = draft
+          .editComponentUnit(2, 'g')
+          .confirmComponentUnit(2)
+          .confirmComponentBehavior(3);
+
+      expect(
+        const RecipeDraftVerifier().verify(draft),
+        isA<RecipeDraftRejected>(),
+      );
+      expect(
+        const RecipeDraftVerifier().verify(draft.confirmComponentAmount(0)),
+        isA<RecipeDraftVerified>(),
+      );
+    });
+
+    test('a null value cannot be confirmed even without local issues', () {
+      final draft = ReviewRecipeDraft.fromExtracted(_fixture());
+
+      expect(draft.components[2].unit.value, isNull);
+      expect(draft.components[2].unit.canConfirm, isFalse);
+      expect(() => draft.confirmComponentUnit(2), throwsStateError);
+    });
+  });
+
   group('local issues', () {
     test('an absent unit is required, an unknown unit is unsupported', () {
       final draft = ReviewRecipeDraft.fromExtracted(
@@ -261,6 +308,17 @@ void main() {
       expect(amount.activeIssues, ['A quantity is required.']);
     });
   });
+}
+
+ExtractedRecipeDraft _fixtureWithFlaggedFlourAmount() {
+  final json =
+      jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
+  final components = json['components']! as List<Object?>;
+  final flour = components[0]! as Map<String, Object?>;
+  final amount = flour['amount']! as Map<String, Object?>;
+  amount['confidence'] = 'low';
+  amount['issues'] = <Object?>['The digits are hard to read.'];
+  return ExtractedRecipeDraft.fromJson(json);
 }
 
 ExtractedRecipeDraft _fixtureWithoutWaterUnitIssue() {
