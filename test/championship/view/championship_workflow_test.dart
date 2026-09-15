@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -113,6 +114,50 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('• Recipe name: Confirm this value.'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('review semantics identify fields actions and static statuses', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    await _pumpApp(tester, cubit, size: const Size(1200, 1000));
+
+    final field = tester.widget<Semantics>(
+      find.byKey(const ValueKey('components[0].name.field-semantics')),
+    );
+    final confidence = tester.widget<Semantics>(
+      find.byKey(const ValueKey('components[0].name.confidence-semantics')),
+    );
+    final confirmation = tester.widget<Semantics>(
+      find.byKey(const ValueKey('components[0].name.confirmation-semantics')),
+    );
+    final confirmAction = tester.widget<Semantics>(
+      find.byKey(const ValueKey('components[0].name.confirm-semantics')),
+    );
+    final removeAction = tester.widget<Semantics>(
+      find.byKey(const ValueKey('components[0].remove-semantics')),
+    );
+    final input = tester.widget<TextField>(
+      find.descendant(
+        of: find.byKey(const ValueKey('components[0].name.input')),
+        matching: find.byType(TextField),
+      ),
+    );
+
+    expect(field.properties.label, 'Component 1 name');
+    expect(find.bySemanticsLabel('Component 1 name'), findsOneWidget);
+    expect(input.decoration?.labelText, 'Current value for Component 1 name');
+    expect(confidence.properties.label, 'High confidence');
+    expect(confidence.properties.role, SemanticsRole.status);
+    expect(confidence.properties.checked, isNull);
+    expect(confirmation.properties.label, 'Needs confirmation');
+    expect(confirmation.properties.role, SemanticsRole.status);
+    expect(confirmation.properties.checked, isNull);
+    expect(confirmAction.properties.label, 'Confirm Component 1 name');
+    expect(confirmAction.properties.button, isTrue);
+    expect(removeAction.properties.label, 'Remove Component 1: Flour');
+    expect(removeAction.properties.button, isTrue);
   });
 
   testWidgets('verification summary localizes fields without internal paths', (
@@ -287,6 +332,31 @@ void main() {
     expect(cubit.state.phase, ChampionshipPhase.review);
   });
 
+  testWidgets('consent enables the next keyboard submit action', (
+    tester,
+  ) async {
+    final cubit = buildChampionshipTestCubit()
+      ..setSourceText('Dough\nFlour 100 g');
+    await _pumpApp(
+      tester,
+      cubit,
+      size: const Size(390, 844),
+      locale: const Locale('ko'),
+    );
+    const consentKey = ValueKey('source-consent');
+    const submitKey = ValueKey('source-submit-text');
+    expect(find.bySemanticsLabel('아래 개인정보 경계를 확인하고 동의합니다.'), findsOneWidget);
+
+    await _tabTo(tester, consentKey);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pumpAndSettle();
+    expect(cubit.state.hasLiveConsent, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(_hasPrimaryFocus(find.byKey(submitKey)), isTrue);
+  });
+
   testWidgets('image mode shows metadata without rendering source bytes', (
     tester,
   ) async {
@@ -414,8 +484,8 @@ void main() {
       for (final key in const [
         ValueKey('source-mode-selector'),
         ValueKey('source-text-input'),
-        ValueKey('source-submit-text'),
         ValueKey('source-consent'),
+        ValueKey('source-submit-text'),
         ValueKey('source-sample'),
       ]) {
         await _tabTo(tester, key);
@@ -554,7 +624,9 @@ void main() {
     cubit.continueToTarget();
     expect(cubit.state.reviewIssues, isEmpty);
     expect(cubit.state.phase, ChampionshipPhase.target);
+    await tester.pumpAndSettle();
     cubit.back();
+    await tester.pumpAndSettle();
     await _tapVisible(tester, find.byKey(const ValueKey('review-back')));
     expect(cubit.state.phase, ChampionshipPhase.source);
   });
@@ -699,17 +771,29 @@ void main() {
     },
   );
 
-  testWidgets('review removes an incorrect extracted component', (
-    tester,
-  ) async {
+  testWidgets('component removal requires confirmation', (tester) async {
     final cubit = buildChampionshipTestCubit();
     await cubit.loadSample();
+    cubit.updateReview((draft) => draft.editComponentName(0, '   '));
     await _pumpApp(tester, cubit);
 
     await _tapVisible(
       tester,
       find.byKey(const ValueKey('components[0].remove')),
     );
+
+    expect(cubit.state.review?.components, hasLength(4));
+    expect(find.text('Remove Component 1?'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('component-remove-cancel')));
+    await tester.pumpAndSettle();
+    expect(cubit.state.review?.components, hasLength(4));
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('components[0].remove')),
+    );
+    await tester.tap(find.byKey(const ValueKey('component-remove-confirm')));
+    await tester.pumpAndSettle();
 
     expect(cubit.state.review?.components, hasLength(3));
     expect(cubit.state.review?.components.first.name.value, 'Butter');
@@ -848,6 +932,42 @@ void main() {
       expect(cubit.state.phase, ChampionshipPhase.source);
     },
   );
+
+  testWidgets('result groups exact repeated batch quantities', (tester) async {
+    final cubit = buildChampionshipTestCubit();
+    await cubit.loadSample();
+    cubit
+      ..confirmAllUnambiguous()
+      ..updateReview(
+        (draft) => draft.editComponentUnit(2, 'g').confirmComponentUnit(2),
+      )
+      ..updateReview((draft) => draft.confirmComponentBehavior(3))
+      ..continueToTarget()
+      ..setTargetAmount('180')
+      ..calculate();
+    await _pumpApp(tester, cubit, size: const Size(390, 844));
+
+    expect(find.text('Batches 1–15: 500 g each'), findsOneWidget);
+    expect(find.text('Batches 1–15: 250 g each'), findsOneWidget);
+    expect(find.text('Batches 1–15: 240 g each'), findsOneWidget);
+    expect(find.text('Batches 1–15: Manual / as needed'), findsOneWidget);
+    expect(find.textContaining('Batch 1:'), findsNothing);
+    final firstComponent = tester.widget<Semantics>(
+      find.byKey(const ValueKey('result-component-0-semantics')),
+    );
+    expect(firstComponent.properties.header, isTrue);
+    expect(find.bySemanticsLabel('Flour'), findsNWidgets(2));
+    for (final key in const [
+      ValueKey('result-summary-semantics'),
+      ValueKey('result-warnings-semantics'),
+      ValueKey('result-actions-semantics'),
+    ]) {
+      final section = tester.widget<Semantics>(find.byKey(key));
+      expect(section.container, isTrue);
+      expect(section.explicitChildNodes, isTrue);
+    }
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'production sheet receives the identical run and failures recover',

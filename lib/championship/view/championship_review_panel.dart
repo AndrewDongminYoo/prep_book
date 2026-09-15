@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/championship/cubit/championship_demo_cubit.dart';
@@ -298,27 +300,38 @@ class _ComponentReview extends StatelessWidget {
     final strings = ChampionshipStrings.of(context);
     final path = 'components[$index]';
     final isManual = component.behavior.value == DraftScalingBehavior.manual;
+    final name = component.name.value?.trim();
+    final visibleName = name == null || name.isEmpty
+        ? strings.component(index)
+        : name;
+    final removeComponent = draft.components.length > 1
+        ? () => _confirmRemoval(context, cubit, strings)
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Divider(height: 40),
         _SectionHeading(strings.component(index)),
         const SizedBox(height: 12),
-        OutlinedButton.icon(
-          key: ValueKey('$path.remove'),
-          onPressed: draft.components.length > 1
-              ? () => cubit.updateReview(
-                  (review) => review.removeComponent(index),
-                )
-              : null,
-          icon: const Icon(Icons.delete_outline),
-          label: Text(strings.removeComponent),
+        Semantics(
+          key: ValueKey('$path.remove-semantics'),
+          excludeSemantics: true,
+          button: true,
+          enabled: removeComponent != null,
+          label: strings.removeComponentAction(index: index, name: visibleName),
+          onTap: removeComponent,
+          child: OutlinedButton.icon(
+            key: ValueKey('$path.remove'),
+            onPressed: removeComponent,
+            icon: const Icon(Icons.delete_outline),
+            label: Text(strings.removeComponent),
+          ),
         ),
         _StringReviewField(
           path: '$path.name',
           anchorKey: anchorFor('$path.name'),
           focusNode: focusNodeFor('$path.name'),
-          label: strings.componentName,
+          label: strings.componentNameFor(index),
           field: component.name,
           onEdit: (value) => cubit.updateReview(
             (review) => review.editComponentName(index, value),
@@ -328,14 +341,20 @@ class _ComponentReview extends StatelessWidget {
           ),
         ),
         if (isManual) ...[
-          _ReadOnlyManualField(label: strings.amount, field: component.amount),
-          _ReadOnlyManualField(label: strings.unit, field: component.unit),
+          _ReadOnlyManualField(
+            label: strings.componentAmountFor(index),
+            field: component.amount,
+          ),
+          _ReadOnlyManualField(
+            label: strings.componentUnitFor(index),
+            field: component.unit,
+          ),
         ] else ...[
           _StringReviewField(
             path: '$path.amount',
             anchorKey: anchorFor('$path.amount'),
             focusNode: focusNodeFor('$path.amount'),
-            label: strings.amount,
+            label: strings.componentAmountFor(index),
             field: component.amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onEdit: (value) => cubit.updateReview(
@@ -349,7 +368,7 @@ class _ComponentReview extends StatelessWidget {
             path: '$path.unit',
             anchorKey: anchorFor('$path.unit'),
             focusNode: focusNodeFor('$path.unit'),
-            label: strings.unit,
+            label: strings.componentUnitFor(index),
             field: component.unit,
             resolvedValue: draft.units.resolve(component.unit.value)?.symbol,
             onEdit: (value) => cubit.updateReview(
@@ -364,6 +383,7 @@ class _ComponentReview extends StatelessWidget {
           path: '$path.behavior',
           anchorKey: anchorFor('$path.behavior'),
           focusNode: focusNodeFor('$path.behavior'),
+          label: strings.componentBehaviorFor(index),
           field: component.behavior,
           onEdit: (value) => cubit.updateReview(
             (review) => review.editComponentBehavior(index, value),
@@ -377,7 +397,7 @@ class _ComponentReview extends StatelessWidget {
             path: '$path.note',
             anchorKey: anchorFor('$path.note'),
             focusNode: focusNodeFor('$path.note'),
-            label: strings.note,
+            label: strings.componentNoteFor(index),
             field: note,
             onEdit: (value) => cubit.updateReview(
               (review) => review.editComponentNote(index, value),
@@ -388,6 +408,39 @@ class _ComponentReview extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  Future<void> _confirmRemoval(
+    BuildContext context,
+    ChampionshipDemoCubit cubit,
+    ChampionshipStrings strings,
+  ) async {
+    final name = component.name.value?.trim();
+    final visibleName = name == null || name.isEmpty
+        ? strings.component(index)
+        : name;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.removeComponentTitle(visibleName)),
+        content: Text(strings.removeComponentMessage(visibleName)),
+        actions: [
+          TextButton(
+            key: const ValueKey('component-remove-cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('component-remove-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(strings.remove),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      cubit.updateReview((review) => review.removeComponent(index));
+    }
   }
 }
 
@@ -415,6 +468,7 @@ class _StringReviewField extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ReviewFieldCard(
     key: anchorKey,
+    path: path,
     label: label,
     field: field,
     input: TextFormField(
@@ -423,7 +477,7 @@ class _StringReviewField extends StatelessWidget {
       focusNode: focusNode,
       keyboardType: keyboardType,
       decoration: InputDecoration(
-        labelText: ChampionshipStrings.of(context).currentValue,
+        labelText: ChampionshipStrings.of(context).currentValueFor(label),
         border: const OutlineInputBorder(),
       ),
       onChanged: onEdit,
@@ -457,6 +511,7 @@ class _UnitReviewField extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ReviewFieldCard(
     key: anchorKey,
+    path: path,
     label: label,
     field: field,
     input: DropdownButtonFormField<String>(
@@ -465,7 +520,7 @@ class _UnitReviewField extends StatelessWidget {
       focusNode: focusNode,
       isExpanded: true,
       decoration: InputDecoration(
-        labelText: ChampionshipStrings.of(context).currentValue,
+        labelText: ChampionshipStrings.of(context).currentValueFor(label),
         border: const OutlineInputBorder(),
       ),
       items: [
@@ -491,6 +546,7 @@ class _BehaviorReviewField extends StatelessWidget {
     required this.path,
     required this.anchorKey,
     required this.focusNode,
+    required this.label,
     required this.field,
     required this.onEdit,
     required this.onConfirm,
@@ -499,6 +555,7 @@ class _BehaviorReviewField extends StatelessWidget {
   final String path;
   final GlobalKey anchorKey;
   final FocusNode focusNode;
+  final String label;
   final ReviewField<DraftScalingBehavior> field;
   final ValueChanged<DraftScalingBehavior?> onEdit;
   final VoidCallback onConfirm;
@@ -508,7 +565,8 @@ class _BehaviorReviewField extends StatelessWidget {
     final strings = ChampionshipStrings.of(context);
     return _ReviewFieldCard(
       key: anchorKey,
-      label: strings.behavior,
+      path: path,
+      label: label,
       field: field,
       valueLabel: (value) => value == null ? '—' : strings.behaviorName(value),
       input: DropdownButtonFormField<DraftScalingBehavior>(
@@ -517,7 +575,7 @@ class _BehaviorReviewField extends StatelessWidget {
         focusNode: focusNode,
         isExpanded: true,
         decoration: InputDecoration(
-          labelText: strings.currentValue,
+          labelText: strings.currentValueFor(label),
           border: const OutlineInputBorder(),
         ),
         items: [
@@ -540,6 +598,7 @@ class _BehaviorReviewField extends StatelessWidget {
 
 class _ReviewFieldCard<T> extends StatelessWidget {
   const _ReviewFieldCard({
+    required this.path,
     required this.label,
     required this.field,
     required this.input,
@@ -549,6 +608,7 @@ class _ReviewFieldCard<T> extends StatelessWidget {
     super.key,
   });
 
+  final String path;
   final String label;
   final ReviewField<T> field;
   final Widget input;
@@ -564,81 +624,130 @@ class _ReviewFieldCard<T> extends StatelessWidget {
         valueLabel?.call(field.sourceValue) ??
         field.sourceValue?.toString() ??
         '—';
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(color: colors.outlineVariant),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(label, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 12),
-              _MetadataLine(label: strings.aiProposal, value: proposal),
-              _MetadataLine(label: strings.evidence, value: field.evidence),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  Chip(label: Text(strings.confidence(field.confidence))),
-                  Chip(
-                    avatar: Icon(
-                      field.isConfirmed
-                          ? Icons.check_circle
-                          : Icons.pending_outlined,
-                      size: 18,
+    return Semantics(
+      key: ValueKey('$path.field-semantics'),
+      container: true,
+      explicitChildNodes: true,
+      label: label,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: colors.outlineVariant),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ExcludeSemantics(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _MetadataLine(label: strings.aiProposal, value: proposal),
+                _MetadataLine(label: strings.evidence, value: field.evidence),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _StatusChip(
+                      semanticsKey: ValueKey('$path.confidence-semantics'),
+                      label: strings.confidence(field.confidence),
                     ),
-                    label: Text(
-                      field.isConfirmed
+                    _StatusChip(
+                      semanticsKey: ValueKey('$path.confirmation-semantics'),
+                      avatar: Icon(
+                        field.isConfirmed
+                            ? Icons.check_circle
+                            : Icons.pending_outlined,
+                        size: 18,
+                      ),
+                      label: field.isConfirmed
                           ? strings.confirmed
                           : strings.needsConfirmation,
                     ),
-                  ),
-                  if (field.isEdited) Chip(label: Text(strings.edited)),
-                ],
-              ),
-              if (field.activeIssues.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(strings.issues, style: TextStyle(color: colors.error)),
-                for (final issue in [
-                  ...field.activeSourceIssues,
-                  for (final issue in field.activeLocalIssues)
-                    strings.reviewIssue(issue),
-                ])
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('• ', style: TextStyle(color: colors.error)),
-                      Expanded(
-                        child: Text(
-                          issue,
-                          style: TextStyle(color: colors.error),
-                        ),
+                    if (field.isEdited)
+                      _StatusChip(
+                        semanticsKey: ValueKey('$path.edited-semantics'),
+                        label: strings.edited,
                       ),
-                    ],
-                  ),
-              ],
-              const SizedBox(height: 12),
-              input,
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                key: confirmKey,
-                onPressed: onConfirm,
-                icon: const Icon(Icons.check),
-                label: Text(
-                  field.isConfirmed ? strings.confirmed : strings.confirm,
+                  ],
                 ),
-              ),
-            ],
+                if (field.activeIssues.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(strings.issues, style: TextStyle(color: colors.error)),
+                  for (final issue in [
+                    ...field.activeSourceIssues,
+                    for (final issue in field.activeLocalIssues)
+                      strings.reviewIssue(issue),
+                  ])
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('• ', style: TextStyle(color: colors.error)),
+                        Expanded(
+                          child: Text(
+                            issue,
+                            style: TextStyle(color: colors.error),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+                const SizedBox(height: 12),
+                input,
+                const SizedBox(height: 12),
+                Semantics(
+                  key: ValueKey('$path.confirm-semantics'),
+                  excludeSemantics: true,
+                  button: true,
+                  enabled: onConfirm != null,
+                  label: field.isConfirmed
+                      ? strings.confirmedField(label)
+                      : strings.confirmField(label),
+                  onTap: onConfirm,
+                  child: OutlinedButton.icon(
+                    key: confirmKey,
+                    onPressed: onConfirm,
+                    icon: const Icon(Icons.check),
+                    label: Text(
+                      field.isConfirmed ? strings.confirmed : strings.confirm,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.semanticsKey,
+    required this.label,
+    this.avatar,
+  });
+
+  final Key semanticsKey;
+  final String label;
+  final Widget? avatar;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    key: semanticsKey,
+    container: true,
+    excludeSemantics: true,
+    role: SemanticsRole.status,
+    label: label,
+    child: Chip(avatar: avatar, label: Text(label)),
+  );
 }
 
 class _ReadOnlyManualField extends StatelessWidget {

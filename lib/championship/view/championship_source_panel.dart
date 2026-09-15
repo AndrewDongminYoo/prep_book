@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:prep_book/championship/cubit/championship_demo_cubit.dart';
 import 'package:prep_book/championship/cubit/championship_demo_state.dart';
 import 'package:prep_book/championship/view/championship_strings.dart';
+import 'package:prep_book/championship/view/championship_word_wrap_text.dart';
 
 class ChampionshipSourcePanel extends StatefulWidget {
   const ChampionshipSourcePanel({super.key});
@@ -96,18 +97,6 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
                 ),
                 onChanged: cubit.setSourceText,
               ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                key: const ValueKey('source-submit-text'),
-                onPressed:
-                    !state.isLoading &&
-                        state.hasLiveConsent &&
-                        state.sourceText.trim().isNotEmpty
-                    ? () => cubit.submitText(locale: locale)
-                    : null,
-                icon: const Icon(Icons.auto_awesome),
-                label: Text(strings.importText),
-              ),
             ] else ...[
               OutlinedButton.icon(
                 key: const ValueKey('source-pick-image'),
@@ -132,7 +121,36 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
                 if (prepared.wasReduced)
                   Text(strings.imageReduced(prepared.originalByteCount)),
               ],
-              const SizedBox(height: 16),
+            ],
+            const SizedBox(height: 20),
+            CheckboxListTile(
+              key: const ValueKey('source-consent'),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: state.hasLiveConsent,
+              onChanged: state.isLoading
+                  ? null
+                  : (value) => cubit.setLiveConsent(value: value ?? false),
+              title: ChampionshipWordWrapText(
+                key: const ValueKey('source-live-consent-label'),
+                text: strings.liveConsent,
+              ),
+            ),
+            _PrivacyBoundary(text: strings.privacy),
+            const SizedBox(height: 16),
+            if (state.sourceMode == ChampionshipSourceMode.text)
+              FilledButton.icon(
+                key: const ValueKey('source-submit-text'),
+                onPressed:
+                    !state.isLoading &&
+                        state.hasLiveConsent &&
+                        state.sourceText.trim().isNotEmpty
+                    ? () => cubit.submitText(locale: locale)
+                    : null,
+                icon: const Icon(Icons.auto_awesome),
+                label: Text(strings.importText),
+              )
+            else
               FilledButton.icon(
                 key: const ValueKey('source-submit-image'),
                 onPressed:
@@ -144,19 +162,6 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
                 icon: const Icon(Icons.auto_awesome),
                 label: Text(strings.importImage),
               ),
-            ],
-            const SizedBox(height: 20),
-            CheckboxListTile(
-              key: const ValueKey('source-consent'),
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              value: state.hasLiveConsent,
-              onChanged: state.isLoading
-                  ? null
-                  : (value) => cubit.setLiveConsent(value: value ?? false),
-              title: Text(strings.liveConsent),
-            ),
-            _PrivacyBoundary(text: strings.privacy),
             if (state.isLoading) ...[
               const SizedBox(height: 16),
               const LinearProgressIndicator(),

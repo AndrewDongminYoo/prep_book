@@ -30,6 +30,27 @@ final class ChampionshipStrings {
   String get reset => isKorean ? '초기화' : 'Reset';
   String get back => isKorean ? '뒤로' : 'Back';
 
+  String phaseName(ChampionshipPhase phase) => switch (phase) {
+    ChampionshipPhase.source => source,
+    ChampionshipPhase.review => review,
+    ChampionshipPhase.target => target,
+    ChampionshipPhase.result => result,
+  };
+
+  String currentStep({required String label, required int index}) => isKorean
+      ? '현재 단계 ${index + 1}/4: $label'
+      : 'Current step ${index + 1} of 4: $label';
+
+  String phaseStep({
+    required String label,
+    required int index,
+    required bool current,
+  }) {
+    final position = isKorean ? '${index + 1}/4단계' : 'Step ${index + 1} of 4';
+    if (!current) return '$position: $label';
+    return isKorean ? '$position: $label, 현재 단계' : '$position: $label, current';
+  }
+
   String get sourceHeading =>
       isKorean ? '레시피 원본을 선택하세요' : 'Choose a recipe source';
 
@@ -144,6 +165,8 @@ final class ChampionshipStrings {
   String get aiProposal => isKorean ? 'AI 제안' : 'AI proposal';
   String get evidence => isKorean ? '원문 근거' : 'Evidence';
   String get currentValue => isKorean ? '현재 값' : 'Current value';
+  String currentValueFor(String label) =>
+      isKorean ? '$label 현재 값' : 'Current value for $label';
   String get issues => isKorean ? '확인할 문제' : 'Issues';
 
   String reviewIssue(ReviewIssue issue) => switch (issue) {
@@ -263,6 +286,10 @@ final class ChampionshipStrings {
   }
 
   String get confirm => isKorean ? '이 값 확인' : 'Confirm value';
+  String confirmField(String label) =>
+      isKorean ? '$label 확인' : 'Confirm $label';
+  String confirmedField(String label) =>
+      isKorean ? '$label 확인 완료' : '$label confirmed';
   String get confirmed => isKorean ? '사용자 확인 완료' : 'Operator confirmed';
   String get edited => isKorean ? '사용자 수정됨' : 'Edited by operator';
   String get needsConfirmation => isKorean ? '확인 필요' : 'Needs confirmation';
@@ -282,11 +309,33 @@ final class ChampionshipStrings {
   String component(int index) =>
       isKorean ? '재료 ${index + 1}' : 'Component ${index + 1}';
   String get removeComponent => isKorean ? '재료 삭제' : 'Remove component';
+  String removeComponentAction({required int index, required String name}) =>
+      isKorean
+      ? '${component(index)} $name 삭제'
+      : 'Remove ${component(index)}: $name';
+  String removeComponentTitle(String name) =>
+      isKorean ? '$name 재료를 삭제할까요?' : 'Remove $name?';
+  String removeComponentMessage(String name) => isKorean
+      ? '$name 재료와 검토 내용을 삭제합니다.'
+      : 'This removes $name and its review details.';
+  String get cancel => isKorean ? '취소' : 'Cancel';
+  String get remove => isKorean ? '삭제' : 'Remove';
   String get componentName => isKorean ? '재료 이름' : 'Component name';
   String get amount => isKorean ? '수량' : 'Amount';
   String get unit => isKorean ? '단위' : 'Unit';
   String get behavior => isKorean ? '계산 방식' : 'Scaling behavior';
   String get note => isKorean ? '메모' : 'Note';
+  String componentNameFor(int index) =>
+      isKorean ? '${component(index)} 이름' : '${component(index)} name';
+  String componentAmountFor(int index) =>
+      isKorean ? '${component(index)} 수량' : '${component(index)} amount';
+  String componentUnitFor(int index) =>
+      isKorean ? '${component(index)} 단위' : '${component(index)} unit';
+  String componentBehaviorFor(int index) => isKorean
+      ? '${component(index)} 계산 방식'
+      : '${component(index)} scaling behavior';
+  String componentNoteFor(int index) =>
+      isKorean ? '${component(index)} 메모' : '${component(index)} note';
   String get continueToTarget =>
       isKorean ? '검토 완료하고 목표 설정' : 'Finish review and set target';
 
@@ -332,6 +381,21 @@ final class ChampionshipStrings {
       isKorean ? '나머지 배치 · $yield' : 'Remainder batch · $yield';
   String batch(int index) =>
       isKorean ? '배치 ${index + 1}' : 'Batch ${index + 1}';
+  String batchQuantity({
+    required int first,
+    required int last,
+    required Object amount,
+    required bool manual,
+  }) {
+    if (first == last) return '${batch(first - 1)}: $amount';
+    if (isKorean) {
+      return manual ? '배치 $first–$last: $amount' : '배치 $first–$last: 각 $amount';
+    }
+    return manual
+        ? 'Batches $first–$last: $amount'
+        : 'Batches $first–$last: $amount each';
+  }
+
   String get manualAsNeeded => isKorean ? '수동 / 필요량' : 'Manual / as needed';
   String get warnings => isKorean ? '계산 경고' : 'Domain warnings';
   String get noWarnings =>

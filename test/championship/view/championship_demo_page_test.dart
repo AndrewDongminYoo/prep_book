@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/championship/championship.dart';
@@ -25,12 +27,21 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('PrepBook AI Recipe Import'), findsOneWidget);
     expect(
-      find.text(
-        'AI interprets the source. PrepBook calculates the production plan.',
-      ),
-      findsOneWidget,
+      tester
+          .getSemantics(
+            find.byKey(const ValueKey('championship-introduction-title')),
+          )
+          .label,
+      'PrepBook AI Recipe Import',
+    );
+    expect(
+      tester
+          .getSemantics(
+            find.byKey(const ValueKey('championship-introduction-boundary')),
+          )
+          .label,
+      'AI interprets the source. PrepBook calculates the production plan.',
     );
     for (final label in ['Source', 'Review', 'Target', 'Result']) {
       expect(find.text(label), findsOneWidget);
@@ -72,8 +83,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('PrepBook AI 레시피 가져오기'), findsOneWidget);
-    expect(find.text('AI는 원본을 해석합니다. PrepBook은 생산 계획을 계산합니다.'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(
+            find.byKey(const ValueKey('championship-introduction-title')),
+          )
+          .label,
+      'PrepBook AI 레시피 가져오기',
+    );
+    expect(
+      tester
+          .getSemantics(
+            find.byKey(const ValueKey('championship-introduction-boundary')),
+          )
+          .label,
+      'AI는 원본을 해석합니다. PrepBook은 생산 계획을 계산합니다.',
+    );
     for (final label in ['원본', '검토', '목표', '결과']) {
       expect(find.text(label), findsOneWidget);
     }
@@ -123,6 +148,115 @@ void main() {
     expect(compactCubit.state.review, same(review));
     expect(compactCubit.state.review?.components[2].unit.isConfirmed, isTrue);
   });
+
+  testWidgets('phase change restores and identifies the current step', (
+    tester,
+  ) async {
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final cubit = buildChampionshipTestCubit();
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      ChampionshipApp(
+        cubit: cubit,
+        openProductionSheet: ignoreChampionshipProductionSheet,
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollable = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('championship-demo-content')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    final sample = find.byKey(const ValueKey('source-sample'));
+    await tester.ensureVisible(sample);
+    await tester.pumpAndSettle();
+    expect(scrollable.position.pixels, greaterThan(0));
+
+    await tester.tap(sample);
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.phase, ChampionshipPhase.review);
+    expect(scrollable.position.pixels, 0);
+    expect(
+      FocusManager.instance.primaryFocus?.context,
+      tester.element(
+        find.byKey(const ValueKey('championship-current-phase-focus')),
+      ),
+    );
+    final currentStep = tester.widget<Semantics>(
+      find.byKey(const ValueKey('championship-current-phase-semantics')),
+    );
+    expect(currentStep.properties.label, 'Current step 2 of 4: Review');
+    expect(currentStep.properties.liveRegion, isTrue);
+    expect(currentStep.properties.focused, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(
+      tester
+          .widget<Semantics>(
+            find.byKey(const ValueKey('championship-current-phase-semantics')),
+          )
+          .properties
+          .focused,
+      isFalse,
+    );
+  });
+
+  for (final width in [840.0, 900.0]) {
+    testWidgets('keeps every Korean word together at expanded widths', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = Size(width, 900)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final cubit = buildChampionshipTestCubit();
+      addTearDown(cubit.close);
+      await tester.pumpWidget(
+        ChampionshipApp(
+          cubit: cubit,
+          openProductionSheet: ignoreChampionshipProductionSheet,
+          locale: const Locale('ko'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      const fullTitle = 'PrepBook AI 레시피 가져오기';
+      const fullBoundary = 'AI는 원본을 해석합니다. PrepBook은 생산 계획을 계산합니다.';
+      const fullConsent = '아래 개인정보 경계를 확인하고 동의합니다.';
+      _expectAtomicWords(
+        tester,
+        const ValueKey('championship-introduction-title'),
+        fullTitle,
+        width,
+      );
+      _expectAtomicWords(
+        tester,
+        const ValueKey('championship-introduction-boundary'),
+        fullBoundary,
+        width,
+      );
+      _expectAtomicWords(
+        tester,
+        const ValueKey('source-live-consent-label'),
+        fullConsent,
+        width,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   for (final locale in const [Locale('en'), Locale('ko')]) {
     testWidgets(
@@ -179,6 +313,38 @@ void main() {
         expect(cubit.state.phase, ChampionshipPhase.result);
         expect(tester.takeException(), isNull);
       },
+    );
+  }
+}
+
+void _expectAtomicWords(
+  WidgetTester tester,
+  Key containerKey,
+  String text,
+  double width,
+) {
+  final container = find.byKey(containerKey);
+  final wordWidgets = find.descendant(
+    of: container,
+    matching: find.byType(Text),
+  );
+  final words = text.split(' ');
+  expect(
+    tester.widgetList<Text>(wordWidgets).map((widget) => widget.data),
+    words,
+  );
+  for (var index = 0; index < words.length; index += 1) {
+    final word = words[index];
+    final paragraph = tester.renderObject<RenderParagraph>(
+      wordWidgets.at(index),
+    );
+    final boxes = paragraph.getBoxesForSelection(
+      TextSelection(baseOffset: 0, extentOffset: word.length),
+    );
+    expect(
+      boxes.map((box) => box.top.round()).toSet(),
+      hasLength(1),
+      reason: '`$word` must not split across rendered lines at $width px.',
     );
   }
 }

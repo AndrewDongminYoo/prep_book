@@ -24,68 +24,106 @@ class ChampionshipResultPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              strings.resultHeading,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 12),
-            _ExactBoundary(strings: strings),
-            const SizedBox(height: 20),
-            Text(
-              run.recipe.name,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 4),
-            Text(run.targetYield.toString()),
-            Text(strings.batches(batchPlan.batchCount)),
-            if (batchPlan.fullBatchCount > 0)
-              Text(
-                strings.fullBatches(
-                  batchPlan.fullBatchCount,
-                  batchPlan.fullBatchYield,
-                ),
+            Semantics(
+              key: const ValueKey('result-summary-semantics'),
+              container: true,
+              explicitChildNodes: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      strings.resultHeading,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _ExactBoundary(strings: strings),
+                  const SizedBox(height: 20),
+                  Text(
+                    run.recipe.name,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(run.targetYield.toString()),
+                  Text(strings.batches(batchPlan.batchCount)),
+                  if (batchPlan.fullBatchCount > 0)
+                    Text(
+                      strings.fullBatches(
+                        batchPlan.fullBatchCount,
+                        batchPlan.fullBatchYield,
+                      ),
+                    ),
+                  if (batchPlan.remainderYield case final remainder?)
+                    Text(strings.remainderBatch(remainder)),
+                ],
               ),
-            if (batchPlan.remainderYield case final remainder?)
-              Text(strings.remainderBatch(remainder)),
-            const SizedBox(height: 20),
-            for (final component in run.result.components)
-              _ComponentResult(run: run, component: component),
-            const SizedBox(height: 20),
-            Text(
-              strings.warnings,
-              style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
-            if (run.result.warnings.isEmpty)
-              Text(strings.noWarnings)
-            else
-              for (final warning in run.result.warnings)
-                Text('• ${_warningLabel(warning, run)}'),
+            const SizedBox(height: 20),
+            for (final (index, component) in run.result.components.indexed)
+              _ComponentResult(index: index, run: run, component: component),
+            const SizedBox(height: 20),
+            Semantics(
+              key: const ValueKey('result-warnings-semantics'),
+              container: true,
+              explicitChildNodes: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      strings.warnings,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (run.result.warnings.isEmpty)
+                    Text(strings.noWarnings)
+                  else
+                    for (final warning in run.result.warnings)
+                      Text('• ${_warningLabel(warning, run)}'),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
-            FilledButton.icon(
-              key: const ValueKey('result-production-sheet'),
-              onPressed: () async {
-                try {
-                  await openProductionSheet(context, run);
-                } on Object {
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(strings.productionSheetFailure)),
-                  );
-                }
-              },
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: Text(strings.productionSheet),
-            ),
-            TextButton(
-              key: const ValueKey('result-back'),
-              onPressed: cubit.back,
-              child: Text(strings.back),
-            ),
-            OutlinedButton(
-              key: const ValueKey('result-reset'),
-              onPressed: cubit.reset,
-              child: Text(strings.reset),
+            Semantics(
+              key: const ValueKey('result-actions-semantics'),
+              container: true,
+              explicitChildNodes: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  FilledButton.icon(
+                    key: const ValueKey('result-production-sheet'),
+                    onPressed: () async {
+                      try {
+                        await openProductionSheet(context, run);
+                      } on Object {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(strings.productionSheetFailure),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: Text(strings.productionSheet),
+                  ),
+                  TextButton(
+                    key: const ValueKey('result-back'),
+                    onPressed: cubit.back,
+                    child: Text(strings.back),
+                  ),
+                  OutlinedButton(
+                    key: const ValueKey('result-reset'),
+                    onPressed: cubit.reset,
+                    child: Text(strings.reset),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -134,8 +172,13 @@ class _ExactBoundary extends StatelessWidget {
 }
 
 class _ComponentResult extends StatelessWidget {
-  const _ComponentResult({required this.run, required this.component});
+  const _ComponentResult({
+    required this.index,
+    required this.run,
+    required this.component,
+  });
 
+  final int index;
   final ProductionRun run;
   final ScaledComponent component;
 
@@ -148,28 +191,69 @@ class _ComponentResult extends StatelessWidget {
     final name = run.ingredientSnapshot[ingredientId]?.name ?? ingredientId;
     final total =
         component.total?.displayed.toString() ?? strings.manualAsNeeded;
-    String perBatchAmount(int index) =>
-        component.perBatch[index]?.displayed.toString() ??
-        strings.manualAsNeeded;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(name, style: Theme.of(context).textTheme.titleMedium),
-          if (component.source.note case final note?) Text(note),
-          const SizedBox(height: 4),
-          Text(total, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          for (var index = 0; index < component.perBatch.length; index += 1)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text('${strings.batch(index)}: ${perBatchAmount(index)}'),
+    final groups = _groupBatches(component.perBatch);
+    return Semantics(
+      key: ValueKey('result-component-$index-semantics'),
+      container: true,
+      explicitChildNodes: true,
+      label: name,
+      header: true,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ExcludeSemantics(
+              child: Text(name, style: Theme.of(context).textTheme.titleMedium),
             ),
-        ],
+            if (component.source.note case final note?) Text(note),
+            const SizedBox(height: 4),
+            Text(total, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            for (final group in groups)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  strings.batchQuantity(
+                    first: group.first,
+                    last: group.last,
+                    amount:
+                        group.amount?.displayed.toString() ??
+                        strings.manualAsNeeded,
+                    manual: group.amount == null,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
+}
+
+List<({int first, int last, ScaledQuantity? amount})> _groupBatches(
+  List<ScaledQuantity?> batches,
+) {
+  final groups = <({int first, int last, ScaledQuantity? amount})>[];
+  for (var index = 0; index < batches.length; index += 1) {
+    final amount = batches[index];
+    final open = groups.isEmpty ? null : groups.last;
+    if (open != null && _sameAmount(open.amount, amount)) {
+      groups[groups.length - 1] = (
+        first: open.first,
+        last: index + 1,
+        amount: amount,
+      );
+    } else {
+      groups.add((first: index + 1, last: index + 1, amount: amount));
+    }
+  }
+  return groups;
+}
+
+bool _sameAmount(ScaledQuantity? left, ScaledQuantity? right) {
+  if (left == null || right == null) return left == null && right == null;
+  return left.exact == right.exact && left.displayed == right.displayed;
 }
 
 String _warningLabel(ProductionWarning warning, ProductionRun run) {
