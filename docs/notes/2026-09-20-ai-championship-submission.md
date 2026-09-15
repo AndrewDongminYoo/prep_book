@@ -1,6 +1,6 @@
 # AI Championship Submission Note
 
-<!-- cspell:ignore udhj Rasd -->
+<!-- cspell:ignore extendedvaluekey udhj Rasd -->
 
 ## Status
 
@@ -83,7 +83,10 @@ The real tracked-and-untracked scan found zero OpenAI key-shaped values.
 A production-log scan used planted source-shaped values before the real scan.
 The real scan found zero matches for the submitted synthetic recipe text, ingredient phrases, image markers, or provider identifiers.
 
-`[PARTIAL]` Reset and reload returned the application to Source, but the browser connection did not expose origin storage APIs for direct inspection.
+`[PARTIAL]` Reset and reload returned the application to Source.
+Direct inspection found two localStorage keys, no IndexedDB databases, and no Cache Storage entries; sessionStorage changed from three keys to zero between observations.
+One localStorage key was Vercel toolbar metadata, while `extendedvaluekey` had no match in repository source or generated output.
+A fresh isolated browser context was unavailable, so the pass could not establish a clean before-and-after storage baseline or attribute the unknown key to the application.
 
 ## Cost protection
 
@@ -142,9 +145,12 @@ Target duration: 85 seconds.
 | WAF limit                   | PASS    | Five validation requests returned `400`. The next request returned `429`.                                                                                                                                                                   |
 | Forced busy UI              | PARTIAL | The `429` preserved input and exposed Retry and Sample. A later Retry displayed a timeout while function logs showed a `200` response, but browser-control instability prevented request correlation and a verified successful UI recovery. |
 | 390-pixel layout            | PASS    | Document and body width remained 390 pixels with no horizontal overflow. Primary controls remained usable.                                                                                                                                  |
-| Reset and reload            | PARTIAL | Both returned to Source. Direct storage inspection was unavailable.                                                                                                                                                                         |
+| Reset and reload            | PARTIAL | Both returned to Source. Storage inspection found two localStorage keys, zero IndexedDB databases, zero Cache Storage entries, and conflicting sessionStorage counts; an isolated before-and-after baseline was unavailable.                |
 | Safari                      | PARTIAL | Safari 26.6.2 was installed, but WebDriver required the disabled `Allow remote automation` setting. The verification did not change that system setting.                                                                                    |
-| Production sheet and PDF    | PARTIAL | This public pass did not complete preview, download-size, or print-cancellation checks.                                                                                                                                                     |
+| Production-sheet views      | PASS    | The public batch preview displayed batches 1–15. The total preview displayed Flour 7500 g, Butter 3750 g, and Water 3600 g.                                                                                                                 |
+| Preview network dependency  | PASS    | The production-sheet preview requested `https://unpkg.com/pdfjs-dist@5.7.284/build/pdf.min.mjs` once.                                                                                                                                       |
+| PDF download                | FAIL    | The Share action produced no observed download event or PDF file within 15 seconds, so non-zero size and readability were not verified.                                                                                                     |
+| Print dialog                | PARTIAL | Print was selected and Escape returned to the production sheet, but the macOS dialog was outside the browser capture and was not directly observed.                                                                                         |
 | Function route surface      | PASS    | Deployment `dpl_HmV9d59Giu5udhjGFtERasd9rY3w` contains only `api/extract-recipe`. The three former support routes and their underscore-prefixed equivalents returned `404`; deliberate `GET` returned `405`.                                |
 | Production logs             | PASS    | The initial 45-minute live-input window had no 5xx and zero source-shaped matches. The hardened deployment query contained one deliberate metadata-only `405` entry and no unexpected 5xx response.                                         |
 | Local API tests             | PASS    | The route-hygiene test failed against the old filenames, then `npm run test:api` passed 56 tests after the rename.                                                                                                                          |
@@ -154,8 +160,8 @@ Target duration: 85 seconds.
 ## Remaining release-candidate checks
 
 - Complete one desktop Safari pass without changing security settings outside an approved session.
-- Inspect localStorage, sessionStorage, IndexedDB, and Cache Storage directly after Reset and reload.
-- Verify public production-sheet batch and total views.
-- Verify a non-zero PDF download and open then cancel the print dialog.
+- Repeat the storage check in a fresh isolated browser context and compare all four storage surfaces before the Sample flow and after Reset and reload.
+- Verify a non-zero readable PDF download.
+- Directly observe the print dialog opening and then cancel it.
 - Verify one forced-busy Retry reaches Review after the WAF window resets.
 - Keep the public URL available through 2026-10-17.
