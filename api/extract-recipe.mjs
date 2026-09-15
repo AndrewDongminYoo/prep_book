@@ -1,4 +1,4 @@
-import { createExtractRecipeHandler } from "./lib/extract-recipe-handler.mjs";
+import { createExtractRecipeHandler } from "./lib/_extract-recipe-handler.mjs";
 
 const handler = createExtractRecipeHandler();
 

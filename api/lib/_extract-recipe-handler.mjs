@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { recipeDraftSchema, validateRecipeDraft } from "./recipe-draft-schema.mjs";
+import { recipeDraftSchema, validateRecipeDraft } from "./_recipe-draft-schema.mjs";
 
 const responsesUrl = "https://api.openai.com/v1/responses";
 const defaultModel = "gpt-5.6-luna";
