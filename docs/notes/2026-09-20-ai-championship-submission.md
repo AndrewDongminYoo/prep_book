@@ -7,7 +7,7 @@
 Core runtime evidence was collected on 2026-09-15 against the production application at commit `ca428e9566a5aa811d8e3755190c3ea33256301c`.
 The hardened Function route surface was then verified against production commit `66b7b120e9c35d99ca3d1c3215d5502c4034b3a3`.
 The core sample, live text, live image, review, and calculation paths passed in Chrome.
-The remaining partial checks are Safari, direct browser-storage inspection, public production-sheet download and print cancellation, and successful recovery after a forced rate limit.
+The remaining partial checks are Safari, an isolated browser-storage before-and-after comparison, public production-sheet download and print cancellation, and successful recovery after a forced rate limit.
 
 ## Service
 
