@@ -639,7 +639,8 @@ runtime evidence proves a defect.
       `.github/workflows/deploy-championship.yaml` deploys instead (production
       on push to `main`, preview on manual dispatch). The workflow needs the
       `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets.
-      Run `34857049687`, attempt 3, deployed `main@ca428e9566a5aa811d8e3755190c3ea33256301c` to production on 2026-09-15.
+      Run `34924752366` deployed `main@66b7b120e9c35d99ca3d1c3215d5502c4034b3a3` to production on 2026-09-15.
+      Vercel reported only `api/extract-recipe` as a Function, and public probes returned `404` for the three former support routes and their underscore-prefixed equivalents.
       By hand, run:
 
   ```sh
@@ -659,7 +660,7 @@ runtime evidence proves a defect.
       screenshots/PDF outside the repository.
 
   The 2026-09-15 pass verified the Chrome sample, live text, large live PNG, 390-pixel layout, ambiguity block, exact result, request-secret boundary, no-store responses, WAF response, and source-free logs.
-  Safari, direct storage inspection, successful Retry recovery, public production-sheet PDF checks, and post-deployment verification of the hardened Function route surface remain `[PARTIAL]`.
+  Safari, direct storage inspection, successful Retry recovery, and public production-sheet PDF checks remain `[PARTIAL]`.
   See `docs/notes/2026-09-20-ai-championship-submission.md`.
 
 - [x] **7.6 Write the submission note.** Include Service, Problem, Solution, AI

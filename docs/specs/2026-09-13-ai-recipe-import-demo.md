@@ -4,8 +4,8 @@
 
 Approved as an isolated competition variant in conversation on 2026-09-13.
 
-The implementation baseline is `main@ca428e9566a5aa811d8e3755190c3ea33256301c`.
-The 2026-09-15 public acceptance pass remains partial because Safari, direct browser-storage inspection, successful Retry recovery, public production-sheet PDF checks, and post-deployment verification of the hardened Function route surface are incomplete.
+The implementation baseline is `main@66b7b120e9c35d99ca3d1c3215d5502c4034b3a3`.
+The 2026-09-15 public acceptance pass remains partial because Safari, direct browser-storage inspection, successful Retry recovery, and public production-sheet PDF checks are incomplete.
 See `docs/notes/2026-09-20-ai-championship-submission.md`.
 
 This document authorizes one narrow exception to the first-release scope in

@@ -1,10 +1,13 @@
 # AI Championship Submission Note
 
+<!-- cspell:ignore udhj Rasd -->
+
 ## Status
 
-Submission candidate evidence was collected on 2026-09-15 against the production application at commit `ca428e9566a5aa811d8e3755190c3ea33256301c`.
+Core runtime evidence was collected on 2026-09-15 against the production application at commit `ca428e9566a5aa811d8e3755190c3ea33256301c`.
+The hardened Function route surface was then verified against production commit `66b7b120e9c35d99ca3d1c3215d5502c4034b3a3`.
 The core sample, live text, live image, review, and calculation paths passed in Chrome.
-The remaining partial checks are Safari, direct browser-storage inspection, public production-sheet download and print cancellation, successful recovery after a forced rate limit, and production verification of the hardened Function route surface.
+The remaining partial checks are Safari, direct browser-storage inspection, public production-sheet download and print cancellation, and successful recovery after a forced rate limit.
 
 ## Service
 
@@ -87,18 +90,20 @@ The real scan found zero matches for the submitted synthetic recipe text, ingred
 The production Vercel WAF has one active rule for `POST /api/extract-recipe`.
 The rule limits each IP address to 5 requests per 60-second fixed window.
 The sixth low-cost validation request returned HTTP `429` with `x-vercel-mitigated: deny`.
-The draft was published, and Vercel reported no pending firewall changes.
+The active rule was re-read after the hardened deployment, and Vercel reported no draft or pending firewall changes.
 
 ## Deployment and judging availability
 
-The [`deploy-championship` run](https://github.com/AndrewDongminYoo/prep_book/actions/runs/34857049687) succeeded on attempt 3 for `main@ca428e9566a5aa811d8e3755190c3ea33256301c`.
+The [`deploy-championship` run](https://github.com/AndrewDongminYoo/prep_book/actions/runs/34924752366) succeeded for `main@66b7b120e9c35d99ca3d1c3215d5502c4034b3a3`.
 The `vercel pull`, `vercel build --prod`, and `vercel deploy --prebuilt --prod` steps all passed.
-Vercel reported deployment `dpl_FTssHCs8kpiHDRs4YQX75LNxN27V` as `READY`, with the public alias assigned to production.
+Vercel reported deployment `dpl_HmV9d59Giu5udhjGFtERasd9rY3w` as `READY`, with the public alias assigned to production.
+The [main CI run](https://github.com/AndrewDongminYoo/prep_book/actions/runs/34924752786) also passed at the same commit.
 
-Acceptance found that Vercel also packaged three non-entrypoint files under `api/lib` as public Functions.
-Direct probes returned HTTP `500` for the handler, schema, and test routes.
-The current branch prefixes those support filenames with `_`, and a local `vercel build --prod` now outputs only `api/extract-recipe` as a Function.
-Production must be redeployed and the three former routes must return `404` before this route-surface check passes.
+Earlier acceptance found that Vercel also packaged three non-entrypoint files under `api/lib` as public Functions.
+The hardened deployment prefixes those support filenames with `_`, and Vercel now reports only `api/extract-recipe` as a Function.
+Public probes returned HTTP `404` for the three former routes and their three underscore-prefixed equivalents.
+The intended endpoint returned HTTP `405`, `Allow: POST`, and `Cache-Control: no-store` for a deliberate `GET` probe.
+The current deployment log query contained that one metadata-only `405` entry and no unexpected 5xx response.
 
 The project must retain the public URL and required environment configuration through the judging end date of 2026-10-17.
 
@@ -140,8 +145,8 @@ Target duration: 85 seconds.
 | Reset and reload            | PARTIAL | Both returned to Source. Direct storage inspection was unavailable.                                                                                                                                                                         |
 | Safari                      | PARTIAL | Safari 26.6.2 was installed, but WebDriver required the disabled `Allow remote automation` setting. The verification did not change that system setting.                                                                                    |
 | Production sheet and PDF    | PARTIAL | This public pass did not complete preview, download-size, or print-cancellation checks.                                                                                                                                                     |
-| Function route surface      | PARTIAL | Production returned `500` for three unintended `api/lib` routes. The local prebuilt output now contains only `api/extract-recipe`; a production redeploy and public `404` checks remain.                                                    |
-| Production logs             | PARTIAL | The initial 45-minute window contained four `200` and fifteen intentional validation `400` responses, with no 5xx and zero source-shaped matches. Later route-surface probes produced three known diagnostic `500` responses.               |
+| Function route surface      | PASS    | Deployment `dpl_HmV9d59Giu5udhjGFtERasd9rY3w` contains only `api/extract-recipe`. The three former support routes and their underscore-prefixed equivalents returned `404`; deliberate `GET` returned `405`.                                |
+| Production logs             | PASS    | The initial 45-minute live-input window had no 5xx and zero source-shaped matches. The hardened deployment query contained one deliberate metadata-only `405` entry and no unexpected 5xx response.                                         |
 | Local API tests             | PASS    | The route-hygiene test failed against the old filenames, then `npm run test:api` passed 56 tests after the rename.                                                                                                                          |
 | Local code gate             | PASS    | `merry check` formatted 217 files with zero changes, found zero analyze and Bloc lint issues, and passed 1,016 Flutter tests.                                                                                                               |
 | Coverage and release builds | PASS    | `merry coverage` passed 1,016 tests and reached 6,063 of 6,063 lines. Web release, Android development debug, and iOS development Simulator builds completed with their expected artifacts.                                                 |
@@ -153,5 +158,4 @@ Target duration: 85 seconds.
 - Verify public production-sheet batch and total views.
 - Verify a non-zero PDF download and open then cancel the print dialog.
 - Verify one forced-busy Retry reaches Review after the WAF window resets.
-- Deploy the underscore-prefixed support modules and verify the three former public Function routes return `404`.
 - Keep the public URL available through 2026-10-17.
