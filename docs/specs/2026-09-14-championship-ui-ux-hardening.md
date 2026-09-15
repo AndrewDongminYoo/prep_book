@@ -8,7 +8,7 @@ This specification narrows the next championship-variant change to four review c
 It extends `docs/specs/2026-09-13-ai-recipe-import-demo.md` without changing the normal mobile product or the extraction contract.
 
 The operator approved a six-finding UI and UX follow-up on 2026-09-15.
-The follow-up requirements below supersede the immediate component-removal interaction while preserving the original domain invariant and completed hardening work.
+The follow-up requirements below supersede every conflicting statement in the earlier Goal, Scope, Non-goals, and functional requirements while preserving the original domain invariant and completed hardening work.
 
 ## Goal
 
