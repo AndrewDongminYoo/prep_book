@@ -239,7 +239,7 @@ class _PhasePanel extends StatelessWidget {
           child: Semantics(
             key: const ValueKey('championship-current-phase-semantics'),
             focusable: true,
-            focused: phaseFocusNode.hasFocus,
+            focused: phaseFocusNode.hasPrimaryFocus,
             liveRegion: true,
             label: strings.currentStep(
               label: strings.phaseName(state.phase),

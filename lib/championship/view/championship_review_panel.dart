@@ -641,7 +641,12 @@ class _ReviewFieldCard<T> extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(label, style: Theme.of(context).textTheme.titleMedium),
+                ExcludeSemantics(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 _MetadataLine(label: strings.aiProposal, value: proposal),
                 _MetadataLine(label: strings.evidence, value: field.evidence),

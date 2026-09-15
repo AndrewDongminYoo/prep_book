@@ -146,6 +146,7 @@ void main() {
     );
 
     expect(field.properties.label, 'Component 1 name');
+    expect(find.bySemanticsLabel('Component 1 name'), findsOneWidget);
     expect(input.decoration?.labelText, 'Current value for Component 1 name');
     expect(confidence.properties.label, 'High confidence');
     expect(confidence.properties.role, SemanticsRole.status);

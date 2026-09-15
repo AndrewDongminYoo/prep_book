@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/championship/championship.dart';
@@ -198,6 +199,19 @@ void main() {
     );
     expect(currentStep.properties.label, 'Current step 2 of 4: Review');
     expect(currentStep.properties.liveRegion, isTrue);
+    expect(currentStep.properties.focused, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(
+      tester
+          .widget<Semantics>(
+            find.byKey(const ValueKey('championship-current-phase-semantics')),
+          )
+          .properties
+          .focused,
+      isFalse,
+    );
   });
 
   for (final width in [840.0, 900.0]) {
