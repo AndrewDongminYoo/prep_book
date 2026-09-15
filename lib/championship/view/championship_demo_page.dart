@@ -7,45 +7,98 @@ import 'package:prep_book/championship/view/championship_review_panel.dart';
 import 'package:prep_book/championship/view/championship_source_panel.dart';
 import 'package:prep_book/championship/view/championship_strings.dart';
 import 'package:prep_book/championship/view/championship_target_panel.dart';
+import 'package:prep_book/championship/view/championship_word_wrap_text.dart';
 import 'package:prep_book/presentation/responsive/window_width_class.dart';
 
-class ChampionshipDemoPage extends StatelessWidget {
+class ChampionshipDemoPage extends StatefulWidget {
   const ChampionshipDemoPage({required this.openProductionSheet, super.key});
 
   final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
+  State<ChampionshipDemoPage> createState() => _ChampionshipDemoPageState();
+}
+
+class _ChampionshipDemoPageState extends State<ChampionshipDemoPage> {
+  final ScrollController _scrollController = ScrollController();
+  final FocusNode _phaseFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _phaseFocusNode.addListener(_phaseFocusChanged);
+  }
+
+  void _phaseFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _showPhase() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      if (_scrollController.hasClients) {
+        if (MediaQuery.disableAnimationsOf(context)) {
+          _scrollController.jumpTo(0);
+        } else {
+          await _scrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
+        }
+      }
+      if (mounted) _phaseFocusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _phaseFocusNode
+      ..removeListener(_phaseFocusChanged)
+      ..dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final expanded = usesMultiplePanesAt(
-              constraints.maxWidth,
-              MediaQuery.textScalerOf(context),
-            );
-            return SingleChildScrollView(
-              key: const ValueKey('championship-demo-content'),
-              padding: EdgeInsets.symmetric(
-                horizontal: expanded ? 48 : 24,
-                vertical: 40,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1120),
-                  child: !expanded
-                      ? _CompactShell(
-                          key: const ValueKey('championship-compact-layout'),
-                          openProductionSheet: openProductionSheet,
-                        )
-                      : _ExpandedShell(
-                          key: const ValueKey('championship-expanded-layout'),
-                          openProductionSheet: openProductionSheet,
-                        ),
+    return BlocListener<ChampionshipDemoCubit, ChampionshipDemoState>(
+      listenWhen: (previous, current) => previous.phase != current.phase,
+      listener: (context, state) => _showPhase(),
+      child: Scaffold(
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final expanded = usesMultiplePanesAt(
+                constraints.maxWidth,
+                MediaQuery.textScalerOf(context),
+              );
+              return SingleChildScrollView(
+                key: const ValueKey('championship-demo-content'),
+                controller: _scrollController,
+                padding: EdgeInsets.symmetric(
+                  horizontal: expanded ? 48 : 24,
+                  vertical: 40,
                 ),
-              ),
-            );
-          },
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1120),
+                    child: !expanded
+                        ? _CompactShell(
+                            key: const ValueKey('championship-compact-layout'),
+                            phaseFocusNode: _phaseFocusNode,
+                            openProductionSheet: widget.openProductionSheet,
+                          )
+                        : _ExpandedShell(
+                            key: const ValueKey('championship-expanded-layout'),
+                            phaseFocusNode: _phaseFocusNode,
+                            openProductionSheet: widget.openProductionSheet,
+                          ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -53,8 +106,13 @@ class ChampionshipDemoPage extends StatelessWidget {
 }
 
 class _CompactShell extends StatelessWidget {
-  const _CompactShell({required this.openProductionSheet, super.key});
+  const _CompactShell({
+    required this.phaseFocusNode,
+    required this.openProductionSheet,
+    super.key,
+  });
 
+  final FocusNode phaseFocusNode;
   final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
@@ -64,15 +122,23 @@ class _CompactShell extends StatelessWidget {
       children: [
         const _Introduction(),
         const SizedBox(height: 32),
-        _PhasePanel(openProductionSheet: openProductionSheet),
+        _PhasePanel(
+          phaseFocusNode: phaseFocusNode,
+          openProductionSheet: openProductionSheet,
+        ),
       ],
     );
   }
 }
 
 class _ExpandedShell extends StatelessWidget {
-  const _ExpandedShell({required this.openProductionSheet, super.key});
+  const _ExpandedShell({
+    required this.phaseFocusNode,
+    required this.openProductionSheet,
+    super.key,
+  });
 
+  final FocusNode phaseFocusNode;
   final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
@@ -80,11 +146,13 @@ class _ExpandedShell extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(flex: 2, child: _Introduction()),
-        const SizedBox(width: 48),
+        const Expanded(child: _Introduction()),
+        const SizedBox(width: 32),
         Expanded(
-          flex: 3,
-          child: _PhasePanel(openProductionSheet: openProductionSheet),
+          child: _PhasePanel(
+            phaseFocusNode: phaseFocusNode,
+            openProductionSheet: openProductionSheet,
+          ),
         ),
       ],
     );
@@ -101,17 +169,29 @@ class _Introduction extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(strings.title, style: textTheme.displaySmall),
+        ChampionshipWordWrapText(
+          key: const ValueKey('championship-introduction-title'),
+          text: strings.title,
+          style: textTheme.headlineLarge,
+        ),
         const SizedBox(height: 20),
-        Text(strings.boundary, style: textTheme.titleLarge),
+        ChampionshipWordWrapText(
+          key: const ValueKey('championship-introduction-boundary'),
+          text: strings.boundary,
+          style: textTheme.titleLarge,
+        ),
       ],
     );
   }
 }
 
 class _PhasePanel extends StatelessWidget {
-  const _PhasePanel({required this.openProductionSheet});
+  const _PhasePanel({
+    required this.phaseFocusNode,
+    required this.openProductionSheet,
+  });
 
+  final FocusNode phaseFocusNode;
   final OpenChampionshipProductionSheet openProductionSheet;
 
   @override
@@ -121,34 +201,60 @@ class _PhasePanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _PhaseLabel(
-              phase: ChampionshipPhase.source,
-              label: strings.source,
-              currentPhase: state.phase,
-            ),
-            _PhaseLabel(
-              phase: ChampionshipPhase.review,
-              label: strings.review,
-              currentPhase: state.phase,
-            ),
-            _PhaseLabel(
-              phase: ChampionshipPhase.target,
-              label: strings.target,
-              currentPhase: state.phase,
-            ),
-            _PhaseLabel(
-              phase: ChampionshipPhase.result,
-              label: strings.result,
-              currentPhase: state.phase,
-            ),
-          ],
+        Semantics(
+          container: true,
+          explicitChildNodes: true,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _PhaseLabel(
+                phase: ChampionshipPhase.source,
+                label: strings.source,
+                currentPhase: state.phase,
+              ),
+              _PhaseLabel(
+                phase: ChampionshipPhase.review,
+                label: strings.review,
+                currentPhase: state.phase,
+              ),
+              _PhaseLabel(
+                phase: ChampionshipPhase.target,
+                label: strings.target,
+                currentPhase: state.phase,
+              ),
+              _PhaseLabel(
+                phase: ChampionshipPhase.result,
+                label: strings.result,
+                currentPhase: state.phase,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 24),
-        _CurrentPanel(state: state, openProductionSheet: openProductionSheet),
+        Focus(
+          key: const ValueKey('championship-current-phase-focus'),
+          focusNode: phaseFocusNode,
+          skipTraversal: true,
+          child: Semantics(
+            key: const ValueKey('championship-current-phase-semantics'),
+            focusable: true,
+            focused: phaseFocusNode.hasFocus,
+            liveRegion: true,
+            label: strings.currentStep(
+              label: strings.phaseName(state.phase),
+              index: state.phase.index,
+            ),
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              child: _CurrentPanel(
+                state: state,
+                openProductionSheet: openProductionSheet,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -188,6 +294,10 @@ class _PhaseLabel extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Semantics(
       key: ValueKey('championship-phase-${phase.name}'),
+      excludeSemantics: true,
+      label: ChampionshipStrings.of(
+        context,
+      ).phaseStep(label: label, index: phase.index, current: selected),
       selected: selected,
       child: DecoratedBox(
         decoration: BoxDecoration(
