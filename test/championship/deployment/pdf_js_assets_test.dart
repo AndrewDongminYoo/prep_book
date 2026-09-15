@@ -10,6 +10,11 @@ void main() {
     ).firstMatch(index)?.group(1);
 
     expect(baseUrl, isNotNull);
+    expect(
+      baseUrl,
+      startsWith('./assets/'),
+      reason: 'dynamic import() requires an explicit relative specifier',
+    );
     final baseUri = Uri.parse(baseUrl!);
     expect(baseUri.hasScheme, isFalse);
     expect(baseUri.hasAuthority, isFalse);

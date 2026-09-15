@@ -660,10 +660,14 @@ runtime evidence proves a defect.
       screenshots/PDF outside the repository.
 
   The 2026-09-15 passes verified the Chrome sample, live text, large live PNG, 390-pixel layout, ambiguity block, exact result, production-sheet batch and total previews, request-secret boundary, no-store responses, WAF response, and source-free logs.
-  The preview made one unexpected request to `unpkg.com` for pdf.js, which violates the no-network export contract.
-  The current branch vendors the official `pdfjs-dist@5.7.284` browser files and points `printing` to the same-origin path.
-  A merged production deployment must verify that the preview no longer contacts a third-party host.
-  Safari, an isolated storage before-and-after comparison, successful Retry recovery, a non-zero readable PDF download, and direct print-dialog observation remain `[PARTIAL]` or failed.
+  The first preview pass made one unexpected request to `unpkg.com` for pdf.js, which violates the no-network export contract.
+  Commit `8a8e6c8` deployed the official `pdfjs-dist@5.7.284` browser files, but the post-deployment pass found that its `assets/js/` base path was a bare module specifier.
+  The preview failed before either bundled module was requested.
+  This branch uses the explicit relative specifier `./assets/js/`.
+  Its local release build requested `pdf.min.mjs` and `pdf.worker.min.mjs` from `127.0.0.1`, received `200` responses, made no `unpkg.com` request, and rendered the preview.
+  A merged production deployment must repeat the same-origin network check.
+  The production Share action created a 13,214-byte, one-page A4 PDF that passed `qpdf --check`.
+  Safari, an isolated storage before-and-after comparison, successful Retry recovery, and direct print-dialog observation remain `[PARTIAL]` or failed.
   See `docs/notes/2026-09-20-ai-championship-submission.md`.
 
 - [x] **7.6 Write the submission note.** Include Service, Problem, Solution, AI
