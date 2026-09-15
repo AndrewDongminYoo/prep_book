@@ -4,9 +4,12 @@
 
 Approved as an isolated competition variant in conversation on 2026-09-13.
 
-The implementation baseline is `main@66b7b120e9c35d99ca3d1c3215d5502c4034b3a3`.
-The 2026-09-15 public acceptance found an unexpected production-sheet preview request to `unpkg.com` and no observable PDF download.
-The current branch self-hosts the required pdf.js files, but production verification remains incomplete until the fix is merged and deployed.
+The implementation baseline is `main@8a8e6c8e394960346eadaa16f8defda1973b496a`.
+The 2026-09-15 post-deployment acceptance found that the self-hosted pdf.js base path was not a valid dynamic-import specifier, so the production-sheet preview failed before it requested either bundled module.
+The current branch uses an explicit `./assets/` specifier.
+Its local release build loaded both modules from the application origin and rendered the preview.
+Production verification remains incomplete until the correction is merged and deployed.
+The production Share action produced a non-zero readable PDF.
 Safari, an isolated browser-storage comparison, successful Retry recovery, and direct print-dialog observation also remain incomplete.
 See `docs/notes/2026-09-20-ai-championship-submission.md`.
 
