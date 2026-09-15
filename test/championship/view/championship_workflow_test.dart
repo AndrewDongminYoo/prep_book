@@ -952,10 +952,11 @@ void main() {
     expect(find.text('Batches 1–15: 240 g each'), findsOneWidget);
     expect(find.text('Batches 1–15: Manual / as needed'), findsOneWidget);
     expect(find.textContaining('Batch 1:'), findsNothing);
-    expect(
+    final firstComponent = tester.widget<Semantics>(
       find.byKey(const ValueKey('result-component-0-semantics')),
-      findsOneWidget,
     );
+    expect(firstComponent.properties.header, isTrue);
+    expect(find.bySemanticsLabel('Flour'), findsNWidgets(2));
     for (final key in const [
       ValueKey('result-summary-semantics'),
       ValueKey('result-warnings-semantics'),

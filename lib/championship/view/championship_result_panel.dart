@@ -197,13 +197,13 @@ class _ComponentResult extends StatelessWidget {
       container: true,
       explicitChildNodes: true,
       label: name,
+      header: true,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Semantics(
-              header: true,
+            ExcludeSemantics(
               child: Text(name, style: Theme.of(context).textTheme.titleMedium),
             ),
             if (component.source.note case final note?) Text(note),
