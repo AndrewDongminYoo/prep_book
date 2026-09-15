@@ -38,5 +38,5 @@
   "useGitignore": true,
   "ignoreWords": ["meta-data", "plaintext"],
   "ignorePaths": [".git", ".gitignore", ".metadata", ".shellcheckrc"],
-  "words": ["donminzzi", "prepbook", "Pretendard", "wght"]
+  "words": ["donminzzi", "prepbook", "Pretendard", "qpdf", "wght"]
 }
