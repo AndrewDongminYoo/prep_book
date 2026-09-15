@@ -1,16 +1,24 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 import endpointHandler from "../extract-recipe.mjs";
-import { createExtractRecipeHandler } from "./extract-recipe-handler.mjs";
-import { recipeDraftSchema, validateRecipeDraft } from "./recipe-draft-schema.mjs";
+import { createExtractRecipeHandler } from "./_extract-recipe-handler.mjs";
+import { recipeDraftSchema, validateRecipeDraft } from "./_recipe-draft-schema.mjs";
 
 const allowedOrigin = "https://championship.example";
 const validEnvironment = Object.freeze({
   OPENAI_API_KEY: "test-api-key",
   OPENAI_MODEL: "test-extraction-model",
   ALLOWED_ORIGIN: allowedOrigin,
+});
+
+test("keeps support modules out of Vercel public routes", async () => {
+  const moduleNames = await readdir(new URL(".", import.meta.url));
+  assert.deepEqual(
+    moduleNames.filter((name) => name.endsWith(".mjs") && !name.startsWith("_")),
+    []
+  );
 });
 
 const sampleDraft = JSON.parse(

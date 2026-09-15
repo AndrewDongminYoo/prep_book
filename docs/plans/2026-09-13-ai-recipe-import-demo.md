@@ -603,7 +603,7 @@ runtime evidence proves a defect.
       narrow scope exception to CLAUDE without replacing the approved source of
       truth.
 
-- [ ] **7.2 Run one final local gate at one commit.** Run:
+- [x] **7.2 Run one final local gate at one commit.** Run:
 
   ```sh
   flutter pub get
@@ -623,17 +623,23 @@ runtime evidence proves a defect.
 
   Record exact results, counts, coverage, output paths, and non-failing warnings.
 
-- [ ] **7.3 Configure secrets outside the repository.** Set
+  The 2026-09-15 gate passed 56 API tests and 1,016 Flutter tests, with 6,063 of 6,063 reached lines.
+  <!-- cspell:ignore iphonesimulator -->
+
+  The release web build produced `build/web`, the development Android build produced `build/app/outputs/flutter-apk/app-development-debug.apk`, and the development iOS Simulator build produced `build/ios/iphonesimulator/Runner.app`.
+  Non-failing warnings covered the web Wasm dry run and missing Cupertino icon font, upcoming Flutter support floors for Gradle and the Android Gradle Plugin, and an Android SDK XML tool-version mismatch.
+
+- [x] **7.3 Configure secrets outside the repository.** Set
       `OPENAI_API_KEY`, approved `OPENAI_MODEL`, and final `ALLOWED_ORIGIN`
       interactively without echoing the key. Configure and verify a Vercel WAF rate limit for `POST /api/extract-recipe`. Search tracked and untracked files for key patterns before deployment.
 
-- [ ] **7.4 Deploy prebuilt output.** Added 2026-09-14: Vercel's Git
+- [x] **7.4 Deploy prebuilt output.** Added 2026-09-14: Vercel's Git
       integration fails every push at `flutter pub get` because its builders
       have no Flutter, so `vercel.json` disables it and
       `.github/workflows/deploy-championship.yaml` deploys instead (production
       on push to `main`, preview on manual dispatch). The workflow needs the
-      `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets and has
-      not run on a runner yet; its `vercel build` step was exercised locally.
+      `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets.
+      Run `34857049687`, attempt 3, deployed `main@ca428e9566a5aa811d8e3755190c3ea33256301c` to production on 2026-09-15.
       By hand, run:
 
   ```sh
@@ -652,7 +658,11 @@ runtime evidence proves a defect.
       browser storage, secret-free requests, and source-free function logs. Keep
       screenshots/PDF outside the repository.
 
-- [ ] **7.6 Write the submission note.** Include Service, Problem, Solution, AI
+  The 2026-09-15 pass verified the Chrome sample, live text, large live PNG, 390-pixel layout, ambiguity block, exact result, request-secret boundary, no-store responses, WAF response, and source-free logs.
+  Safari, direct storage inspection, successful Retry recovery, public production-sheet PDF checks, and post-deployment verification of the hardened Function route surface remain `[PARTIAL]`.
+  See `docs/notes/2026-09-20-ai-championship-submission.md`.
+
+- [x] **7.6 Write the submission note.** Include Service, Problem, Solution, AI
       use, Deterministic safety boundary, Tools used, Privacy boundary, Demo script,
       Deployment/judging availability, Existing-service disclosure, and Verification
       evidence. Distinguish runtime AI from AI-assisted development. State that AI
@@ -664,7 +674,7 @@ runtime evidence proves a defect.
       commands/results, tests, coverage, builds, URL, browser matrix, artifact
       directory, and any `[PARTIAL]` item with consequence.
 
-- [ ] **7.8 Run repository hygiene review.** Run:
+- [x] **7.8 Run repository hygiene review.** Run:
 
   ```sh
   git diff --check origin/main...HEAD
@@ -677,11 +687,15 @@ runtime evidence proves a defect.
   database, persisted run, Flutter provider SDK, normal-entrypoint variant
   import, or unrelated refactor.
 
-- [ ] **7.9 Commit verified documentation.** Commit:
+  The 2026-09-15 review found eight changed files, zero key-shaped matches, and no artifact or unrelated-code additions.
+
+- [x] **7.9 Commit verified documentation.** Commit:
 
   ```sh
-  git commit -m "docs(championship): record verified competition submission"
+  git commit -m "docs(championship): record submission readiness"
   ```
+
+  Commit `07df1cc` records the verified submission evidence after the route-surface fix in `3032947`.
 
   Do not open or merge a pull request without separate approval.
 
