@@ -1,13 +1,14 @@
 # AI Championship Submission Note
 
-<!-- cspell:ignore udhj Rasd -->
+<!-- cspell:ignore extendedvaluekey udhj Rasd -->
 
 ## Status
 
 Core runtime evidence was collected on 2026-09-15 against the production application at commit `ca428e9566a5aa811d8e3755190c3ea33256301c`.
 The hardened Function route surface was then verified against production commit `66b7b120e9c35d99ca3d1c3215d5502c4034b3a3`.
 The core sample, live text, live image, review, and calculation paths passed in Chrome.
-The remaining partial checks are Safari, direct browser-storage inspection, public production-sheet download and print cancellation, and successful recovery after a forced rate limit.
+The public PDF download failed because it produced no observable file.
+The remaining partial checks are Safari, an isolated browser-storage before-and-after comparison, direct print cancellation, and successful recovery after a forced rate limit.
 
 ## Service
 
@@ -83,7 +84,10 @@ The real tracked-and-untracked scan found zero OpenAI key-shaped values.
 A production-log scan used planted source-shaped values before the real scan.
 The real scan found zero matches for the submitted synthetic recipe text, ingredient phrases, image markers, or provider identifiers.
 
-`[PARTIAL]` Reset and reload returned the application to Source, but the browser connection did not expose origin storage APIs for direct inspection.
+`[PARTIAL]` Reset and reload returned the application to Source.
+Direct inspection found two localStorage keys, no IndexedDB databases, and no Cache Storage entries; sessionStorage changed from three keys to zero between observations.
+One localStorage key was Vercel toolbar metadata, while `extendedvaluekey` had no match in repository source or generated output.
+A fresh isolated browser context was unavailable, so the pass could not establish a clean before-and-after storage baseline or attribute the unknown key to the application.
 
 ## Cost protection
 
@@ -128,34 +132,38 @@ Target duration: 85 seconds.
 
 ## Verification evidence
 
-| Check                       | Result  | Evidence                                                                                                                                                                                                                                    |
-| --------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Public unauthenticated load | PASS    | Chrome 152 opened the production alias at a desktop viewport.                                                                                                                                                                               |
-| Offline sample              | PASS    | The sample reached Review with zero `POST /api/extract-recipe` requests.                                                                                                                                                                    |
-| Human review                | PASS    | Evidence, confidence, issues, and explicit confirmation controls were visible.                                                                                                                                                              |
-| Ambiguity block             | PASS    | Continue stopped at the missing water unit until the value was corrected to `g`.                                                                                                                                                            |
-| Exact target                | PASS    | `180 piece` produced 15 batches of 12 pieces.                                                                                                                                                                                               |
-| Live text                   | PASS    | One browser request returned HTTP `200` and reached Review with three components.                                                                                                                                                           |
-| Large live PNG              | PASS    | A 21,387,717-byte, 2400×1800 PNG became a 181,519-byte, 2048×1536 JPEG before upload. The request returned HTTP `200` and reached Review with three components.                                                                             |
-| Browser request secrets     | PASS    | Observed text and image requests had no `Authorization` header and no OpenAI key prefix.                                                                                                                                                    |
-| Endpoint cache policy       | PASS    | Successful text and image responses returned `Cache-Control: no-store`.                                                                                                                                                                     |
-| WAF limit                   | PASS    | Five validation requests returned `400`. The next request returned `429`.                                                                                                                                                                   |
-| Forced busy UI              | PARTIAL | The `429` preserved input and exposed Retry and Sample. A later Retry displayed a timeout while function logs showed a `200` response, but browser-control instability prevented request correlation and a verified successful UI recovery. |
-| 390-pixel layout            | PASS    | Document and body width remained 390 pixels with no horizontal overflow. Primary controls remained usable.                                                                                                                                  |
-| Reset and reload            | PARTIAL | Both returned to Source. Direct storage inspection was unavailable.                                                                                                                                                                         |
-| Safari                      | PARTIAL | Safari 26.6.2 was installed, but WebDriver required the disabled `Allow remote automation` setting. The verification did not change that system setting.                                                                                    |
-| Production sheet and PDF    | PARTIAL | This public pass did not complete preview, download-size, or print-cancellation checks.                                                                                                                                                     |
-| Function route surface      | PASS    | Deployment `dpl_HmV9d59Giu5udhjGFtERasd9rY3w` contains only `api/extract-recipe`. The three former support routes and their underscore-prefixed equivalents returned `404`; deliberate `GET` returned `405`.                                |
-| Production logs             | PASS    | The initial 45-minute live-input window had no 5xx and zero source-shaped matches. The hardened deployment query contained one deliberate metadata-only `405` entry and no unexpected 5xx response.                                         |
-| Local API tests             | PASS    | The route-hygiene test failed against the old filenames, then `npm run test:api` passed 56 tests after the rename.                                                                                                                          |
-| Local code gate             | PASS    | `merry check` formatted 217 files with zero changes, found zero analyze and Bloc lint issues, and passed 1,016 Flutter tests.                                                                                                               |
-| Coverage and release builds | PASS    | `merry coverage` passed 1,016 tests and reached 6,063 of 6,063 lines. Web release, Android development debug, and iOS development Simulator builds completed with their expected artifacts.                                                 |
+| Check                       | Result  | Evidence                                                                                                                                                                                                                                                                                                               |
+| --------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public unauthenticated load | PASS    | Chrome 152 opened the production alias at a desktop viewport.                                                                                                                                                                                                                                                          |
+| Offline sample              | PASS    | The sample reached Review with zero `POST /api/extract-recipe` requests.                                                                                                                                                                                                                                               |
+| Human review                | PASS    | Evidence, confidence, issues, and explicit confirmation controls were visible.                                                                                                                                                                                                                                         |
+| Ambiguity block             | PASS    | Continue stopped at the missing water unit until the value was corrected to `g`.                                                                                                                                                                                                                                       |
+| Exact target                | PASS    | `180 piece` produced 15 batches of 12 pieces.                                                                                                                                                                                                                                                                          |
+| Live text                   | PASS    | One browser request returned HTTP `200` and reached Review with three components.                                                                                                                                                                                                                                      |
+| Large live PNG              | PASS    | A 21,387,717-byte, 2400×1800 PNG became a 181,519-byte, 2048×1536 JPEG before upload. The request returned HTTP `200` and reached Review with three components.                                                                                                                                                        |
+| Browser request secrets     | PASS    | Observed text and image requests had no `Authorization` header and no OpenAI key prefix.                                                                                                                                                                                                                               |
+| Endpoint cache policy       | PASS    | Successful text and image responses returned `Cache-Control: no-store`.                                                                                                                                                                                                                                                |
+| WAF limit                   | PASS    | Five validation requests returned `400`. The next request returned `429`.                                                                                                                                                                                                                                              |
+| Forced busy UI              | PARTIAL | The `429` preserved input and exposed Retry and Sample. A later Retry displayed a timeout while function logs showed a `200` response, but browser-control instability prevented request correlation and a verified successful UI recovery.                                                                            |
+| 390-pixel layout            | PASS    | Document and body width remained 390 pixels with no horizontal overflow. Primary controls remained usable.                                                                                                                                                                                                             |
+| Reset and reload            | PARTIAL | Both returned to Source. Storage inspection found two localStorage keys, zero IndexedDB databases, zero Cache Storage entries, and conflicting sessionStorage counts; an isolated before-and-after baseline was unavailable.                                                                                           |
+| Safari                      | PARTIAL | Safari 26.6.2 was installed, but WebDriver required the disabled `Allow remote automation` setting. The verification did not change that system setting.                                                                                                                                                               |
+| Production-sheet views      | PASS    | The public batch preview displayed batches 1–15. The total preview displayed Flour 7500 g, Butter 3750 g, and Water 3600 g.                                                                                                                                                                                            |
+| Preview network dependency  | FAIL    | The production-sheet preview made an unexpected request to `https://unpkg.com/pdfjs-dist@5.7.284/build/pdf.min.mjs`. This branch vendors the official `pdfjs-dist@5.7.284` browser files and configures `printing` to load them from the application origin, but production verification requires a merged deployment. |
+| PDF download                | FAIL    | The Share action produced no observed download event or PDF file within 15 seconds, so non-zero size and readability were not verified.                                                                                                                                                                                |
+| Print dialog                | PARTIAL | Print was selected and Escape returned to the production sheet, but the macOS dialog was outside the browser capture and was not directly observed.                                                                                                                                                                    |
+| Function route surface      | PASS    | Deployment `dpl_HmV9d59Giu5udhjGFtERasd9rY3w` contains only `api/extract-recipe`. The three former support routes and their underscore-prefixed equivalents returned `404`; deliberate `GET` returned `405`.                                                                                                           |
+| Production logs             | PASS    | The initial 45-minute live-input window had no 5xx and zero source-shaped matches. The hardened deployment query contained one deliberate metadata-only `405` entry and no unexpected 5xx response.                                                                                                                    |
+| Local API tests             | PASS    | The route-hygiene test failed against the old filenames, then `npm run test:api` passed 56 tests after the rename.                                                                                                                                                                                                     |
+| Local code gate             | PASS    | The current branch's `merry check` formatted 218 files with zero changes, found zero analyze and Bloc lint issues, and passed 1,017 Flutter tests.                                                                                                                                                                     |
+| Coverage and release builds | PASS    | The current branch's `merry coverage` passed 1,017 tests and reached 6,063 of 6,063 lines. Its championship web release build included the three vendored files with their recorded hashes. Earlier Android development debug and iOS development Simulator builds completed with their expected artifacts.            |
 
 ## Remaining release-candidate checks
 
 - Complete one desktop Safari pass without changing security settings outside an approved session.
-- Inspect localStorage, sessionStorage, IndexedDB, and Cache Storage directly after Reset and reload.
-- Verify public production-sheet batch and total views.
-- Verify a non-zero PDF download and open then cancel the print dialog.
+- Repeat the storage check in a fresh isolated browser context and compare all four storage surfaces before the Sample flow and after Reset and reload.
+- Verify that production-sheet preview loads `pdf.min.mjs` and `pdf.worker.min.mjs` only from the deployed application origin.
+- Verify a non-zero readable PDF download.
+- Directly observe the print dialog opening and then cancel it.
 - Verify one forced-busy Retry reaches Review after the WAF window resets.
 - Keep the public URL available through 2026-10-17.

@@ -659,8 +659,11 @@ runtime evidence proves a defect.
       browser storage, secret-free requests, and source-free function logs. Keep
       screenshots/PDF outside the repository.
 
-  The 2026-09-15 pass verified the Chrome sample, live text, large live PNG, 390-pixel layout, ambiguity block, exact result, request-secret boundary, no-store responses, WAF response, and source-free logs.
-  Safari, direct storage inspection, successful Retry recovery, and public production-sheet PDF checks remain `[PARTIAL]`.
+  The 2026-09-15 passes verified the Chrome sample, live text, large live PNG, 390-pixel layout, ambiguity block, exact result, production-sheet batch and total previews, request-secret boundary, no-store responses, WAF response, and source-free logs.
+  The preview made one unexpected request to `unpkg.com` for pdf.js, which violates the no-network export contract.
+  The current branch vendors the official `pdfjs-dist@5.7.284` browser files and points `printing` to the same-origin path.
+  A merged production deployment must verify that the preview no longer contacts a third-party host.
+  Safari, an isolated storage before-and-after comparison, successful Retry recovery, a non-zero readable PDF download, and direct print-dialog observation remain `[PARTIAL]` or failed.
   See `docs/notes/2026-09-20-ai-championship-submission.md`.
 
 - [x] **7.6 Write the submission note.** Include Service, Problem, Solution, AI

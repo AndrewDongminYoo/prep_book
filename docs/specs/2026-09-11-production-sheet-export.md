@@ -218,6 +218,10 @@ The app must bundle the corresponding SIL Open Font License text beside the font
 The repository keeps the pinned license bytes unchanged and disables Git whitespace diagnostics only for that exact asset through `.gitattributes` because the upstream file contains one trailing space.
 The export flow must not use `PdfGoogleFonts`, download a font, or make any other network request.
 
+On web, `printing` 5.15.0 renders the preview through pdf.js 5.7.284.
+The web entrypoint must set `dartPdfJsBaseUrl` to `assets/js/pdf/5.7.284/` and bundle the official `pdf.min.mjs`, `pdf.worker.min.mjs`, and Apache-2.0 license files at that path.
+The vendored asset README records the npm package integrity and file hashes.
+
 ## Filename
 
 The filename format is `production-sheet-<recipe>-<UTC timestamp>.pdf`.
