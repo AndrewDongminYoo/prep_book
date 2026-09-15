@@ -674,7 +674,7 @@ runtime evidence proves a defect.
       commands/results, tests, coverage, builds, URL, browser matrix, artifact
       directory, and any `[PARTIAL]` item with consequence.
 
-- [ ] **7.8 Run repository hygiene review.** Run:
+- [x] **7.8 Run repository hygiene review.** Run:
 
   ```sh
   git diff --check origin/main...HEAD
@@ -687,11 +687,15 @@ runtime evidence proves a defect.
   database, persisted run, Flutter provider SDK, normal-entrypoint variant
   import, or unrelated refactor.
 
-- [ ] **7.9 Commit verified documentation.** Commit:
+  The 2026-09-15 review found eight changed files, zero key-shaped matches, and no artifact or unrelated-code additions.
+
+- [x] **7.9 Commit verified documentation.** Commit:
 
   ```sh
-  git commit -m "docs(championship): record verified competition submission"
+  git commit -m "docs(championship): record submission readiness"
   ```
+
+  Commit `07df1cc` records the verified submission evidence after the route-surface fix in `3032947`.
 
   Do not open or merge a pull request without separate approval.
 
