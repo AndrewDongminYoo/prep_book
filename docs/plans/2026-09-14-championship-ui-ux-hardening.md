@@ -26,7 +26,8 @@ The Cubit remains responsible for workflow state, while widgets remain responsib
 - Do not change CI, deployment, API, rate limiting, extraction schema, normal mobile entrypoints, or persistence.
 - Do not add a dependency.
 - Preserve immutable draft updates and the existing verifier-before-mapper boundary.
-- Preserve author-unknown work and do not stage, commit, push, merge, or deploy.
+- Preserve author-unknown work.
+- The original 2026-09-14 execution stopped before staging, committing, pushing, merging, or deploying.
 - Run only one heavy Flutter or browser job at a time.
 
 ## Task 1: Add the component-removal invariant
@@ -230,3 +231,130 @@ Capture rendered evidence for the changed review state.
 Inspect `git status --short`, staged diff, unstaged diff, and untracked files separately.
 Confirm that no normal mobile entrypoint, CI file, API file, dependency manifest, lockfile, or generated deployment artifact changed.
 Do not stage, commit, push, merge, or deploy without a separate request.
+
+## 2026-09-15 approved follow-up
+
+The operator approved a full PR loop for all six findings from the rendered championship UI and UX review.
+This follow-up authorizes scoped implementation, commits, push, pull-request creation, hosted review, and repairs.
+It does not authorize merge, cleanup, issue creation, or memory recording.
+Rendered visual approval remains required before merge.
+
+### Task 7: Correct review semantics
+
+**Files:**
+
+- Modify: `test/championship/view/championship_workflow_test.dart`
+- Modify: `lib/championship/view/championship_review_panel.dart`
+- Modify: `lib/championship/view/championship_strings.dart`
+
+Add a failing semantics test that distinguishes repeated component fields and confirmation actions and rejects interactive roles on status chips.
+Add field-specific input and action labels, and exclude the decorative chip implementation from the static status semantics.
+
+Run:
+
+```shell
+flutter test test/championship/view/championship_workflow_test.dart --plain-name "review semantics identify fields actions and static statuses"
+```
+
+### Task 8: Put consent before submission
+
+**Files:**
+
+- Modify: `test/championship/view/championship_workflow_test.dart`
+- Modify: `lib/championship/view/championship_source_panel.dart`
+
+Add a failing keyboard test that enters valid source text, focuses consent, accepts it, and expects the next Tab target to be the newly enabled submit action.
+Move the shared consent and privacy block before the mode-specific submit action.
+
+Run:
+
+```shell
+flutter test test/championship/view/championship_workflow_test.dart --plain-name "consent enables the next keyboard submit action"
+```
+
+### Task 9: Recover the current phase context
+
+**Files:**
+
+- Modify: `test/championship/view/championship_demo_page_test.dart`
+- Modify: `lib/championship/view/championship_demo_page.dart`
+- Modify: `lib/championship/view/championship_strings.dart`
+
+Add a failing test that scrolls the source phase, enters review, and observes a zero root scroll offset plus focus and live semantics on the localized current-step region.
+Own the root scroll controller and phase focus node in page presentation state, and react only when the Cubit's phase changes.
+
+Run:
+
+```shell
+flutter test test/championship/view/championship_demo_page_test.dart --plain-name "phase change restores and identifies the current step"
+```
+
+### Task 10: Group exact batch ranges
+
+**Files:**
+
+- Modify: `test/championship/view/championship_workflow_test.dart`
+- Modify: `test/championship/view/championship_strings_test.dart`
+- Modify: `lib/championship/view/championship_result_panel.dart`
+- Modify: `lib/championship/view/championship_strings.dart`
+
+Add a failing 180-piece sample test that expects four component batch ranges and no individual repeated batch labels.
+Group only consecutive entries whose exact and displayed values both match, following the existing production-result presentation contract.
+Keep the domain result and production-sheet input unchanged.
+
+Run:
+
+```shell
+flutter test test/championship/view/championship_workflow_test.dart --plain-name "result groups exact repeated batch quantities"
+```
+
+### Task 11: Confirm component removal
+
+**Files:**
+
+- Modify: `test/championship/view/championship_workflow_test.dart`
+- Modify: `lib/championship/view/championship_review_panel.dart`
+- Modify: `lib/championship/view/championship_strings.dart`
+
+Replace the existing immediate-removal widget expectation with failing cancel and confirm tests.
+Use one localized confirmation dialog and continue to enforce the final-component invariant in the model.
+
+Run:
+
+```shell
+flutter test test/championship/view/championship_workflow_test.dart --plain-name "component removal requires confirmation"
+```
+
+### Task 12: Protect Korean words at the expanded threshold
+
+**Files:**
+
+- Modify: `test/championship/view/championship_demo_page_test.dart`
+- Modify: `lib/championship/view/championship_demo_page.dart`
+
+Add a failing render test at 840 px and 900 px that checks every glyph in `레시피` remains on the same rendered line.
+Reduce the expanded gap and allocate equal width to the introduction and phase columns.
+
+Run:
+
+```shell
+flutter test test/championship/view/championship_demo_page_test.dart --plain-name "keeps the Korean recipe word together at expanded widths"
+```
+
+### Task 13: Integrated verification and PR loop
+
+Run focused tests after each red-green cycle.
+Then format only changed Dart files and run:
+
+```shell
+flutter analyze
+dart run bloc_tools:bloc lint .
+flutter test
+npm run test:api
+flutter build web --release --target lib/main_championship.dart --dart-define=AI_IMPORT_ENDPOINT=/api/extract-recipe --tree-shake-icons
+```
+
+Serve the new `build/web` and inspect the changed Korean and English states at 390 px, 840 px, and 900 px.
+Inspect browser semantics, keyboard order, current-step focus, root scroll position, grouped 15-batch results, and both component-removal dialog paths.
+Complete a medium structured local review, create semantic commits, push the branch, open the pull request, and run the hosted review and CI loop.
+Stop for rendered visual approval and operator merge.

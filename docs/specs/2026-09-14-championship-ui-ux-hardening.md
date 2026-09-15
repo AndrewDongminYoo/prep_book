@@ -7,6 +7,9 @@ Approved for implementation in conversation on 2026-09-14.
 This specification narrows the next championship-variant change to four review corrections.
 It extends `docs/specs/2026-09-13-ai-recipe-import-demo.md` without changing the normal mobile product or the extraction contract.
 
+The operator approved a six-finding UI and UX follow-up on 2026-09-15.
+The follow-up requirements below supersede the immediate component-removal interaction while preserving the original domain invariant and completed hardening work.
+
 ## Goal
 
 Make the guarded review flow complete enough for a release candidate by letting the operator remove an incorrect extracted component, presenting validation failures in the active language, moving keyboard and viewport attention to the first unresolved field, and keeping the HTML document language aligned with Flutter's resolved locale.
@@ -33,7 +36,7 @@ The change includes only these outcomes:
 ### Component removal
 
 - Each component review section has a localized remove action.
-- The action removes that component from the in-memory review draft immediately.
+- The action asks for confirmation before it removes that component from the in-memory review draft.
 - The action is disabled when the draft contains one component.
 - `ReviewRecipeDraft` rejects a direct attempt to remove its final component so the invariant does not depend on the widget.
 - Removing a component preserves every remaining component value, confirmation, evidence, and issue in the original order.
@@ -64,6 +67,62 @@ The change includes only these outcomes:
 - The attribute updates when the resolved locale changes during the app lifetime.
 - The default static `lang="en"` value remains a safe pre-bootstrap fallback.
 - No normal mobile entrypoint imports `package:web`.
+
+## 2026-09-15 follow-up requirements
+
+### Review semantics
+
+- Every editable review field exposes an accessible name that includes its visible field label.
+- Component field names include the one-based component number so repeated fields remain distinguishable.
+- Every confirmation action exposes the corresponding field label.
+- Confidence, confirmation, and edit chips expose static status text without an interactive checkbox role.
+- Each review field is a distinct semantic group rather than part of one undifferentiated card description.
+
+### Source keyboard order
+
+- The privacy boundary and consent control appear before the live submit action in visual and focus traversal order.
+- After the operator enters a valid source and accepts consent, the next forward focus target is the enabled submit action.
+- The offline sample remains independent of consent.
+
+### Phase transitions
+
+- A successful workflow phase change returns the root workflow scroll position to the top.
+- The new current phase exposes a localized label that includes its one-based position out of four.
+- The current phase region receives accessibility focus after the new frame renders.
+- Reduced-motion settings avoid an animated scroll.
+
+### Compact exact results
+
+- Consecutive batches with identical exact and displayed component quantities render as one inclusive batch range.
+- A single distinct batch remains a single-batch line.
+- Manual quantities use the same range grouping and remain labeled as manual or as-needed.
+- Grouping changes presentation only; totals, per-batch domain values, warnings, and production-sheet data remain unchanged.
+- Result summary, component, warning, and action areas expose separate semantic groups.
+
+### Confirmed component removal
+
+- Removing an eligible component opens a localized confirmation dialog that names the component.
+- Cancel keeps the complete review draft unchanged.
+- Confirm removes only the selected component through `ReviewRecipeDraft.removeComponent`.
+- The final-component action remains visible and disabled.
+- Do not add undo history or a component insertion flow.
+
+### Expanded responsive layout
+
+- At the 840 px expanded threshold and at 900 px, the introduction column keeps the Korean word `레시피` on one rendered line at default text scale.
+- The fix must use responsive space allocation or existing typography rather than locale-specific manual line breaks.
+- Compact and high-text-scale layouts remain single-column when selected by the existing width policy.
+
+## Follow-up acceptance criteria
+
+- [ ] Widget semantics distinguish component number, field name, confirmation action, and static status.
+- [ ] Forward keyboard traversal reaches consent before live submit and reaches submit immediately after consent.
+- [ ] Source-to-review, review-to-target, target-to-result, Back, and Reset transitions return the workflow to the top and identify the current step.
+- [ ] The 180-piece sample renders four exact batch-range lines instead of 60 repeated batch lines.
+- [ ] Component removal has tested cancel and confirm paths.
+- [ ] Korean title rendering keeps `레시피` together at 840 px and 900 px.
+- [ ] Local browser evidence confirms semantics, focus, scroll, and responsive rendering.
+- [ ] Formatting, analysis, Bloc lint, Flutter tests, API tests, and the championship web release build pass.
 
 ## Data and state design
 
