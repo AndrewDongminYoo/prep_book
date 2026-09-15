@@ -154,7 +154,10 @@ void main() {
     tester.view
       ..physicalSize = const Size(390, 844)
       ..devicePixelRatio = 1;
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     final cubit = buildChampionshipTestCubit();
     addTearDown(cubit.close);
     await tester.pumpWidget(

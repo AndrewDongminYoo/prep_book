@@ -773,6 +773,7 @@ void main() {
   testWidgets('component removal requires confirmation', (tester) async {
     final cubit = buildChampionshipTestCubit();
     await cubit.loadSample();
+    cubit.updateReview((draft) => draft.editComponentName(0, '   '));
     await _pumpApp(tester, cubit);
 
     await _tapVisible(
@@ -781,7 +782,7 @@ void main() {
     );
 
     expect(cubit.state.review?.components, hasLength(4));
-    expect(find.text('Remove Flour?'), findsOneWidget);
+    expect(find.text('Remove Component 1?'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('component-remove-cancel')));
     await tester.pumpAndSettle();
     expect(cubit.state.review?.components, hasLength(4));
