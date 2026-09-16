@@ -220,6 +220,28 @@ void main() {
       expect(cubit.state.hasFieldErrors, isFalse);
     });
 
+    test('the maximum batch unit is not judged until the base yield unit is '
+        'chosen', () {
+      final cubit = _editor()
+        ..nameChanged('Rolls')
+        ..baseYieldAmountChanged('24')
+        ..maxBatchAmountChanged('500')
+        ..maxBatchUnitChanged(_piece);
+
+      // Against the placeholder this would be a mismatch with a unit the
+      // form does not show, stacked on the error asking for that unit.
+      expect(cubit.state.baseYieldUnitChosen, isFalse);
+      expect(cubit.state.maxBatchUnitIsIncompatible, isFalse);
+      expect(cubit.state.hasFieldErrors, isTrue);
+
+      cubit.baseYieldUnitChanged(Unit.gram);
+      expect(cubit.state.maxBatchUnitIsIncompatible, isTrue);
+
+      cubit.baseYieldUnitChanged(_piece);
+      expect(cubit.state.maxBatchUnitIsIncompatible, isFalse);
+      expect(cubit.state.hasFieldErrors, isFalse);
+    });
+
     test('a component needs an amount unless it is manual', () {
       final cubit = _editor()
         ..addIngredientComponent(buildIngredient(id: 'flour'));
