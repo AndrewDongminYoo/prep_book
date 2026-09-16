@@ -7,6 +7,7 @@
 library;
 
 export 'library_backup/library_backup.dart';
+export 'production_history/production_history.dart';
 export 'production_result/production_result.dart';
 export 'production_setup/production_setup.dart';
 export 'production_sheet/production_sheet.dart';

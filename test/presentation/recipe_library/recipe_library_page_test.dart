@@ -46,6 +46,7 @@ Widget _libraryOver(
   RecipeRepository recipes, {
   IngredientRepository? ingredients,
   LibraryBackupLauncher? libraryBackup,
+  ProductionHistoryLauncher? history,
   bool restored = false,
   LibraryBackupFailureKind? restoreFailure,
 }) => RecipeLibraryPage(
@@ -56,10 +57,20 @@ Widget _libraryOver(
     ingredients ?? FakeIngredientRepository(),
   ),
   production: buildProductionLauncher(recipes),
+  history: history ?? _historyLauncher(),
   libraryBackup: libraryBackup ?? _backupLauncher(),
   restored: restored,
   restoreFailure: restoreFailure,
 );
+
+ProductionHistoryLauncher _historyLauncher() {
+  final runs = FakeProductionRunRepository();
+  return ProductionHistoryLauncher(
+    listHistory: ListProductionHistory(runs),
+    openProductionRun: OpenProductionRun(runs),
+    productionSheet: ProductionSheetLauncher(platform: _HistorySheetPlatform()),
+  );
+}
 
 LibraryBackupLauncher _backupLauncher({
   LibraryBackupGateway? gateway,
@@ -101,6 +112,28 @@ final class _BackupPlatform implements LibraryBackupPlatform {
 
   @override
   Future<bool> saveBackup(LibraryBackupFile backup) async => saveResult;
+}
+
+final class _HistorySheetPlatform implements ProductionSheetPlatform {
+  @override
+  Future<Uint8List> loadFontBytes() async => Uint8List(0);
+
+  @override
+  Widget preview({
+    required Uint8List bytes,
+    required Widget loading,
+    required Widget Function(Object error) onError,
+  }) => const SizedBox.shrink();
+
+  @override
+  Future<bool> print({required Uint8List bytes, required String name}) async =>
+      true;
+
+  @override
+  Future<bool> share({
+    required Uint8List bytes,
+    required String filename,
+  }) async => true;
 }
 
 /// The screen's own scroll position.
@@ -183,6 +216,20 @@ void main() {
       expect(_inLibraryList(find.text('1000 g')), findsOneWidget);
       expect(find.text(_emptyMessage), findsNothing);
       expect(find.text(_errorMessage), findsNothing);
+    });
+
+    testWidgets('the app-bar history action opens production history', (
+      tester,
+    ) async {
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('Production history'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(ProductionHistoryPage), findsOneWidget);
+      expect(find.text('No production runs yet.'), findsOneWidget);
     });
 
     testWidgets('backup menu exposes both library operations', (tester) async {

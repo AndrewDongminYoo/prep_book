@@ -6,6 +6,7 @@ import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/library_backup/library_backup.dart';
+import 'package:prep_book/presentation/production_history/production_history.dart';
 import 'package:prep_book/presentation/production_setup/production_setup.dart';
 import 'package:prep_book/presentation/recipe_editor/recipe_editor.dart';
 import 'package:prep_book/presentation/recipe_library/recipe_library.dart';
@@ -23,6 +24,7 @@ class RecipeLibraryPage extends StatelessWidget {
     required this.searchLibrary,
     required this.editor,
     required this.production,
+    required this.history,
     required this.libraryBackup,
     required this.restored,
     required this.restoreFailure,
@@ -42,6 +44,9 @@ class RecipeLibraryPage extends StatelessWidget {
   /// Opens production setup, which each row's Production Run action goes
   /// through.
   final ProductionSetupLauncher production;
+
+  /// Opens the read-only production history screen.
+  final ProductionHistoryLauncher history;
 
   /// Opens backup and restore from the app-bar menu.
   final LibraryBackupLauncher libraryBackup;
@@ -65,6 +70,7 @@ class RecipeLibraryPage extends StatelessWidget {
       child: RecipeLibraryView(
         editor: editor,
         production: production,
+        history: history,
         libraryBackup: libraryBackup,
         restored: restored,
         restoreFailure: restoreFailure,
@@ -80,6 +86,7 @@ class RecipeLibraryView extends StatefulWidget {
   const RecipeLibraryView({
     required this.editor,
     required this.production,
+    required this.history,
     required this.libraryBackup,
     required this.restored,
     required this.restoreFailure,
@@ -91,6 +98,8 @@ class RecipeLibraryView extends StatefulWidget {
 
   /// Opens production setup for a row's Production Run action.
   final ProductionSetupLauncher production;
+
+  final ProductionHistoryLauncher history;
 
   final LibraryBackupLauncher libraryBackup;
 
@@ -176,6 +185,11 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
         // that would have to be reserved is most of a landscape phone's
         // body with the keyboard up.
         actions: [
+          IconButton(
+            tooltip: l10n.recipeLibraryHistory,
+            icon: const Icon(Icons.history),
+            onPressed: () => unawaited(widget.history.open(context)),
+          ),
           IconButton(
             tooltip: l10n.recipeLibraryCreate,
             icon: const Icon(Icons.add),
