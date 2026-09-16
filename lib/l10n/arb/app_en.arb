@@ -429,6 +429,10 @@
     "@recipeLibraryUnarchivedNotice": {
         "description": "Shown after an archived recipe is restored, beside the undo action"
     },
+    "recipeLibraryDuplicatedNotice": "Copy saved to the library.",
+    "@recipeLibraryDuplicatedNotice": {
+        "description": "Shown when a duplicate finished while another screen was open, so its editor was not opened automatically"
+    },
     "recipeLibraryArchiveFailed": "The recipe could not be archived.",
     "@recipeLibraryArchiveFailed": {
         "description": "Shown when archiving a recipe fails; the list is unchanged"

@@ -1674,6 +1674,57 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('a copy that lands under another route opens no editor', (
+      tester,
+    ) async {
+      // Holds the copy's write open, so there is a window in which the
+      // operator can open a route of their own before the notice arrives.
+      final deferred = DeferredWriteRecipeRepository(recipes);
+      await tester.pumpApp(_libraryOver(deferred));
+      await tester.pump();
+
+      await _pickFromFirstRowMenu(tester, 'Duplicate');
+      expect(deferred.written, hasLength(1));
+
+      // New stays enabled while the copy is stored: only Duplicate is
+      // greyed out. It pushes the blank editor over the library.
+      await tester.tap(find.byTooltip('New recipe'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RecipeEditorPage), findsOneWidget);
+
+      // The fake records a write without listing it, so the copy is
+      // seeded by hand before the write is released: the re-read that
+      // follows it then lists the copy as the real store would.
+      recipes.seed(deferred.written.single);
+      deferred.completeWrite(0);
+      await tester.pumpAndSettle();
+
+      // The blank editor is still the one on top, with nothing pushed over
+      // it: the copy's name is nowhere in the form. The copy is announced
+      // instead, on the screen the operator is looking at, because the
+      // editor that did not open was the only other confirmation.
+      expect(find.byType(RecipeEditorPage), findsOneWidget);
+      expect(
+        find.widgetWithText(TextFormField, 'Croissant dough (copy)'),
+        findsNothing,
+      );
+      expect(find.text('Copy saved to the library.'), findsOneWidget);
+
+      // One back lands on the library, not on a second editor, and the
+      // copy is stored and listed there: the editor was the convenience,
+      // the copy is the outcome.
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(RecipeLibraryPage), findsOneWidget);
+      expect(find.byType(RecipeEditorPage), findsNothing);
+      expect(deferred.written.single.id, 'croissant-dough-copy');
+      expect(
+        _inLibraryList(find.text('Croissant dough (copy)')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('the wide layout starts one tap target past 420', (
       tester,
     ) async {

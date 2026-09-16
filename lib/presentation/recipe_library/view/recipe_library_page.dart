@@ -220,7 +220,28 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
         // The copy is already stored, so this is the edit path over it:
         // closing without saving leaves the copy in place, and a save
         // re-reads the library exactly as any other edit does.
-        unawaited(_openEditor(context, widget.editor, recipe: copy));
+        //
+        // Only while this screen is the one on top. The notice arrives
+        // after the copy's write and the re-read that follows it, and
+        // every action but Duplicate stays enabled meanwhile, so by then
+        // the operator may be on a route of their own — the blank editor,
+        // history, a production setup. The copy's editor must not land
+        // over that one: it was never asked for there, and a blank editor
+        // underneath it is still holding the library as it was before the
+        // copy. The editor is a convenience, not the outcome — the copy is
+        // stored and listed either way, and its row's Edit opens the same
+        // editor this would have. What the operator on that other route
+        // still needs is to hear that the copy exists, because the pushed
+        // editor was the only confirmation the current-route path gives;
+        // the messenger is the app's, so the notice lands on the screen
+        // they are looking at.
+        if (ModalRoute.isCurrentOf(context) ?? true) {
+          unawaited(_openEditor(context, widget.editor, recipe: copy));
+        } else {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.recipeLibraryDuplicatedNotice)),
+          );
+        }
       case RecipeActionFailedNotice(:final action):
         messenger.showSnackBar(
           SnackBar(

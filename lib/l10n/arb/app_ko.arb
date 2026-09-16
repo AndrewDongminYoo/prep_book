@@ -429,6 +429,10 @@
     "@recipeLibraryUnarchivedNotice": {
         "description": "보관한 레시피를 다시 꺼낸 뒤 실행 취소 동작과 함께 보여 주는 문구"
     },
+    "recipeLibraryDuplicatedNotice": "복사본을 라이브러리에 저장했습니다.",
+    "@recipeLibraryDuplicatedNotice": {
+        "description": "다른 화면이 열려 있는 동안 복제가 끝나서 복사본 편집기를 자동으로 열지 않았을 때 보여 주는 문구"
+    },
     "recipeLibraryArchiveFailed": "레시피를 보관하지 못했습니다.",
     "@recipeLibraryArchiveFailed": {
         "description": "레시피 보관에 실패했을 때 보여 주는 문구. 목록은 그대로다"
