@@ -4,8 +4,5 @@
   "type": "module",
   "scripts": {
     "test:api": "node --test api/lib/_extract-recipe-handler_test.mjs"
-  },
-  "dependencies": {
-    "@vercel/analytics": "^2.0.1"
   }
 }
