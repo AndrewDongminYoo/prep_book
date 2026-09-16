@@ -4,6 +4,10 @@
     "@recipeLibraryTitle": {
         "description": "레시피 목록 화면의 제목"
     },
+    "recipeLibraryHistory": "생산 이력",
+    "@recipeLibraryHistory": {
+        "description": "생산 이력을 여는 동작의 도움말"
+    },
     "recipeLibrarySearchLabel": "레시피 검색",
     "@recipeLibrarySearchLabel": {
         "description": "레시피 목록 화면 검색 입력란의 라벨"
@@ -39,6 +43,43 @@
     "recipeLibraryRetry": "다시 시도",
     "@recipeLibraryRetry": {
         "description": "실패한 읽기를 다시 시도하는 버튼의 라벨"
+    },
+    "productionHistoryTitle": "생산 이력",
+    "@productionHistoryTitle": {
+        "description": "생산 이력 화면의 제목"
+    },
+    "productionHistoryEmpty": "아직 저장된 생산 실행이 없습니다.",
+    "@productionHistoryEmpty": {
+        "description": "저장된 생산 실행이 없을 때 보여 주는 문구"
+    },
+    "productionHistoryError": "생산 이력을 불러오지 못했습니다.",
+    "@productionHistoryError": {
+        "description": "저장된 생산 실행 요약을 읽지 못했을 때 보여 주는 문구"
+    },
+    "productionHistoryRevision": "{revision}차 버전",
+    "@productionHistoryRevision": {
+        "description": "생산 이력 항목에 표시하는 저장된 레시피 버전",
+        "placeholders": {
+            "revision": {
+                "type": "int"
+            }
+        }
+    },
+    "productionHistoryDraft": "초안",
+    "@productionHistoryDraft": {
+        "description": "확인하지 않은 필수 경고가 있는 저장된 생산 실행의 상태"
+    },
+    "productionHistoryReady": "준비됨",
+    "@productionHistoryReady": {
+        "description": "확인하지 않은 필수 경고가 없는 저장된 생산 실행의 상태"
+    },
+    "productionHistoryMissing": "이 생산 실행은 더 이상 존재하지 않습니다.",
+    "@productionHistoryMissing": {
+        "description": "목록을 읽은 뒤 생산 실행이 사라졌을 때 보여 주는 문구"
+    },
+    "productionHistoryOpenError": "이 생산 실행을 열지 못했습니다.",
+    "@productionHistoryOpenError": {
+        "description": "저장된 생산 실행을 읽지 못했을 때 보여 주는 문구"
     },
     "libraryBackupMenu": "라이브러리 백업",
     "@libraryBackupMenu": {

@@ -9,6 +9,7 @@ class App extends StatelessWidget {
     required this.searchLibrary,
     required this.editor,
     required this.production,
+    required this.history,
     required this.libraryBackup,
     required this.restored,
     required this.restoreFailure,
@@ -28,6 +29,9 @@ class App extends StatelessWidget {
   /// Opens production setup, from each library row's Production Run
   /// action.
   final ProductionSetupLauncher production;
+
+  /// Opens stored production runs for preview, share, and print.
+  final ProductionHistoryLauncher history;
 
   /// Opens native backup and restore flows from the library menu.
   final LibraryBackupLauncher libraryBackup;
@@ -54,6 +58,7 @@ class App extends StatelessWidget {
         searchLibrary: searchLibrary,
         editor: editor,
         production: production,
+        history: history,
         libraryBackup: libraryBackup,
         restored: restored,
         restoreFailure: restoreFailure,

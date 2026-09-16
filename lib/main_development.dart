@@ -44,6 +44,13 @@ Future<void> main() async {
               ),
             ),
           ),
+          history: ProductionHistoryLauncher(
+            listHistory: ListProductionHistory(runs),
+            openProductionRun: OpenProductionRun(runs),
+            productionSheet: const ProductionSheetLauncher(
+              platform: PrintingProductionSheetPlatform(),
+            ),
+          ),
           libraryBackup: LibraryBackupLauncher(
             createBackup: createLibraryBackup,
             restoreBackup: restoreLibraryBackup,

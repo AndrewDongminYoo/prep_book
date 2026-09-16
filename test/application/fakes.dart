@@ -194,9 +194,11 @@ final class FakeProductionRunRepository implements ProductionRunRepository {
         ProductionRunSummary(
           id: run.id,
           recipeId: run.recipeId,
+          recipeName: run.recipe.name,
           recipeRevision: run.recipeRevision,
           targetYield: run.targetYield,
           createdAt: run.createdAt,
+          isDraft: !run.isFinalizable,
         ),
     ];
   }

@@ -20,6 +20,7 @@ void main() {
           searchLibrary: SearchLibrary(recipes),
           editor: buildEditorLauncher(recipes, FakeIngredientRepository()),
           production: buildProductionLauncher(recipes),
+          history: _historyLauncher(),
           libraryBackup: LibraryBackupLauncher(
             createBackup: CreateLibraryBackup(_BackupGateway()),
             restoreBackup: RestoreLibraryBackup(_BackupGateway()),
@@ -43,6 +44,15 @@ void main() {
   });
 }
 
+ProductionHistoryLauncher _historyLauncher() {
+  final runs = FakeProductionRunRepository();
+  return ProductionHistoryLauncher(
+    listHistory: ListProductionHistory(runs),
+    openProductionRun: OpenProductionRun(runs),
+    productionSheet: ProductionSheetLauncher(platform: _SheetPlatform()),
+  );
+}
+
 final class _BackupGateway implements LibraryBackupGateway {
   @override
   Future<LibraryBackupFile> create() async => LibraryBackupFile(
@@ -60,4 +70,26 @@ final class _BackupPlatform implements LibraryBackupPlatform {
 
   @override
   Future<bool> saveBackup(LibraryBackupFile backup) async => false;
+}
+
+final class _SheetPlatform implements ProductionSheetPlatform {
+  @override
+  Future<Uint8List> loadFontBytes() async => Uint8List(0);
+
+  @override
+  Widget preview({
+    required Uint8List bytes,
+    required Widget loading,
+    required Widget Function(Object error) onError,
+  }) => const SizedBox.shrink();
+
+  @override
+  Future<bool> print({required Uint8List bytes, required String name}) async =>
+      true;
+
+  @override
+  Future<bool> share({
+    required Uint8List bytes,
+    required String filename,
+  }) async => true;
 }

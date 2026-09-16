@@ -69,9 +69,11 @@ final class ProductionRunSummary {
   const ProductionRunSummary({
     required this.id,
     required this.recipeId,
+    required this.recipeName,
     required this.recipeRevision,
     required this.targetYield,
     required this.createdAt,
+    required this.isDraft,
   });
 
   /// Stable identifier of the run.
@@ -79,6 +81,9 @@ final class ProductionRunSummary {
 
   /// The recipe the run was computed from.
   final String recipeId;
+
+  /// The stored name of the recipe the run was computed from.
+  final String recipeName;
 
   /// The revision of that recipe.
   final int recipeRevision;
@@ -88,6 +93,9 @@ final class ProductionRunSummary {
 
   /// When the run was calculated.
   final DateTime createdAt;
+
+  /// Whether a blocking warning remained unacknowledged when listed.
+  final bool isDraft;
 }
 
 /// Storage for production runs and the acknowledgement and override state

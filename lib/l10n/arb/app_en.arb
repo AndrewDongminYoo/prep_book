@@ -4,6 +4,10 @@
     "@recipeLibraryTitle": {
         "description": "Title of the recipe library screen"
     },
+    "recipeLibraryHistory": "Production history",
+    "@recipeLibraryHistory": {
+        "description": "Tooltip for the action that opens production history"
+    },
     "recipeLibrarySearchLabel": "Search recipes",
     "@recipeLibrarySearchLabel": {
         "description": "Label of the search field on the recipe library screen"
@@ -39,6 +43,43 @@
     "recipeLibraryRetry": "Try again",
     "@recipeLibraryRetry": {
         "description": "Label of the button that retries a failed read"
+    },
+    "productionHistoryTitle": "Production history",
+    "@productionHistoryTitle": {
+        "description": "Title of the production history screen"
+    },
+    "productionHistoryEmpty": "No production runs yet.",
+    "@productionHistoryEmpty": {
+        "description": "Shown when no stored production runs exist"
+    },
+    "productionHistoryError": "Production history could not be loaded.",
+    "@productionHistoryError": {
+        "description": "Shown when stored production-run summaries cannot be read"
+    },
+    "productionHistoryRevision": "Revision {revision}",
+    "@productionHistoryRevision": {
+        "description": "Stored recipe revision shown in a production history row",
+        "placeholders": {
+            "revision": {
+                "type": "int"
+            }
+        }
+    },
+    "productionHistoryDraft": "Draft",
+    "@productionHistoryDraft": {
+        "description": "Status of a stored run with an unacknowledged blocking warning"
+    },
+    "productionHistoryReady": "Ready",
+    "@productionHistoryReady": {
+        "description": "Status of a stored run with no unacknowledged blocking warning"
+    },
+    "productionHistoryMissing": "This production run is no longer available.",
+    "@productionHistoryMissing": {
+        "description": "Shown when a listed production run disappeared before it opened"
+    },
+    "productionHistoryOpenError": "This production run could not be opened.",
+    "@productionHistoryOpenError": {
+        "description": "Shown when a stored production run cannot be read"
     },
     "libraryBackupMenu": "Library backup",
     "@libraryBackupMenu": {

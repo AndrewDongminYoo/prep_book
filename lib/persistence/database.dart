@@ -1,79 +1,70 @@
 import 'package:prep_book/persistence/schema/v1.dart';
+import 'package:prep_book/persistence/schema/v2.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// The schema version this build writes and expects.
-const currentSchemaVersion = 1;
+const currentSchemaVersion = 2;
 
 /// Upgrades keyed by the version they produce. Applied in ascending order, so
 /// version N is reached by running every entry from 2 through N.
 ///
-/// Empty at version 1. The harness that exercises this map exists from the
-/// first version deliberately: writing it alongside version 2 would mean
-/// building the upgrade and its means of verification at the same time.
-const schemaUpgrades = <int, List<String>>{};
+const schemaUpgrades = <int, List<String>>{2: schemaV2UpgradeStatements};
 
-/// Runs every upgrade that takes a database from version [from] to [to], in
-/// ascending order of the version it produces.
+/// A data migration that runs after one schema version's DDL.
+typedef SchemaBackfill = Future<void> Function(DatabaseExecutor db);
+
+/// Backfills keyed by the version whose DDL must run first.
+const schemaUpgradeBackfills = <int, SchemaBackfill>{
+  2: backfillProductionRunSummaryMetadata,
+};
+
+/// Runs every upgrade that takes a database from version [from] to [to], in ascending order of the version it produces.
 ///
-/// This is what [openPrepBookDatabase] hands sqflite as its `onUpgrade`
-/// handler, and it is a named function rather than a closure so a test can
-/// drive it directly. At version 1 there is no stored version between 0 and
-/// the current one, so sqflite calls `onCreate` and never this — without a
-/// seam the whole upgrade path would ship unexercised, which is the failure
-/// the specification asks the harness to prevent by existing from the first
-/// version.
+/// This is what [openPrepBookDatabase] hands sqflite as its `onUpgrade` handler, and it is a named function rather than a closure so tests can drive the real upgrade path directly.
 ///
-/// [upgrades] defaults to the real [schemaUpgrades]. A test substitutes a
-/// map of its own, so the loop, the ordering, and the gap between two
-/// registered versions are all exercised against a real database before the
-/// first genuine upgrade is written.
+/// [upgrades] and [backfills] default to the production migration contract.
+/// Tests may substitute them to exercise ordering and missing-version behavior independently from a specific schema change.
 Future<void> applySchemaUpgrades(
   DatabaseExecutor db,
   int from,
   int to, {
   Map<int, List<String>> upgrades = schemaUpgrades,
+  Map<int, SchemaBackfill> backfills = schemaUpgradeBackfills,
 }) async {
   for (var version = from + 1; version <= to; version++) {
     for (final statement in upgrades[version] ?? const <String>[]) {
       await db.execute(statement);
     }
+    await backfills[version]?.call(db);
   }
 }
 
 /// Creates the version 1 schema in [db] and then brings it up to [version].
 ///
-/// This is what [openPrepBookDatabase] hands sqflite as its `onCreate`
-/// handler, and it is a named function rather than a closure for the same
-/// reason [applySchemaUpgrades] is: so a test can drive it directly.
+/// This is what [openPrepBookDatabase] hands sqflite as its `onCreate` handler, and it is a named function rather than a closure for the same reason [applySchemaUpgrades] is: so tests can drive it directly.
 ///
-/// The [applySchemaUpgrades] call is what makes the create path correct at
-/// any version above 1. sqflite calls `onCreate` — not `onUpgrade` — for a
-/// brand-new database, and then stamps it at the version the open requested.
-/// A create that ran only [schemaV1Statements] would therefore leave a fresh
-/// installation holding the version 1 tables while recorded as being at the
-/// current version, and every later open would consider it up to date. The
-/// gap surfaces at runtime as a missing table or column rather than at open,
-/// which is the failure with no signal attached to it.
+/// The [applySchemaUpgrades] call keeps fresh creation and incremental upgrades on the same schema path.
+/// sqflite calls `onCreate` instead of `onUpgrade` for a brand-new database and then stamps it at the requested version, so creating only [schemaV1Statements] would leave a fresh database with an obsolete catalog recorded as current.
 ///
-/// At version 1 the call does nothing, because [applySchemaUpgrades]'s loop
-/// starts at `from + 1`.
+/// At version 1 the call does nothing because [applySchemaUpgrades]'s loop starts at `from + 1`.
 ///
-/// [upgrades] defaults to the real [schemaUpgrades], and exists for the same
-/// reason [applySchemaUpgrades]'s does. [openPrepBookDatabase] hardcodes
-/// `version: currentSchemaVersion`, so nothing can force a create above
-/// version 1 through it, and the call below would ship unexercised until the
-/// first genuine upgrade — the untested seam the harness exists to prevent.
-/// A test substitutes a map of its own and asserts that what a fake version
-/// 2 adds is really present in the newly created database.
+/// [upgrades] and [backfills] exist for the same test seam as the corresponding parameters on [applySchemaUpgrades].
 Future<void> createPrepBookSchema(
   DatabaseExecutor db,
   int version, {
   Map<int, List<String>> upgrades = schemaUpgrades,
+  Map<int, SchemaBackfill> backfills = schemaUpgradeBackfills,
 }) async {
   for (final statement in schemaV1Statements) {
     await db.execute(statement);
   }
-  await applySchemaUpgrades(db, 1, version, upgrades: upgrades);
+  await applySchemaUpgrades(
+    db,
+    1,
+    version,
+    upgrades: upgrades,
+    backfills: backfills,
+  );
 }
 
 /// Verifies that [db] has exactly the application schema for this build.
@@ -88,7 +79,7 @@ Future<void> validatePrepBookSchema(DatabaseExecutor db) async {
     '^CREATE (?:UNIQUE )?(TABLE|INDEX) ([^ (]+)',
     caseSensitive: false,
   );
-  for (final statement in schemaV1Statements) {
+  for (final statement in schemaV2Statements) {
     final sql = _normalizeSchemaSql(statement);
     final match = declaration.firstMatch(sql)!;
     expected[match.group(2)!] = (type: match.group(1)!.toLowerCase(), sql: sql);
@@ -130,8 +121,12 @@ Future<void> validatePrepBookSchema(DatabaseExecutor db) async {
   }
 }
 
-String _normalizeSchemaSql(String sql) =>
-    sql.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+String _normalizeSchemaSql(String sql) => sql
+    .trim()
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .replaceAll(RegExp(r'\s*,\s*'), ', ')
+    .replaceAll(RegExp(r'\s*\)'), ')')
+    .toLowerCase();
 
 /// Opens the database at [path], creating or upgrading it as needed.
 ///

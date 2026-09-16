@@ -55,9 +55,11 @@ ProductionRunSummary _summary(String id, DateTime createdAt) =>
     ProductionRunSummary(
       id: id,
       recipeId: 'a',
+      recipeName: 'Recipe A',
       recipeRevision: 1,
       targetYield: Quantity.parse('1000', Unit.gram),
       createdAt: createdAt,
+      isDraft: false,
     );
 
 void main() {
@@ -100,6 +102,34 @@ void main() {
       final summaries = await ListProductionHistory(runs).call();
 
       expect(summaries.map((s) => s.id), ['c', 'a', 'b']);
+    },
+  );
+
+  test(
+    'history exposes an application read model for every summary field',
+    () async {
+      final createdAt = DateTime.utc(2026, 9, 8, 10);
+      final runs = _FixedOrderRunRepository([
+        ProductionRunSummary(
+          id: 'run-1',
+          recipeId: 'recipe-1',
+          recipeName: 'Morning rolls',
+          recipeRevision: 4,
+          targetYield: Quantity.parse('24', Unit.count('roll')),
+          createdAt: createdAt,
+          isDraft: true,
+        ),
+      ]);
+
+      final entry = (await ListProductionHistory(runs).call()).single;
+
+      expect(entry.id, 'run-1');
+      expect(entry.recipeId, 'recipe-1');
+      expect(entry.recipeName, 'Morning rolls');
+      expect(entry.recipeRevision, 4);
+      expect(entry.targetYield, Quantity.parse('24', Unit.count('roll')));
+      expect(entry.createdAt, createdAt);
+      expect(entry.isDraft, isTrue);
     },
   );
 
