@@ -93,6 +93,19 @@ check:
     - $lint
     - $test
 
+gate:
+  # Everything CI's `build` job runs, in its order: the competition variant's
+  # API tests and web build come first there and fail the job before any Dart
+  # gate is reached, so a `check` that passed says nothing about them. Kept out
+  # of `check` because the web build takes tens of seconds, which is too slow
+  # for the commit loop and right for the push that decides.
+  (description): The pre-push gate — the championship API tests and web build, then everything `check` runs.
+  (execution): once
+  (scripts):
+    - $api:test
+    - $build:championship-web
+    - $check
+
 # --- Code generation --------------------------------------------------------
 l10n:
   (aliases): gen-l10n
