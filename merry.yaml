@@ -93,6 +93,19 @@ check:
     - $lint
     - $test
 
+gate:
+  # Everything CI's `build` job runs, in its order: the competition variant's
+  # API tests and web build come first there and fail the job before any Dart
+  # gate is reached, so a `check` that passed says nothing about them. Kept out
+  # of `check` because the web build takes tens of seconds, which is too slow
+  # for the commit loop and right for the push that decides.
+  (description): The pre-push gate — the championship API tests and web build, then everything `check` runs.
+  (execution): once
+  (scripts):
+    - $api:test
+    - $build:championship-web
+    - $check
+
 # --- Code generation --------------------------------------------------------
 l10n:
   (aliases): gen-l10n
@@ -129,5 +142,9 @@ build:
     (scripts): flutter build ipa --release --flavor production --target lib/main_production.dart --tree-shake-icons
 
   championship-web:
-    (description): Builds the isolated championship web release.
-    (scripts): flutter build web --release --target lib/main_championship.dart --tree-shake-icons
+    # The same command `.github/workflows/main.yaml` and `vercel.json` run,
+    # define included: the entrypoint's fallback happens to equal it today, so
+    # an artifact built without the define is only accidentally the deployed
+    # one, and `gate` is meant to exercise the build CI and Vercel ship.
+    (description): Builds the isolated championship web release, as CI and Vercel build it.
+    (scripts): flutter build web --release --target lib/main_championship.dart --dart-define=AI_IMPORT_ENDPOINT=/api/extract-recipe --tree-shake-icons
