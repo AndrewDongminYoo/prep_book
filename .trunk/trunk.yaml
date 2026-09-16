@@ -30,11 +30,12 @@ lint:
         - web/assets/js/pdf/5.7.284/pdf.min.mjs
         - web/assets/js/pdf/5.7.284/pdf.worker.min.mjs
   enabled:
-    - pinact@4.0.0
+    - pinact@4.1.1:
+        commands: [lint, upgrade]
     - shellcheck@0.11.0
     - shfmt@3.13.1
     - actionlint@1.7.12
-    - checkov@3.3.16
+    - checkov@3.3.17
     - git-diff-check
     - grype@0.116.1
     - ktlint@1.8.0
