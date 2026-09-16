@@ -28,9 +28,9 @@
     "@recipeLibraryEmpty": {
         "description": "Shown above the create action when the library holds nothing to list"
     },
-    "recipeLibraryNoMatches": "No recipes match your search.",
+    "recipeLibraryNoMatches": "No recipes match your search or filter.",
     "@recipeLibraryNoMatches": {
-        "description": "Shown when a search matches no recipe"
+        "description": "Shown when a search or the category filter leaves no recipe to list"
     },
     "recipeLibraryOnlyArchived": "Every recipe here is archived. Turn the switch on to see them.",
     "@recipeLibraryOnlyArchived": {
@@ -390,6 +390,64 @@
     "recipeLibraryEdit": "Edit",
     "@recipeLibraryEdit": {
         "description": "Label of the per-row action that opens the recipe in the editor"
+    },
+    "recipeLibraryRowMenu": "More actions",
+    "@recipeLibraryRowMenu": {
+        "description": "Tooltip of the per-row menu holding the duplicate and archive actions"
+    },
+    "recipeLibraryDuplicate": "Duplicate",
+    "@recipeLibraryDuplicate": {
+        "description": "Label of the action that stores a copy of the recipe and opens it in the editor"
+    },
+    "recipeLibraryArchive": "Archive",
+    "@recipeLibraryArchive": {
+        "description": "Label of the action that archives a live recipe"
+    },
+    "recipeLibraryUnarchive": "Unarchive",
+    "@recipeLibraryUnarchive": {
+        "description": "Label of the action that restores an archived recipe"
+    },
+    "recipeLibraryCopyName": "{name} (copy)",
+    "@recipeLibraryCopyName": {
+        "description": "The name a duplicated recipe is stored under before the operator renames it",
+        "placeholders": {
+            "name": {
+                "type": "String",
+                "example": "Croissant dough"
+            }
+        }
+    },
+    "recipeLibraryUndo": "Undo",
+    "@recipeLibraryUndo": {
+        "description": "Label of the notice action that reverses an archive or unarchive"
+    },
+    "recipeLibraryArchivedNotice": "Recipe archived.",
+    "@recipeLibraryArchivedNotice": {
+        "description": "Shown after a recipe is archived, beside the undo action"
+    },
+    "recipeLibraryUnarchivedNotice": "Recipe unarchived.",
+    "@recipeLibraryUnarchivedNotice": {
+        "description": "Shown after an archived recipe is restored, beside the undo action"
+    },
+    "recipeLibraryDuplicatedNotice": "Copy saved to the library.",
+    "@recipeLibraryDuplicatedNotice": {
+        "description": "Shown when a duplicate finished while another screen was open, so its editor was not opened automatically"
+    },
+    "recipeLibraryArchiveFailed": "The recipe could not be archived.",
+    "@recipeLibraryArchiveFailed": {
+        "description": "Shown when archiving a recipe fails; the list is unchanged"
+    },
+    "recipeLibraryUnarchiveFailed": "The recipe could not be unarchived.",
+    "@recipeLibraryUnarchiveFailed": {
+        "description": "Shown when restoring an archived recipe fails; the list is unchanged"
+    },
+    "recipeLibraryDuplicateFailed": "The recipe could not be duplicated.",
+    "@recipeLibraryDuplicateFailed": {
+        "description": "Shown when storing a copy of a recipe fails; the list is unchanged"
+    },
+    "recipeLibraryAllCategories": "All",
+    "@recipeLibraryAllCategories": {
+        "description": "Label of the category chip that turns the category filter off"
     },
     "recipeEditorCycleError": "A recipe cannot depend on itself: {path}",
     "@recipeEditorCycleError": {

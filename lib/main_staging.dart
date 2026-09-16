@@ -17,6 +17,8 @@ Future<void> main() async {
         }) => App(
           listLibrary: ListLibrary(recipes),
           searchLibrary: SearchLibrary(recipes),
+          archiveRecipe: ArchiveRecipe(recipes),
+          duplicateRecipe: DuplicateRecipe(recipes, const SystemClock()),
           editor: RecipeEditorLauncher(
             listLibrary: ListLibrary(recipes),
             listIngredients: ListIngredients(ingredients),

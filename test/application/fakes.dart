@@ -7,7 +7,8 @@ import 'package:prep_book/persistence/repositories.dart';
 /// before they became parameters. The presentation layer needs both: it
 /// sorts on `modifiedAt` and renders `baseYield`, and a fixture where every
 /// recipe carries the same value cannot tell a right implementation from a
-/// wrong one.
+/// wrong one. [category] stays `null` unless asked for, so the library's
+/// category filter has nothing to offer over fixtures that never set it.
 Recipe buildRecipe({
   required String id,
   int revision = 1,
@@ -16,6 +17,7 @@ Recipe buildRecipe({
   bool isArchived = false,
   Quantity? baseYield,
   DateTime? modifiedAt,
+  String? category,
 }) => Recipe(
   id: id,
   revision: revision,
@@ -23,6 +25,7 @@ Recipe buildRecipe({
   baseYield: baseYield ?? Quantity.parse('1000', Unit.gram),
   modifiedAt: modifiedAt ?? DateTime.utc(2026, 9, 8),
   isArchived: isArchived,
+  category: category,
   components:
       components ??
       [
