@@ -180,6 +180,10 @@
     "@recipeEditorAmountRequired": {
         "description": "수량이 비어 있거나 0보다 크지 않을 때 보여 주는 문구"
     },
+    "recipeEditorUnitRequired": "단위를 고르세요.",
+    "@recipeEditorUnitRequired": {
+        "description": "새 레시피의 기준 생산량 단위를 고르지 않은 채 저장을 시도했을 때 그 단위 아래에 보여 주는 문구"
+    },
     "recipeEditorUnitIncompatible": "기준 생산량과 환산할 수 있는 단위를 고르세요.",
     "@recipeEditorUnitIncompatible": {
         "description": "최대 생산량 단위를 기준 생산량 단위로 환산할 수 없을 때 보여 주는 문구"

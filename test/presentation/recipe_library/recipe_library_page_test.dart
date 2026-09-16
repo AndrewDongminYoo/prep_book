@@ -972,6 +972,11 @@ void main() {
         'Summer focaccia',
       );
       await tester.enterText(find.byKey(const ValueKey('base-yield')), '2000');
+      // A new recipe starts with no base yield unit, so the save needs one.
+      await tester.tap(find.byType(DropdownButtonFormField<Unit>).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('g').last);
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TextButton, 'Save'));
       await tester.pumpAndSettle();
 

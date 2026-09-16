@@ -77,7 +77,8 @@ Future<void> _save(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
-/// Fills the two fields a save needs before it will write.
+/// Fills the fields a save needs before it will write: the name, the base
+/// yield amount, and the base yield unit, which a new recipe starts without.
 Future<void> _fillRequiredFields(
   WidgetTester tester, {
   String name = 'Ciabatta',
@@ -85,6 +86,14 @@ Future<void> _fillRequiredFields(
   await tester.enterText(find.byKey(const ValueKey('recipe-name')), name);
   await tester.enterText(find.byKey(const ValueKey('base-yield')), '1000');
   await tester.pump();
+  await _chooseBaseYieldUnit(tester, 'g');
+}
+
+/// Picks [symbol] in the base yield unit dropdown, the first on the form.
+Future<void> _chooseBaseYieldUnit(WidgetTester tester, String symbol) async {
+  await _tap(tester, find.byType(DropdownButtonFormField<Unit>).first);
+  await tester.tap(find.text(symbol).last);
+  await tester.pumpAndSettle();
 }
 
 /// Scrolls [finder] into view and taps it.
@@ -322,6 +331,39 @@ void main() {
         isEmpty,
       );
     });
+
+    testWidgets(
+      'a new recipe starts with no base yield unit and save says so',
+      (tester) async {
+        await _openEditor(tester, recipes: recipes, ingredients: ingredients);
+
+        // Empty rather than pre-set to grams: a recipe counted in pieces
+        // saved under a unit nobody chose is a wrong recipe, not a default.
+        final unitField = tester.widget<DropdownButtonFormField<Unit>>(
+          find.byType(DropdownButtonFormField<Unit>).first,
+        );
+        expect(unitField.initialValue, isNull);
+
+        await tester.enterText(
+          find.byKey(const ValueKey('recipe-name')),
+          'Rolls',
+        );
+        await tester.enterText(find.byKey(const ValueKey('base-yield')), '24');
+        await _save(tester);
+
+        expect(find.text('Choose a unit.'), findsOneWidget);
+        expect(
+          recipes.calls.where((call) => call.startsWith('saveRevision:')),
+          isEmpty,
+        );
+
+        await _chooseBaseYieldUnit(tester, 'g');
+        await _save(tester);
+
+        expect(find.text('Choose a unit.'), findsNothing);
+        expect((await recipes.findLatest('rolls'))!.baseYield.unit, Unit.gram);
+      },
+    );
 
     testWidgets('a maximum batch yield in the wrong dimension is refused', (
       tester,

@@ -467,10 +467,13 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// The form as [recipe] leaves it, or an empty one when it is `null`.
   static RecipeEditorState _initialState(Recipe? recipe) {
     if (recipe == null) {
+      // Grams is a placeholder, not a default: the form shows no unit and
+      // refuses to save until one is chosen. See `baseYieldUnitChosen`.
       return RecipeEditorState(
         recipeId: '',
         isNewRecipe: true,
         baseYieldUnit: Unit.gram,
+        baseYieldUnitChosen: false,
         maxBatchUnit: Unit.gram,
       );
     }
@@ -482,6 +485,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
       category: recipe.category ?? '',
       baseYieldAmount: _amountText(recipe.baseYield),
       baseYieldUnit: recipe.baseYield.unit,
+      baseYieldUnitChosen: true,
       storedBaseYield: recipe.baseYield,
       maxBatchAmount: maxBatchYield == null ? '' : _amountText(maxBatchYield),
       maxBatchUnit: maxBatchYield?.unit ?? recipe.baseYield.unit,

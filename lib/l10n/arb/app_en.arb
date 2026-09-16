@@ -180,6 +180,10 @@
     "@recipeEditorAmountRequired": {
         "description": "Shown under an amount field that is empty or not a positive number"
     },
+    "recipeEditorUnitRequired": "Choose a unit.",
+    "@recipeEditorUnitRequired": {
+        "description": "Shown under the base yield unit of a new recipe when a save is attempted before one is chosen"
+    },
     "recipeEditorUnitIncompatible": "Use a unit the base yield converts to.",
     "@recipeEditorUnitIncompatible": {
         "description": "Shown under the maximum batch yield when its unit cannot convert to the base yield's"

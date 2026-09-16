@@ -354,9 +354,15 @@ class _MetadataSection extends StatelessWidget {
           fieldKey: const ValueKey('base-yield'),
           label: l10n.recipeEditorBaseYieldLabel,
           amount: state.baseYieldAmount,
-          unit: state.baseYieldUnit,
+          // No unit shown until one is chosen: the state's placeholder is
+          // what a save refuses, and showing it would contradict the error
+          // that asks for a choice.
+          unit: state.baseYieldUnitChosen ? state.baseYieldUnit : null,
           choices: state.unitChoices,
           errorText: _baseYieldError(l10n, state),
+          unitErrorText: state.submitted && !state.baseYieldUnitChosen
+              ? l10n.recipeEditorUnitRequired
+              : null,
           onAmountChanged: cubit.baseYieldAmountChanged,
           onUnitChanged: cubit.baseYieldUnitChanged,
         ),
@@ -446,14 +452,20 @@ class _AmountRow extends StatelessWidget {
     required this.errorText,
     required this.onAmountChanged,
     required this.onUnitChanged,
+    this.unitErrorText,
   });
 
   final Key fieldKey;
   final String label;
   final String amount;
-  final Unit unit;
+
+  /// The selected unit, or `null` for a dropdown with nothing selected yet.
+  final Unit? unit;
   final List<Unit> choices;
   final String? errorText;
+
+  /// What is wrong with the unit, shown under its dropdown.
+  final String? unitErrorText;
   final ValueChanged<String> onAmountChanged;
   final ValueChanged<Unit> onUnitChanged;
 
@@ -490,6 +502,7 @@ class _AmountRow extends StatelessWidget {
             decoration: InputDecoration(
               labelText: l10n.recipeEditorUnitLabel,
               border: const OutlineInputBorder(),
+              errorText: unitErrorText,
             ),
             items: [
               for (final choice in choices)
