@@ -17,8 +17,8 @@ The tree is the Very Good CLI template with its `counter` sample removed, plus f
 
 The design document defines six isolated units as the target layout: presentation, application, domain, persistence, export, and migration.
 `lib/domain/` is complete for units and their conversion table, `Quantity`, rounding, the recipe model, dependency-cycle and missing-dependency validation, batch decomposition, the production calculator, nested sub-recipe expansion, and the immutable production-run snapshot.
-`lib/persistence/` is complete for the version 1 schema and its upgrade path, the repositories for recipes, ingredients, and production runs, and the codecs that store an exact quantity and a run's result payload.
-`lib/application/` holds one class per use case over the repository interfaces, and `lib/presentation/` holds five screens: the recipe library, the recipe editor, production setup, production result, and the production-sheet preview that shares or prints the PDF.
+`lib/persistence/` is complete for the version 2 schema and its upgrade path, the repositories for recipes, ingredients, and production runs, and the codecs that store an exact quantity and a run's result payload.
+`lib/application/` holds one class per use case over the repository interfaces, and `lib/presentation/` holds six screens: the recipe library, the recipe editor, production setup, production result, production history, and the production-sheet preview that shares or prints the PDF.
 `lib/export/` is complete for the production-sheet document builder, its deterministic filename, and the A4 PDF renderer; `test/export/export_boundary_test.dart` keeps it free of Flutter and of the `printing` plugin, which is imported in exactly one place, `lib/presentation/production_sheet/view/production_sheet_platform.dart`.
 Migration is still a target to build, not a directory to look for.
 

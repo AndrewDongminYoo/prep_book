@@ -15,7 +15,7 @@ The mobile application works entirely offline. It requires no account, no subscr
 
 ## Status
 
-Pre-release, version `0.1.0+1`. The domain, persistence, application, and export layers are implemented, and the recipe library, recipe editor, production setup, production result, and production-sheet screens are in place; migration is not implemented yet.
+Pre-release, version `0.1.0+1`. The domain, persistence, application, and export layers are implemented, and the recipe library, recipe editor, production setup, production result, production history, and production-sheet screens are in place; the separate migration unit is not implemented yet.
 Portable library backup and restore are implemented and verified on iOS and Android.
 
 The approved design is `docs/notes/2026-09-06-prepbook-pro-design.md`, which defines the scope, domain model, scaling semantics, screens, testing strategy, and definition of done.
