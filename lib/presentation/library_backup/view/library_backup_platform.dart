@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:prep_book/application/application.dart';
+import 'package:prep_book/presentation/library_backup/view/android_backup_save.dart';
 
 /// A selected file exposed without native paths or plugin types.
 final class PickedLibraryBackup {
@@ -125,6 +127,12 @@ Future<bool> _saveWithFilePicker({
   required String suggestedName,
   required Uint8List bytes,
 }) async {
+  if (Platform.isAndroid) {
+    // Android integration tests exercise this host-unreachable branch.
+    // coverage:ignore-start
+    return await saveAndroidBackup(suggestedName: suggestedName, bytes: bytes);
+    // coverage:ignore-end
+  }
   final uri = await FilePicker.saveFile(fileName: suggestedName, bytes: bytes);
   return uri != null;
 }
