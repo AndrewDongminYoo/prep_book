@@ -321,6 +321,31 @@ void main() {
     expect(summaries.map((s) => s.id), ['new', 'old']);
   });
 
+  test('a summary carries the stored recipe name and draft state', () async {
+    await repository.save(buildRunWithOneBlockingWarning(id: 'run-1'));
+
+    final summary = (await repository.listSummaries()).single;
+
+    expect(summary.recipeName, 'Needs a manual line');
+    expect(summary.isDraft, isTrue);
+  });
+
+  test(
+    'acknowledging the last blocking warning makes the summary ready',
+    () async {
+      final run = buildRunWithOneBlockingWarning(id: 'run-1');
+      await repository.save(run);
+      expect((await repository.listSummaries()).single.isDraft, isTrue);
+
+      await repository.recordAcknowledgement(
+        'run-1',
+        run.result.warnings.single,
+      );
+
+      expect((await repository.listSummaries()).single.isDraft, isFalse);
+    },
+  );
+
   // Two runs saved within the same millisecond tie on `created_at`, and an
   // ORDER BY with no tiebreaker leaves SQLite free to return them in any
   // order — including a different one between two queries, so the same list
@@ -522,6 +547,36 @@ void main() {
     final loaded = await repository.findById('run-1');
     expect(loaded!.acknowledgedWarnings, {warning});
     expect(loaded.isFinalizable, isTrue);
+  });
+
+  test('recordAcknowledgement rejects a warning absent from the run', () async {
+    final run = buildRunWithOneBlockingWarning(id: 'run-1');
+    await repository.save(run);
+    final warning = run.result.warnings.single as ManualComponentWarning;
+    final unrelated = ManualComponentWarning(
+      warning.recipeId,
+      'not-a-stored-warning',
+    );
+
+    await expectLater(
+      repository.recordAcknowledgement('run-1', unrelated),
+      throwsArgumentError,
+    );
+
+    expect((await repository.listSummaries()).single.isDraft, isTrue);
+    expect((await repository.findById('run-1'))!.isFinalizable, isFalse);
+  });
+
+  test('save rejects an acknowledgement absent from the run', () async {
+    final run = buildRunWithOneBlockingWarning(id: 'run-1');
+    final warning = run.result.warnings.single as ManualComponentWarning;
+    final invalid = run.acknowledge(
+      ManualComponentWarning(warning.recipeId, 'not-a-stored-warning'),
+    );
+
+    await expectLater(repository.save(invalid), throwsArgumentError);
+
+    expect(await repository.findById('run-1'), isNull);
   });
 
   // `_acknowledgementsFor` reconstructs rows into a `Set`, and the

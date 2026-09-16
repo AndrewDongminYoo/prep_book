@@ -1,6 +1,28 @@
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/repositories.dart';
 
+/// The storage-neutral fields a production history row renders.
+final class ProductionHistoryEntry {
+  /// Creates one history entry from stored snapshot metadata.
+  const ProductionHistoryEntry({
+    required this.id,
+    required this.recipeId,
+    required this.recipeName,
+    required this.recipeRevision,
+    required this.targetYield,
+    required this.createdAt,
+    required this.isDraft,
+  });
+
+  final String id;
+  final String recipeId;
+  final String recipeName;
+  final int recipeRevision;
+  final Quantity targetYield;
+  final DateTime createdAt;
+  final bool isDraft;
+}
+
 /// Every stored run, newest first.
 final class ListProductionHistory {
   /// Creates the use case over [_runs].
@@ -9,7 +31,18 @@ final class ListProductionHistory {
   final ProductionRunRepository _runs;
 
   /// Reads the history. The repository already orders it.
-  Future<List<ProductionRunSummary>> call() => _runs.listSummaries();
+  Future<List<ProductionHistoryEntry>> call() async => [
+    for (final summary in await _runs.listSummaries())
+      ProductionHistoryEntry(
+        id: summary.id,
+        recipeId: summary.recipeId,
+        recipeName: summary.recipeName,
+        recipeRevision: summary.recipeRevision,
+        targetYield: summary.targetYield,
+        createdAt: summary.createdAt,
+        isDraft: summary.isDraft,
+      ),
+  ];
 }
 
 /// Reopens one stored run.

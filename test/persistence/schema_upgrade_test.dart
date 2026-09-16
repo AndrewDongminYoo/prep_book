@@ -1,5 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/database.dart';
+import 'package:prep_book/persistence/errors.dart';
+import 'package:prep_book/persistence/schema/v1.dart';
+import 'package:prep_book/persistence/sqflite/production_run_repository.dart';
+import 'package:prep_book/persistence/sqflite/quantity_columns.dart';
+import 'package:prep_book/persistence/sqflite/result_codec.dart';
+import 'package:prep_book/persistence/sqflite/timestamps.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// A stand-in for the first real upgrade: it adds a column to an existing
@@ -26,6 +35,60 @@ const _fakeUpgradeWithAGap = <int, List<String>>{
 void main() {
   setUpAll(sqfliteFfiInit);
 
+  Future<Database> createVersionOne(String path) =>
+      databaseFactoryFfi.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 1,
+          onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
+          onCreate: (db, _) async {
+            for (final statement in schemaV1Statements) {
+              await db.execute(statement);
+            }
+          },
+        ),
+      );
+
+  ProductionRun legacyDraft() {
+    final recipe = Recipe(
+      id: 'legacy-recipe',
+      revision: 3,
+      name: 'Legacy morning rolls',
+      baseYield: Quantity.parse('12', Unit.count('roll')),
+      modifiedAt: DateTime.utc(2026, 9),
+      components: [
+        RecipeComponent(
+          id: 'finish',
+          target: const IngredientRef('finish'),
+          baseQuantity: null,
+          behavior: ScalingBehavior.manual,
+          displayOrder: 0,
+        ),
+      ],
+    );
+    return ProductionRun(
+      id: 'legacy-run',
+      createdAt: DateTime.utc(2026, 9, 15, 23),
+      recipe: recipe,
+      dependencySnapshot: const {},
+      targetYield: recipe.baseYield,
+      result: const ProductionCalculator().calculate(
+        recipe: recipe,
+        targetYield: recipe.baseYield,
+      ),
+    );
+  }
+
+  Future<void> insertVersionOneRun(Database db, ProductionRun run) =>
+      db.insert('production_runs', <String, Object?>{
+        'id': run.id,
+        'recipe_id': run.recipeId,
+        'recipe_revision': run.recipeRevision,
+        ...quantityToColumns(run.targetYield, 'target'),
+        'created_at': timestampToStorage(run.createdAt),
+        'result_json': encodeRunPayload(run),
+      });
+
   Future<Database> openAtVersionOne() async {
     final db = await openPrepBookDatabase(
       path: inMemoryDatabasePath,
@@ -46,13 +109,8 @@ void main() {
     return rows.map((row) => row['name']! as String).toSet();
   }
 
-  // The count is the half of this that is not vacuous. `everyElement` over
-  // an empty map passes without reading anything, which is exactly how the
-  // previous version of this test managed to assert nothing at all: its
-  // loop body never ran. `schemaUpgrades` must hold one entry per version
-  // above 1, so at version 1 it must be empty and at version N it must hold
-  // N - 1 entries — a claim that fails if an upgrade is registered without
-  // bumping the version, or the version is bumped without an upgrade.
+  // The count prevents `everyElement` from passing vacuously over an empty map.
+  // `schemaUpgrades` must hold one entry per version above 1, so at version N it must hold N - 1 entries.
   test('every registered upgrade is reachable from version 1', () {
     expect(
       schemaUpgrades.keys,
@@ -63,18 +121,19 @@ void main() {
     expect(schemaUpgrades, hasLength(currentSchemaVersion - 1));
   });
 
-  // The harness the specification asks for: a database at an older version,
-  // the upgrade path applied over it, and both the resulting shape and the
-  // survival of the existing rows asserted. It runs against an injected
-  // upgrade map because the real one is empty until schema version 2 —
-  // building it now is the point, so that the session which writes the first
-  // upgrade does not have to write its means of verification at the same
-  // time.
+  // An injected upgrade isolates the generic upgrade runner from the production schema change.
+  // The test covers the resulting shape and the survival of existing rows.
   test('an upgrade changes the shape and keeps the existing rows', () async {
     final db = await openAtVersionOne();
     expect(await columnsOfIngredients(db), isNot(contains('storage_location')));
 
-    await applySchemaUpgrades(db, 1, 2, upgrades: _fakeUpgradeToTwo);
+    await applySchemaUpgrades(
+      db,
+      1,
+      2,
+      upgrades: _fakeUpgradeToTwo,
+      backfills: const {},
+    );
 
     expect(await columnsOfIngredients(db), contains('storage_location'));
     final rows = await db.query('ingredients');
@@ -90,7 +149,13 @@ void main() {
   test('two upgrades apply in ascending version order', () async {
     final db = await openAtVersionOne();
 
-    await applySchemaUpgrades(db, 1, 3, upgrades: _fakeUpgradeToThree);
+    await applySchemaUpgrades(
+      db,
+      1,
+      3,
+      upgrades: _fakeUpgradeToThree,
+      backfills: const {},
+    );
 
     final columns = await columnsOfIngredients(db);
     expect(columns, contains('shelf'));
@@ -101,7 +166,13 @@ void main() {
   test('a version with no registered statements is stepped over', () async {
     final db = await openAtVersionOne();
 
-    await applySchemaUpgrades(db, 1, 3, upgrades: _fakeUpgradeWithAGap);
+    await applySchemaUpgrades(
+      db,
+      1,
+      3,
+      upgrades: _fakeUpgradeWithAGap,
+      backfills: const {},
+    );
 
     expect(await columnsOfIngredients(db), contains('shelf'));
   });
@@ -122,11 +193,21 @@ void main() {
       inMemoryDatabasePath,
       options: OpenDatabaseOptions(
         version: 2,
-        onCreate: (db, version) =>
-            createPrepBookSchema(db, version, upgrades: _fakeUpgradeToTwo),
+        onCreate: (db, version) => createPrepBookSchema(
+          db,
+          version,
+          upgrades: _fakeUpgradeToTwo,
+          backfills: const {},
+        ),
         onUpgrade: (db, from, to) {
           upgradeRan = true;
-          return applySchemaUpgrades(db, from, to, upgrades: _fakeUpgradeToTwo);
+          return applySchemaUpgrades(
+            db,
+            from,
+            to,
+            upgrades: _fakeUpgradeToTwo,
+            backfills: const {},
+          );
         },
       ),
     );
@@ -141,7 +222,13 @@ void main() {
     final db = await openAtVersionOne();
     final before = await columnsOfIngredients(db);
 
-    await applySchemaUpgrades(db, 1, 1, upgrades: _fakeUpgradeToTwo);
+    await applySchemaUpgrades(
+      db,
+      1,
+      1,
+      upgrades: _fakeUpgradeToTwo,
+      backfills: const {},
+    );
 
     expect(await columnsOfIngredients(db), before);
   });
@@ -173,4 +260,129 @@ void main() {
     expect(rows.single['id'], 'flour');
     expect(await reopened.getVersion(), currentSchemaVersion);
   });
+
+  test(
+    'the real version 1 upgrade backfills production history metadata',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'prep-book-schema-upgrade-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final path = '${directory.path}/library.db';
+      final versionOne = await createVersionOne(path);
+      await insertVersionOneRun(versionOne, legacyDraft());
+      await versionOne.close();
+
+      final upgraded = await openPrepBookDatabase(
+        path: path,
+        factory: databaseFactoryFfi,
+        singleInstance: false,
+      );
+      addTearDown(upgraded.close);
+
+      expect(await upgraded.getVersion(), 2);
+      final columns = await upgraded.rawQuery(
+        'PRAGMA table_info(production_runs)',
+      );
+      expect(columns.map((row) => row['name']), contains('recipe_name'));
+      expect(
+        columns.map((row) => row['name']),
+        contains('blocking_warning_count'),
+      );
+      final summary = (await SqfliteProductionRunRepository(
+        upgraded,
+      ).listSummaries()).single;
+      expect(summary.recipeName, 'Legacy morning rolls');
+      expect(summary.isDraft, isTrue);
+    },
+  );
+
+  test('a corrupt version 1 payload rolls back the whole upgrade', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'prep-book-schema-corrupt-upgrade-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final path = '${directory.path}/library.db';
+    final versionOne = await createVersionOne(path);
+    await insertVersionOneRun(versionOne, legacyDraft());
+    final validRow = (await versionOne.query('production_runs')).single;
+    await versionOne.insert('production_runs', <String, Object?>{
+      ...validRow,
+      'id': 'zz-corrupt-run',
+      'result_json': '{not valid json',
+    });
+    await versionOne.close();
+
+    await expectLater(
+      openPrepBookDatabase(
+        path: path,
+        factory: databaseFactoryFfi,
+        singleInstance: false,
+      ),
+      throwsA(isA<CorruptDatabaseError>()),
+    );
+
+    final unchanged = await databaseFactoryFfi.openDatabase(
+      path,
+      options: OpenDatabaseOptions(readOnly: true, singleInstance: false),
+    );
+    addTearDown(unchanged.close);
+    expect(await unchanged.getVersion(), 1);
+    final columns = await unchanged.rawQuery(
+      'PRAGMA table_info(production_runs)',
+    );
+    expect(columns.map((row) => row['name']), isNot(contains('recipe_name')));
+    expect(
+      columns.map((row) => row['name']),
+      isNot(contains('blocking_warning_count')),
+    );
+    expect(await unchanged.query('production_runs'), hasLength(2));
+  });
+
+  test(
+    'fresh and upgraded databases have the same application catalog',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'prep-book-schema-catalog-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final upgradedPath = '${directory.path}/upgraded.db';
+      final versionOne = await createVersionOne(upgradedPath);
+      await versionOne.close();
+      final upgraded = await openPrepBookDatabase(
+        path: upgradedPath,
+        factory: databaseFactoryFfi,
+        singleInstance: false,
+      );
+      addTearDown(upgraded.close);
+      final fresh = await openPrepBookDatabase(
+        path: '${directory.path}/fresh.db',
+        factory: databaseFactoryFfi,
+        singleInstance: false,
+      );
+      addTearDown(fresh.close);
+
+      Future<Map<String, String>> catalog(Database db) async => {
+        for (final row in await db.query(
+          'sqlite_master',
+          columns: ['name', 'sql'],
+          where: "name NOT LIKE 'sqlite_%'",
+        ))
+          row['name']! as String: (row['sql']! as String)
+              .trim()
+              .replaceAll(RegExp(r'\s+'), ' ')
+              .toLowerCase(),
+      };
+
+      final upgradedCatalog = await catalog(upgraded);
+      final freshCatalog = await catalog(fresh);
+      expect(upgradedCatalog, freshCatalog);
+      expect(
+        upgradedCatalog['production_runs'],
+        allOf(contains('recipe_name'), contains('blocking_warning_count')),
+      );
+      await validatePrepBookSchema(upgraded);
+      await validatePrepBookSchema(fresh);
+    },
+  );
 }

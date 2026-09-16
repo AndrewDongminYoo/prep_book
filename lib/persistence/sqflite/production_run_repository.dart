@@ -18,6 +18,8 @@ const _summaryColumns = <String>[
   'target_denominator',
   'target_unit',
   'created_at',
+  'recipe_name',
+  'blocking_warning_count',
 ];
 
 /// [ProductionRunRepository] backed by the `production_runs`,
@@ -38,17 +40,24 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
 
   @override
   Future<List<ProductionRunSummary>> listSummaries() async {
-    final rows = await _db.query(
-      'production_runs',
-      columns: _summaryColumns,
-      // `id` breaks a tie rather than leaving one. Two runs saved within
-      // the same millisecond carry the same `created_at`, and an ORDER BY
-      // that does not distinguish them lets SQLite return them in any
-      // order — and in a different one between two queries, so the same
-      // history list could reorder under the operator. The direction is
-      // arbitrary; being settled is not.
-      orderBy: 'created_at DESC, id ASC',
-    );
+    // `id` breaks a tie rather than leaving one. Two runs saved within the
+    // same millisecond carry the same `created_at`, and an ORDER BY that does
+    // not distinguish them lets SQLite return them in a different order
+    // between two queries. The direction is arbitrary. Being settled is not.
+    final rows = await _db.rawQuery('''
+SELECT ${_summaryColumns.map((column) => 'runs.$column').join(', ')},
+       (
+         SELECT COUNT(*)
+         FROM run_acknowledgements AS acknowledgements
+         WHERE acknowledgements.run_id = runs.id
+           AND acknowledgements.warning_kind IN (
+             'manual_component',
+             'archived_dependency'
+           )
+       ) AS acknowledged_blocking_warning_count
+FROM production_runs AS runs
+ORDER BY runs.created_at DESC, runs.id ASC
+''');
     return rows.map(_summaryFromRow).toList();
   }
 
@@ -65,6 +74,7 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
       return ProductionRunSummary(
         id: row['id']! as String,
         recipeId: row['recipe_id']! as String,
+        recipeName: row['recipe_name']! as String,
         recipeRevision: row['recipe_revision']! as int,
         targetYield: quantityFromColumns(
           row,
@@ -72,6 +82,9 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
           rowLabel: 'production_runs row ${row['id']}',
         ),
         createdAt: DateTime.parse(row['created_at']! as String),
+        isDraft:
+            (row['blocking_warning_count']! as int) >
+            (row['acknowledged_blocking_warning_count']! as int),
       );
       // A wrong-typed column is a corrupt row, not a programmer bug, so its
       // `TypeError` is caught rather than left to escape.
@@ -146,7 +159,12 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
     // It does not re-derive the payload's own arithmetic, which the domain
     // guarantees at construction.
     if (recipeId != payload.recipe.id ||
-        recipeRevision != payload.recipe.revision) {
+        recipeRevision != payload.recipe.revision ||
+        row['recipe_name'] != payload.recipe.name ||
+        row['blocking_warning_count'] !=
+            payload.result.warnings
+                .where((warning) => warning.isBlocking)
+                .length) {
       throw CorruptDatabaseError(
         'production_runs row $id names recipe $recipeId revision '
         '$recipeRevision, but its result_json holds recipe '
@@ -175,46 +193,90 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
   }
 
   @override
-  Future<void> save(ProductionRun run) => _db.transaction((txn) async {
-    await txn.insert('production_runs', <String, Object?>{
-      'id': run.id,
-      'recipe_id': run.recipe.id,
-      'recipe_revision': run.recipe.revision,
-      ...quantityToColumns(run.targetYield, 'target'),
-      // Normalized before serializing, because [listSummaries] orders on
-      // this column as text: [timestampToStorage] moves the value to UTC
-      // and always writes the microsecond triplet. Without the first, a mix
-      // of local and UTC writers sorts '…T21:00:00.000Z' after
-      // '…T21:00:00.000'; without the second, two runs in the same
-      // millisecond sort the one with no microseconds last. Both mechanisms
-      // are set out in full on that function. [_summaryFromRow] and
-      // [findById] read the column back unchanged and rely on every stored
-      // value being in that one form.
-      'created_at': timestampToStorage(run.createdAt),
-      'result_json': encodeRunPayload(run),
-    });
-
+  Future<void> save(ProductionRun run) async {
     for (final warning in run.acknowledgedWarnings) {
-      await txn.insert(
-        'run_acknowledgements',
-        _acknowledgementRow(run.id, warning),
+      _requireStoredWarning(
+        runId: run.id,
+        warning: warning,
+        storedWarnings: run.result.warnings,
       );
     }
-    for (final entry in run.overrides.entries) {
-      await txn.insert(
-        'run_overrides',
-        _overrideRow(run.id, entry.key, entry.value),
-      );
-    }
-  });
+    await _db.transaction((txn) async {
+      await txn.insert('production_runs', <String, Object?>{
+        'id': run.id,
+        'recipe_id': run.recipe.id,
+        'recipe_revision': run.recipe.revision,
+        'recipe_name': run.recipe.name,
+        'blocking_warning_count': run.result.warnings
+            .where((warning) => warning.isBlocking)
+            .length,
+        ...quantityToColumns(run.targetYield, 'target'),
+        // Normalized before serializing, because [listSummaries] orders on
+        // this column as text: [timestampToStorage] moves the value to UTC
+        // and always writes the microsecond triplet. Without the first, a mix
+        // of local and UTC writers sorts '…T21:00:00.000Z' after
+        // '…T21:00:00.000'; without the second, two runs in the same
+        // millisecond sort the one with no microseconds last. Both mechanisms
+        // are set out in full on that function. [_summaryFromRow] and
+        // [findById] read the column back unchanged and rely on every stored
+        // value being in that one form.
+        'created_at': timestampToStorage(run.createdAt),
+        'result_json': encodeRunPayload(run),
+      });
+
+      for (final warning in run.acknowledgedWarnings) {
+        await txn.insert(
+          'run_acknowledgements',
+          _acknowledgementRow(run.id, warning),
+        );
+      }
+      for (final entry in run.overrides.entries) {
+        await txn.insert(
+          'run_overrides',
+          _overrideRow(run.id, entry.key, entry.value),
+        );
+      }
+    });
+  }
 
   @override
   Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
-      _db.insert(
-        'run_acknowledgements',
-        _acknowledgementRow(runId, warning),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      _db.transaction((txn) async {
+        final rows = await txn.query(
+          'production_runs',
+          columns: ['result_json'],
+          where: 'id = ?',
+          whereArgs: [runId],
+          limit: 1,
+        );
+        if (rows.isEmpty) {
+          throw ArgumentError.value(
+            runId,
+            'runId',
+            'No stored production run has this id',
+          );
+        }
+        final resultJson = rows.single['result_json'];
+        if (resultJson is! String) {
+          throw CorruptDatabaseError(
+            'production_runs row $runId holds result_json of the wrong type',
+          );
+        }
+        final payload = decodeRunPayload(
+          resultJson,
+          rowLabel: 'production_runs row $runId',
+        );
+        _requireStoredWarning(
+          runId: runId,
+          warning: warning,
+          storedWarnings: payload.result.warnings,
+        );
+        await txn.insert(
+          'run_acknowledgements',
+          _acknowledgementRow(runId, warning),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      });
 
   @override
   Future<void> recordOverride(String runId, OverrideKey key, Quantity value) =>
@@ -247,6 +309,20 @@ final class SqfliteProductionRunRepository implements ProductionRunRepository {
           rowLabel: _overrideLabel(row),
         ),
     };
+  }
+
+  void _requireStoredWarning({
+    required String runId,
+    required ProductionWarning warning,
+    required Iterable<ProductionWarning> storedWarnings,
+  }) {
+    if (!storedWarnings.contains(warning)) {
+      throw ArgumentError.value(
+        warning,
+        'warning',
+        'Production run $runId does not contain this warning',
+      );
+    }
   }
 
   /// Identifies a `run_overrides` row by its three key columns.

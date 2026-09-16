@@ -12,15 +12,19 @@ void main() {
     final summary = ProductionRunSummary(
       id: 'run-1',
       recipeId: 'recipe-1',
+      recipeName: 'Morning rolls',
       recipeRevision: 3,
       targetYield: Quantity.parse('10', Unit.gram),
       createdAt: createdAt,
+      isDraft: true,
     );
 
     expect(summary.id, 'run-1');
     expect(summary.recipeId, 'recipe-1');
+    expect(summary.recipeName, 'Morning rolls');
     expect(summary.recipeRevision, 3);
     expect(summary.targetYield, Quantity.parse('10', Unit.gram));
     expect(summary.createdAt, createdAt);
+    expect(summary.isDraft, isTrue);
   });
 }
