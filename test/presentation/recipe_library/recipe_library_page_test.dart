@@ -420,16 +420,37 @@ void main() {
       expect(_emptyLibraryCreateButton, findsOneWidget);
     });
 
-    testWidgets("the empty library's create action opens the editor", (
-      tester,
-    ) async {
-      await tester.pumpApp(_libraryOver(FakeRecipeRepository()));
+    testWidgets("the empty library's create action stores a recipe and lists "
+        'it', (tester) async {
+      final recipes = FakeRecipeRepository();
+      await tester.pumpApp(_libraryOver(recipes));
       await tester.pump();
 
       await tester.tap(_emptyLibraryCreateButton);
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('recipe-name')), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-name')),
+        'First loaf',
+      );
+      await tester.enterText(find.byKey(const ValueKey('base-yield')), '800');
+      await tester.tap(find.byType(DropdownButtonFormField<Unit>).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('g').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      // The same launcher as the app bar's icon, so the library reads again
+      // when the editor closes: the row is listed and the empty state, with
+      // its button, is gone. Scoped to the list because, at this width, the
+      // sole recipe is also the detail pane's selection.
+      expect(find.byType(RecipeLibraryPage), findsOneWidget);
+      expect(_inLibraryList(find.text('First loaf')), findsOneWidget);
+      expect(find.text(_emptyMessage), findsNothing);
+      expect(_emptyLibraryCreateButton, findsNothing);
+      expect((await recipes.findLatest('first-loaf'))!.revision, 1);
     });
 
     testWidgets(
