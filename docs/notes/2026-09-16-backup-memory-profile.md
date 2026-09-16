@@ -65,6 +65,7 @@ The real DocumentsUI interface completed save and pick in the corrected 8 MiB ba
 
 With the original `file_picker` byte handoff, the corrected 240 MiB fixture reached native save and the app process terminated.
 Android logcat recorded `java.lang.OutOfMemoryError` while `StandardMessageCodec.readBytes` tried to allocate 250,577,040 bytes under a 201,326,592-byte growth limit.
+The original full logcat stream was not retained; this failure signature was read from the integration session output and cannot be re-audited from a stored log artifact.
 This is an observed Android native-channel limit in the product path, not a completed near-limit profile.
 A local adapter now writes an app-private temporary file and passes its path to an Android native document-save channel, which streams to the selected `content://` destination.
 The first 8 MiB check rejected the path because Dart's `Directory.systemTemp` used the app's `code_cache` while the native guard expected `cache`.
