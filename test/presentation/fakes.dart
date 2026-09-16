@@ -18,9 +18,14 @@ import '../application/fakes.dart';
 /// the fake that `test/application/fakes_test.dart` pins against the real
 /// repository's behaviour.
 ///
-/// Every other member throws: the two use cases the screen holds call
+/// Every other member throws: the two reads the screen holds call
 /// [listLatestRevisions] and nothing else, and a fake that quietly answered
-/// the rest would invite a test to depend on an answer nobody checked.
+/// the rest would invite a test to depend on an answer nobody checked. The
+/// screen's row actions do write, but their timing is not what this fake is
+/// for — they are exercised against `FakeRecipeRepository`, their failures
+/// against [FailingLifecycleRecipeRepository], and the one write whose
+/// timing matters, a duplicate held open, against
+/// [DeferredWriteRecipeRepository].
 final class DeferredRecipeRepository implements RecipeRepository {
   /// One entry per [listLatestRevisions] call that has not been answered,
   /// in call order. The test completes them itself, in any order it likes.
@@ -50,20 +55,67 @@ final class DeferredRecipeRepository implements RecipeRepository {
 
   @override
   Future<Recipe?> findLatest(String id) =>
-      throw UnsupportedError('the library screen never reads one recipe');
+      throw UnsupportedError('this fake defers list reads only');
 
   @override
   Future<void> saveRevision(Recipe recipe) =>
-      throw UnsupportedError('the library screen never writes');
+      throw UnsupportedError('this fake defers list reads only');
 
   @override
   Future<void> setArchived(String id, {required bool isArchived}) =>
-      throw UnsupportedError('the library screen never archives');
+      throw UnsupportedError('this fake defers list reads only');
 
   @override
   Future<List<Recipe>> listLatestRevisionsUsingIngredient(
     String ingredientId,
   ) => throw UnsupportedError('the library screen never reads by ingredient');
+}
+
+/// A recipe repository that reads through [FakeRecipeRepository] and
+/// refuses every write.
+///
+/// The library screen's row actions each have a failure path — the notice
+/// that names the action, over rows that must stay as they were — and
+/// neither in-memory fake can reach it: [FakeRecipeRepository] stores
+/// whatever it is given, and [DeferredRecipeRepository] refuses to read one
+/// recipe, which `ArchiveRecipe` and `DuplicateRecipe` both do before they
+/// write. [readCount] is how a test proves the failure was not followed by
+/// a re-read.
+final class FailingLifecycleRecipeRepository implements RecipeRepository {
+  /// Creates a repository reading through [reads].
+  FailingLifecycleRecipeRepository(this.reads);
+
+  /// The in-memory library every read is answered from.
+  final FakeRecipeRepository reads;
+
+  /// How many list reads this fake has answered.
+  int readCount = 0;
+
+  @override
+  Future<List<Recipe>> listLatestRevisions() {
+    readCount++;
+    return reads.listLatestRevisions();
+  }
+
+  @override
+  Future<Recipe?> findRevision(String id, int revision) =>
+      reads.findRevision(id, revision);
+
+  @override
+  Future<Recipe?> findLatest(String id) => reads.findLatest(id);
+
+  @override
+  Future<void> saveRevision(Recipe recipe) async =>
+      throw StateError('the database is unwritable');
+
+  @override
+  Future<void> setArchived(String id, {required bool isArchived}) async =>
+      throw StateError('the database is unwritable');
+
+  @override
+  Future<List<Recipe>> listLatestRevisionsUsingIngredient(
+    String ingredientId,
+  ) => reads.listLatestRevisionsUsingIngredient(ingredientId);
 }
 
 /// An ingredient repository whose reads the test completes by hand.
@@ -141,8 +193,11 @@ final class DeferredIngredientRepository implements IngredientRepository {
 /// must not be able to press Save twice while the first one is in flight,
 /// and a failed write has to leave the form up with a message. Neither is
 /// expressible against a fake that answers immediately, and
-/// [DeferredRecipeRepository] refuses to write at all because the library
-/// screen it was built for never does.
+/// [DeferredRecipeRepository] refuses to write at all because it was built
+/// for the library screen's reads. The library's duplicate has the same
+/// shape as the editor's Save — a copy the operator must not be able to
+/// ask for twice while the first is being stored — so its suite reaches
+/// for this fake too: a write held open is the only way to see that guard.
 final class DeferredWriteRecipeRepository implements RecipeRepository {
   /// Creates a repository reading through [reads].
   DeferredWriteRecipeRepository(this.reads);

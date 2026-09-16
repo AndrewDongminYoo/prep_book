@@ -18,6 +18,8 @@ void main() {
         App(
           listLibrary: ListLibrary(recipes),
           searchLibrary: SearchLibrary(recipes),
+          archiveRecipe: ArchiveRecipe(recipes),
+          duplicateRecipe: DuplicateRecipe(recipes, const FixedClock()),
           editor: buildEditorLauncher(recipes, FakeIngredientRepository()),
           production: buildProductionLauncher(recipes),
           history: _historyLauncher(),
@@ -40,6 +42,45 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('wires the row actions through to the library', (tester) async {
+      final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'r-a'));
+
+      await tester.pumpWidget(
+        App(
+          listLibrary: ListLibrary(recipes),
+          searchLibrary: SearchLibrary(recipes),
+          archiveRecipe: ArchiveRecipe(recipes),
+          duplicateRecipe: DuplicateRecipe(recipes, const FixedClock()),
+          editor: buildEditorLauncher(recipes, FakeIngredientRepository()),
+          production: buildProductionLauncher(recipes),
+          history: _historyLauncher(),
+          libraryBackup: LibraryBackupLauncher(
+            createBackup: CreateLibraryBackup(_BackupGateway()),
+            restoreBackup: RestoreLibraryBackup(_BackupGateway()),
+            platform: _BackupPlatform(),
+          ),
+          restored: false,
+          restoreFailure: null,
+        ),
+      );
+      await tester.pump();
+
+      // The use cases the root receives are the ones the row acts through:
+      // an archive from the menu reaches this repository.
+      await tester.tap(find.byTooltip('More actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byWidgetPredicate((widget) => widget is PopupMenuItem),
+          matching: find.text('Archive'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect((await recipes.findLatest('r-a'))!.isArchived, isTrue);
+      expect(find.text('Recipe archived.'), findsOneWidget);
     });
   });
 }

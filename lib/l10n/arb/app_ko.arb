@@ -28,9 +28,9 @@
     "@recipeLibraryEmpty": {
         "description": "목록에 표시할 레시피가 없을 때 생성 버튼 위에 보여 주는 문구"
     },
-    "recipeLibraryNoMatches": "검색과 일치하는 레시피가 없습니다.",
+    "recipeLibraryNoMatches": "검색이나 필터와 일치하는 레시피가 없습니다.",
     "@recipeLibraryNoMatches": {
-        "description": "검색 결과가 없을 때 보여 주는 문구"
+        "description": "검색이나 분류 필터로 남는 레시피가 없을 때 보여 주는 문구"
     },
     "recipeLibraryOnlyArchived": "여기 있는 레시피는 모두 보관한 상태입니다. 스위치를 켜면 볼 수 있습니다.",
     "@recipeLibraryOnlyArchived": {
@@ -390,6 +390,60 @@
     "recipeLibraryEdit": "편집",
     "@recipeLibraryEdit": {
         "description": "레시피를 편집 화면에서 여는 항목별 동작의 라벨"
+    },
+    "recipeLibraryRowMenu": "더 보기",
+    "@recipeLibraryRowMenu": {
+        "description": "복제와 보관 동작을 담은 항목별 메뉴의 툴팁"
+    },
+    "recipeLibraryDuplicate": "복제",
+    "@recipeLibraryDuplicate": {
+        "description": "레시피 복사본을 저장하고 편집 화면에서 여는 동작의 라벨"
+    },
+    "recipeLibraryArchive": "보관",
+    "@recipeLibraryArchive": {
+        "description": "사용 중인 레시피를 보관하는 동작의 라벨"
+    },
+    "recipeLibraryUnarchive": "보관 해제",
+    "@recipeLibraryUnarchive": {
+        "description": "보관한 레시피를 다시 꺼내는 동작의 라벨"
+    },
+    "recipeLibraryCopyName": "{name} (복사본)",
+    "@recipeLibraryCopyName": {
+        "description": "복제한 레시피가 이름을 바꾸기 전까지 저장되는 이름",
+        "placeholders": {
+            "name": {
+                "type": "String",
+                "example": "크루아상 반죽"
+            }
+        }
+    },
+    "recipeLibraryUndo": "실행 취소",
+    "@recipeLibraryUndo": {
+        "description": "보관 또는 보관 해제를 되돌리는 알림 동작의 라벨"
+    },
+    "recipeLibraryArchivedNotice": "레시피를 보관했습니다.",
+    "@recipeLibraryArchivedNotice": {
+        "description": "레시피를 보관한 뒤 실행 취소 동작과 함께 보여 주는 문구"
+    },
+    "recipeLibraryUnarchivedNotice": "레시피 보관을 해제했습니다.",
+    "@recipeLibraryUnarchivedNotice": {
+        "description": "보관한 레시피를 다시 꺼낸 뒤 실행 취소 동작과 함께 보여 주는 문구"
+    },
+    "recipeLibraryArchiveFailed": "레시피를 보관하지 못했습니다.",
+    "@recipeLibraryArchiveFailed": {
+        "description": "레시피 보관에 실패했을 때 보여 주는 문구. 목록은 그대로다"
+    },
+    "recipeLibraryUnarchiveFailed": "레시피 보관을 해제하지 못했습니다.",
+    "@recipeLibraryUnarchiveFailed": {
+        "description": "보관 해제에 실패했을 때 보여 주는 문구. 목록은 그대로다"
+    },
+    "recipeLibraryDuplicateFailed": "레시피를 복제하지 못했습니다.",
+    "@recipeLibraryDuplicateFailed": {
+        "description": "레시피 복사본 저장에 실패했을 때 보여 주는 문구. 목록은 그대로다"
+    },
+    "recipeLibraryAllCategories": "전체",
+    "@recipeLibraryAllCategories": {
+        "description": "분류 필터를 해제하는 분류 칩의 라벨"
     },
     "recipeEditorCycleError": "레시피가 자기 자신을 참조하게 됩니다: {path}",
     "@recipeEditorCycleError": {

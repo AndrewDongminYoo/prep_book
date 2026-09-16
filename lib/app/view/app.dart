@@ -7,6 +7,8 @@ class App extends StatelessWidget {
   const App({
     required this.listLibrary,
     required this.searchLibrary,
+    required this.archiveRecipe,
+    required this.duplicateRecipe,
     required this.editor,
     required this.production,
     required this.history,
@@ -21,6 +23,12 @@ class App extends StatelessWidget {
 
   /// Filters that list by name.
   final SearchLibrary searchLibrary;
+
+  /// Sets or clears a recipe's archived flag, from the library's row menu.
+  final ArchiveRecipe archiveRecipe;
+
+  /// Stores a copy of a recipe, from the library's row menu.
+  final DuplicateRecipe duplicateRecipe;
 
   /// Opens the recipe editor, from the library's create action and from
   /// each row.
@@ -56,6 +64,8 @@ class App extends StatelessWidget {
       home: RecipeLibraryPage(
         listLibrary: listLibrary,
         searchLibrary: searchLibrary,
+        archiveRecipe: archiveRecipe,
+        duplicateRecipe: duplicateRecipe,
         editor: editor,
         production: production,
         history: history,
