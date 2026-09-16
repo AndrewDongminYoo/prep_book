@@ -1,3 +1,5 @@
+import 'package:prep_book/domain/domain.dart';
+import 'package:prep_book/persistence/errors.dart';
 import 'package:prep_book/persistence/schema/v1.dart';
 import 'package:prep_book/persistence/sqflite/result_codec.dart';
 import 'package:sqflite/sqflite.dart';
@@ -44,6 +46,8 @@ const schemaV2UpgradeStatements = <String>[
 /// The existing codec validates the complete payload before either value is
 /// written. A corrupt payload therefore aborts the upgrade instead of leaving
 /// a current-version database with metadata that cannot identify its source.
+/// Blocking acknowledgements are also matched to that payload before their
+/// count can affect a history row's draft state.
 Future<void> backfillProductionRunSummaryMetadata(DatabaseExecutor db) async {
   final rows = await db.query(
     'production_runs',
@@ -55,6 +59,37 @@ Future<void> backfillProductionRunSummaryMetadata(DatabaseExecutor db) async {
       row['result_json']! as String,
       rowLabel: 'production_runs row $id',
     );
+    final acknowledgements = await db.query(
+      'run_acknowledgements',
+      columns: ['warning_kind', 'recipe_id', 'component_id'],
+      where:
+          "run_id = ? AND warning_kind IN ('manual_component', 'archived_dependency')",
+      whereArgs: [id],
+    );
+    for (final acknowledgement in acknowledgements) {
+      final kind = acknowledgement['warning_kind'];
+      final recipeId = acknowledgement['recipe_id'];
+      final componentId = acknowledgement['component_id'];
+      final matchesStoredWarning =
+          (kind == 'manual_component' &&
+              recipeId is String &&
+              componentId is String &&
+              payload.result.warnings.contains(
+                ManualComponentWarning(recipeId, componentId),
+              )) ||
+          (kind == 'archived_dependency' &&
+              recipeId is String &&
+              componentId == null &&
+              payload.result.warnings.contains(
+                ArchivedDependencyWarning(recipeId),
+              ));
+      if (!matchesStoredWarning) {
+        throw CorruptDatabaseError(
+          'run_acknowledgements row for run $id does not match a warning '
+          'in production_runs row $id',
+        );
+      }
+    }
     final blockingWarningCount = payload.result.warnings
         .where((warning) => warning.isBlocking)
         .length;

@@ -43,6 +43,7 @@ This derivation keeps the summary correct if the existing repository acknowledge
 
 The version 1 upgrade decodes each stored payload through the existing production-run codec before it backfills the two metadata columns.
 An invalid payload aborts the upgrade.
+An acknowledgement for a blocking warning that is absent from its stored payload also aborts the upgrade without changing the version 1 database.
 The upgraded catalog and a freshly created version 2 catalog must match the same exact schema declaration.
 
 ## Presentation contract

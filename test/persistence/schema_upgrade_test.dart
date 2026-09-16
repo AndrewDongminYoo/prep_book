@@ -272,6 +272,12 @@ void main() {
       final path = '${directory.path}/library.db';
       final versionOne = await createVersionOne(path);
       await insertVersionOneRun(versionOne, legacyDraft());
+      await versionOne.insert('run_acknowledgements', <String, Object?>{
+        'run_id': 'legacy-run',
+        'warning_kind': 'manual_component',
+        'recipe_id': 'legacy-recipe',
+        'component_id': 'finish',
+      });
       await versionOne.close();
 
       final upgraded = await openPrepBookDatabase(
@@ -294,9 +300,58 @@ void main() {
         upgraded,
       ).listSummaries()).single;
       expect(summary.recipeName, 'Legacy morning rolls');
-      expect(summary.isDraft, isTrue);
+      expect(summary.isDraft, isFalse);
     },
   );
+
+  for (final acknowledgement
+      in <({String kind, String recipeId, String? componentId})>[
+        (
+          kind: 'manual_component',
+          recipeId: 'legacy-recipe',
+          componentId: 'not-a-stored-warning',
+        ),
+        (
+          kind: 'archived_dependency',
+          recipeId: 'not-a-stored-warning',
+          componentId: null,
+        ),
+      ]) {
+    test('a version 1 ${acknowledgement.kind} acknowledgement absent from its '
+        'run aborts the upgrade', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'prep-book-schema-acknowledgement-upgrade-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final path = '${directory.path}/library.db';
+      final versionOne = await createVersionOne(path);
+      await insertVersionOneRun(versionOne, legacyDraft());
+      await versionOne.insert('run_acknowledgements', <String, Object?>{
+        'run_id': 'legacy-run',
+        'warning_kind': acknowledgement.kind,
+        'recipe_id': acknowledgement.recipeId,
+        'component_id': acknowledgement.componentId,
+      });
+      await versionOne.close();
+
+      await expectLater(
+        openPrepBookDatabase(
+          path: path,
+          factory: databaseFactoryFfi,
+          singleInstance: false,
+        ),
+        throwsA(isA<CorruptDatabaseError>()),
+      );
+
+      final unchanged = await databaseFactoryFfi.openDatabase(
+        path,
+        options: OpenDatabaseOptions(readOnly: true, singleInstance: false),
+      );
+      addTearDown(unchanged.close);
+      expect(await unchanged.getVersion(), 1);
+      expect(await unchanged.query('run_acknowledgements'), hasLength(1));
+    });
+  }
 
   test('metadata backfill reports a run removed during its update', () async {
     final db = await openPrepBookDatabase(
