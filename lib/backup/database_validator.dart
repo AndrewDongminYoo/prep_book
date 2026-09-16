@@ -97,7 +97,7 @@ final class BackupDatabaseValidator {
   Future<int> _readStoredVersion(String candidatePath) async {
     final db = await _factory.openDatabase(
       candidatePath,
-      options: OpenDatabaseOptions(readOnly: true, singleInstance: false),
+      options: OpenDatabaseOptions(singleInstance: false),
     );
     try {
       return await db.getVersion();

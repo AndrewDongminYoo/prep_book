@@ -33,6 +33,10 @@ const _allowedUriPrefixes = <String>[
 
 const _filePickerAdapterPath =
     'lib/presentation/library_backup/view/library_backup_platform.dart';
+const _nativeBackupIoPaths = <String>{
+  _filePickerAdapterPath,
+  'lib/presentation/library_backup/view/android_backup_save.dart',
+};
 
 /// Matches a whole `import`/`export` directive, from the keyword to its
 /// terminating `;`. A conditional directive
@@ -49,8 +53,9 @@ final _quotedUri = RegExp("'([^']*)'|\"([^\"]*)\"");
 /// A `package:`/`dart:` URI must start with an allowed prefix. A relative
 /// URI may only refer to a sibling inside `lib/presentation/`, never escape
 /// it via `../`.
-bool _isAllowedUri(String uri) {
+bool _isAllowedUri(String uri, {required String sourcePath}) {
   if (_allowedUriPrefixes.any(uri.startsWith)) return true;
+  if (uri == 'dart:io') return _nativeBackupIoPaths.contains(sourcePath);
   if (uri.startsWith('package:') || uri.startsWith('dart:')) return false;
   return !uri.contains('../');
 }
@@ -105,6 +110,25 @@ List<File> _dartFilesUnder(String path) {
 }
 
 void main() {
+  test('dart:io remains limited to the native backup adapters', () {
+    expect(
+      _isAllowedUri('dart:io', sourcePath: _filePickerAdapterPath),
+      isTrue,
+    );
+    expect(
+      _isAllowedUri(
+        'dart:io',
+        sourcePath:
+            'lib/presentation/library_backup/view/android_backup_save.dart',
+      ),
+      isTrue,
+    );
+    expect(
+      _isAllowedUri('dart:io', sourcePath: 'lib/presentation/new_screen.dart'),
+      isFalse,
+    );
+  });
+
   test('the guard scans the presentation sources that exist', () {
     // Without this, both gates below pass vacuously the day a rename
     // empties the directory they read.
@@ -121,7 +145,7 @@ void main() {
           final text = statement.group(0)!;
           for (final match in _quotedUri.allMatches(text)) {
             final uri = match.group(1) ?? match.group(2)!;
-            if (!_isAllowedUri(uri)) {
+            if (!_isAllowedUri(uri, sourcePath: file.path)) {
               offenders.add('${file.path} references disallowed uri: $uri');
             }
           }
