@@ -864,9 +864,22 @@ void main() {
         ingredients: ingredients,
         recipe: cake,
       );
+
+      // The note beside the disabled add action must not promise that
+      // saving makes this recipe referenceable: a save keeps it archived,
+      // and archived recipes never enter the choices. A stored recipe only
+      // gets here when it is itself archived, so the plain "nothing to
+      // reference" wording is the true one.
+      expect(find.text(_subRecipeUnavailable), findsNothing);
+      expect(find.text('No recipe is available to reference.'), findsOneWidget);
+
       await changeTarget(tester, 'Croissant dough');
 
-      expect(find.text('No recipe is available to reference.'), findsOneWidget);
+      // The picker's own message, on top of the note's.
+      expect(
+        find.text('No recipe is available to reference.'),
+        findsNWidgets(2),
+      );
 
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();

@@ -752,8 +752,16 @@ class _ComponentActions extends StatelessWidget {
         if (!canAddSubRecipe)
           Padding(
             padding: const EdgeInsets.only(top: 8),
+            // "Save this one first" is only true of a new recipe. A stored
+            // recipe is in its own choices unless it is archived, so the
+            // only stored recipe that reaches this note is an archived one
+            // in a library where every recipe is — and saving it keeps it
+            // archived, which the choices exclude. That case gets the
+            // picker's own wording, which promises nothing.
             child: Text(
-              l10n.recipeEditorSubRecipeUnavailable,
+              state.isNewRecipe
+                  ? l10n.recipeEditorSubRecipeUnavailable
+                  : l10n.recipeEditorSubRecipeNone,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
