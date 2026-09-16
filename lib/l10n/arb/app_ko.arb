@@ -20,9 +20,9 @@
     "@recipeLibraryProductionRun": {
         "description": "레시피별 생산 실행을 시작하는 동작의 라벨"
     },
-    "recipeLibraryEmpty": "아직 저장된 레시피가 없습니다.",
+    "recipeLibraryEmpty": "아직 저장된 레시피가 없습니다. 첫 레시피를 만들어 보세요.",
     "@recipeLibraryEmpty": {
-        "description": "목록에 표시할 레시피가 없을 때 보여 주는 문구"
+        "description": "목록에 표시할 레시피가 없을 때 생성 버튼 위에 보여 주는 문구"
     },
     "recipeLibraryNoMatches": "검색과 일치하는 레시피가 없습니다.",
     "@recipeLibraryNoMatches": {
@@ -180,6 +180,10 @@
     "@recipeEditorAmountRequired": {
         "description": "수량이 비어 있거나 0보다 크지 않을 때 보여 주는 문구"
     },
+    "recipeEditorUnitRequired": "단위를 고르세요.",
+    "@recipeEditorUnitRequired": {
+        "description": "새 레시피의 기준 생산량 단위를 고르지 않은 채 저장을 시도했을 때 그 단위 아래에 보여 주는 문구"
+    },
     "recipeEditorUnitIncompatible": "기준 생산량과 환산할 수 있는 단위를 고르세요.",
     "@recipeEditorUnitIncompatible": {
         "description": "최대 생산량 단위를 기준 생산량 단위로 환산할 수 없을 때 보여 주는 문구"
@@ -309,6 +313,10 @@
     "recipeEditorSubRecipeNone": "참조할 수 있는 레시피가 없습니다.",
     "@recipeEditorSubRecipeNone": {
         "description": "고를 수 있는 하위 레시피가 없을 때 보여 주는 문구"
+    },
+    "recipeEditorSubRecipeUnavailable": "아직 참조할 수 있는 저장된 레시피가 없습니다. 이 레시피를 먼저 저장하면 다른 레시피에서 하위 레시피로 추가할 수 있습니다.",
+    "@recipeEditorSubRecipeUnavailable": {
+        "description": "참조할 레시피가 없어 비활성화된 하위 레시피 추가 버튼 옆에 보여 주는 문구"
     },
     "recipeEditorCustomUnitTitle": "새 단위",
     "@recipeEditorCustomUnitTitle": {

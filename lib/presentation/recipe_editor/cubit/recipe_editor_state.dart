@@ -110,6 +110,7 @@ final class RecipeEditorState {
     required this.recipeId,
     required this.isNewRecipe,
     required this.baseYieldUnit,
+    required this.baseYieldUnitChosen,
     required this.maxBatchUnit,
     this.status = RecipeEditorStatus.loading,
     this.name = '',
@@ -151,7 +152,24 @@ final class RecipeEditorState {
   final String baseYieldAmount;
 
   /// The unit the base yield is measured in.
+  ///
+  /// Never null, like every unit this state holds, but only a chosen one
+  /// may be stored: see [baseYieldUnitChosen].
   final Unit baseYieldUnit;
+
+  /// Whether the operator has chosen [baseYieldUnit], or it is still the
+  /// placeholder a new recipe starts with.
+  ///
+  /// A stored recipe's unit was chosen when it was saved, so it opens
+  /// `true`; a new recipe opens `false` and the form shows no unit until
+  /// one is picked. The placeholder stays a real unit so the checks that
+  /// read [baseYieldUnit] keep one operand, but a save is refused while
+  /// this is `false`: a recipe counted in pieces saved under a unit nobody
+  /// chose is a wrong recipe, not a default. The maximum batch unit needs
+  /// no such flag — it is never read while its amount is blank, and once
+  /// there is an amount [maxBatchUnitIsIncompatible] checks it against the
+  /// base yield unit.
+  final bool baseYieldUnitChosen;
 
   /// The typed maximum batch yield. Empty means the recipe has no maximum.
   final String maxBatchAmount;
@@ -240,7 +258,12 @@ final class RecipeEditorState {
   /// Checked here as well as there because it is a field error the operator
   /// fixes by changing a dropdown, not a failure that needs the library
   /// read.
+  ///
+  /// Not judged until the base yield unit is chosen: against the
+  /// placeholder it would report a mismatch with a unit the form does not
+  /// even show, on top of the error asking for that unit.
   bool get maxBatchUnitIsIncompatible =>
+      baseYieldUnitChosen &&
       !maxBatchIsBlank &&
       !maxBatchIsInvalid &&
       !baseYieldUnit.canConvertTo(maxBatchUnit);
@@ -327,6 +350,7 @@ final class RecipeEditorState {
   bool get hasFieldErrors =>
       nameIsMissing ||
       baseYieldIsInvalid ||
+      !baseYieldUnitChosen ||
       maxBatchIsInvalid ||
       maxBatchUnitIsIncompatible ||
       dependentsBlockedByBaseYieldUnit.isNotEmpty ||
@@ -442,6 +466,10 @@ final class RecipeEditorState {
     category: category ?? this.category,
     baseYieldAmount: baseYieldAmount ?? this.baseYieldAmount,
     baseYieldUnit: baseYieldUnit ?? this.baseYieldUnit,
+    // A unit passed here is one the operator picked, so the flag rises
+    // with it and cannot be raised without one. Nothing lowers it: the
+    // placeholder is only ever the state a new recipe starts in.
+    baseYieldUnitChosen: baseYieldUnit != null || baseYieldUnitChosen,
     maxBatchAmount: maxBatchAmount ?? this.maxBatchAmount,
     maxBatchUnit: maxBatchUnit ?? this.maxBatchUnit,
     preparationNotes: preparationNotes ?? this.preparationNotes,

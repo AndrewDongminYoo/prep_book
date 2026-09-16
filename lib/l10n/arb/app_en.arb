@@ -20,9 +20,9 @@
     "@recipeLibraryProductionRun": {
         "description": "Label of the per-recipe action that starts a production run"
     },
-    "recipeLibraryEmpty": "No recipes yet.",
+    "recipeLibraryEmpty": "No recipes yet. Create your first recipe to get started.",
     "@recipeLibraryEmpty": {
-        "description": "Shown when the library holds nothing to list"
+        "description": "Shown above the create action when the library holds nothing to list"
     },
     "recipeLibraryNoMatches": "No recipes match your search.",
     "@recipeLibraryNoMatches": {
@@ -180,6 +180,10 @@
     "@recipeEditorAmountRequired": {
         "description": "Shown under an amount field that is empty or not a positive number"
     },
+    "recipeEditorUnitRequired": "Choose a unit.",
+    "@recipeEditorUnitRequired": {
+        "description": "Shown under the base yield unit of a new recipe when a save is attempted before one is chosen"
+    },
     "recipeEditorUnitIncompatible": "Use a unit the base yield converts to.",
     "@recipeEditorUnitIncompatible": {
         "description": "Shown under the maximum batch yield when its unit cannot convert to the base yield's"
@@ -309,6 +313,10 @@
     "recipeEditorSubRecipeNone": "No recipe is available to reference.",
     "@recipeEditorSubRecipeNone": {
         "description": "Shown when the sub-recipe picker has nothing to offer"
+    },
+    "recipeEditorSubRecipeUnavailable": "No saved recipe to reference yet. Save this recipe first; other recipes can then add it as a sub-recipe.",
+    "@recipeEditorSubRecipeUnavailable": {
+        "description": "Shown beside the disabled sub-recipe action when the library holds no recipe to reference"
     },
     "recipeEditorCustomUnitTitle": "New unit",
     "@recipeEditorCustomUnitTitle": {

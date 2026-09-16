@@ -38,7 +38,8 @@ RecipeEditorCubit _editor({
 void _fillRequiredFields(RecipeEditorCubit cubit, {String name = 'Ciabatta'}) =>
     cubit
       ..nameChanged(name)
-      ..baseYieldAmountChanged('1000');
+      ..baseYieldAmountChanged('1000')
+      ..baseYieldUnitChanged(Unit.gram);
 
 void main() {
   group('loading', () {
@@ -104,8 +105,46 @@ void main() {
       expect(cubit.state.components, isEmpty);
       expect(cubit.state.nameIsMissing, isTrue);
       expect(cubit.state.baseYieldIsInvalid, isTrue);
+      expect(cubit.state.baseYieldUnitChosen, isFalse);
       expect(cubit.state.hasFieldErrors, isTrue);
       expect(cubit.state.submitted, isFalse);
+    });
+
+    test(
+      'a new recipe is not written until its base yield unit is chosen',
+      () async {
+        final recipes = FakeRecipeRepository();
+        final cubit = _editor(recipes: recipes);
+        await cubit.load();
+        cubit
+          ..nameChanged('Rolls')
+          ..baseYieldAmountChanged('24');
+
+        // Everything a save needs except the unit. The placeholder the state
+        // carries must not become the stored unit: a count of rolls saved as
+        // grams is a wrong recipe, not a default.
+        await cubit.save();
+
+        expect(cubit.state.submitted, isTrue);
+        expect(cubit.state.hasFieldErrors, isTrue);
+        expect(await recipes.findLatest('rolls'), isNull);
+
+        cubit.baseYieldUnitChanged(_piece);
+        await cubit.save();
+
+        expect((await recipes.findLatest('rolls'))!.baseYield.unit, _piece);
+      },
+    );
+
+    test('a stored recipe opens with its base yield unit already chosen', () {
+      final cubit = _editor(
+        recipe: buildRecipe(id: 'dough', baseYield: Quantity.parse('4', _tray)),
+      );
+
+      // The stored unit was chosen when the recipe was saved, so editing
+      // its name must not demand the choice again.
+      expect(cubit.state.baseYieldUnitChosen, isTrue);
+      expect(cubit.state.baseYieldUnit, _tray);
     });
 
     test('records every metadata field the operator types', () {
@@ -133,6 +172,7 @@ void main() {
     test('rejects an amount that is not a positive number', () {
       final cubit = _editor()
         ..nameChanged('Ciabatta')
+        ..baseYieldUnitChanged(Unit.gram)
         ..baseYieldAmountChanged('nope');
 
       expect(cubit.state.baseYieldIsInvalid, isTrue);
@@ -176,6 +216,28 @@ void main() {
       expect(cubit.state.hasFieldErrors, isTrue);
 
       cubit.maxBatchUnitChanged(Unit.kilogram);
+      expect(cubit.state.maxBatchUnitIsIncompatible, isFalse);
+      expect(cubit.state.hasFieldErrors, isFalse);
+    });
+
+    test('the maximum batch unit is not judged until the base yield unit is '
+        'chosen', () {
+      final cubit = _editor()
+        ..nameChanged('Rolls')
+        ..baseYieldAmountChanged('24')
+        ..maxBatchAmountChanged('500')
+        ..maxBatchUnitChanged(_piece);
+
+      // Against the placeholder this would be a mismatch with a unit the
+      // form does not show, stacked on the error asking for that unit.
+      expect(cubit.state.baseYieldUnitChosen, isFalse);
+      expect(cubit.state.maxBatchUnitIsIncompatible, isFalse);
+      expect(cubit.state.hasFieldErrors, isTrue);
+
+      cubit.baseYieldUnitChanged(Unit.gram);
+      expect(cubit.state.maxBatchUnitIsIncompatible, isTrue);
+
+      cubit.baseYieldUnitChanged(_piece);
       expect(cubit.state.maxBatchUnitIsIncompatible, isFalse);
       expect(cubit.state.hasFieldErrors, isFalse);
     });

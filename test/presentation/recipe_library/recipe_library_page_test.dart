@@ -11,7 +11,8 @@ import '../../application/fakes.dart';
 import '../../helpers/helpers.dart';
 import '../fakes.dart';
 
-const _emptyMessage = 'No recipes yet.';
+const _emptyMessage =
+    'No recipes yet. Create your first recipe to get started.';
 const _noMatchMessage = 'No recipes match your search.';
 const _onlyArchivedMessage =
     'Every recipe here is archived. Turn the switch on to see them.';
@@ -127,6 +128,13 @@ List<String> _rowTitles(WidgetTester tester) => [
 Finder _inLibraryList(Finder matching) => find.descendant(
   of: find.byKey(const PageStorageKey<String>('recipe-list-pane')),
   matching: matching,
+);
+
+/// The create action the empty state offers, as distinct from the app bar's
+/// icon, which is found by its tooltip.
+final Finder _emptyLibraryCreateButton = find.widgetWithText(
+  FilledButton,
+  'New recipe',
 );
 
 ListTile _recipeTile(WidgetTester tester, String name) => tester
@@ -384,6 +392,38 @@ void main() {
       expect(find.text(_onlyArchivedMessage), findsNothing);
       expect(find.text(_errorMessage), findsNothing);
       expect(find.text('Ciabatta'), findsNothing);
+      // The next step here is the search field, not a new recipe.
+      expect(_emptyLibraryCreateButton, findsNothing);
+    });
+
+    testWidgets('clearing a no-match search keeps the create action away '
+        'until the read lands', (tester) async {
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'zzz');
+      await tester.pump(_pastTheDebounce);
+      await tester.pump();
+      expect(find.text(_noMatchMessage), findsOneWidget);
+
+      // The field is empty at once, but the rows on screen still answer
+      // "zzz" until the debounce and the read have run. In that window the
+      // library is not unfilled, so the empty state must keep describing
+      // the result it shows rather than offer a new recipe over a library
+      // that holds two.
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pump();
+
+      expect(find.text(_noMatchMessage), findsOneWidget);
+      expect(find.text(_emptyMessage), findsNothing);
+      expect(_emptyLibraryCreateButton, findsNothing);
+
+      await tester.pump(_pastTheDebounce);
+      await tester.pump();
+
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
+      expect(find.text(_noMatchMessage), findsNothing);
+      expect(_emptyLibraryCreateButton, findsNothing);
     });
 
     testWidgets('shows the empty message when the library holds nothing', (
@@ -396,6 +436,51 @@ void main() {
       expect(find.text(_noMatchMessage), findsNothing);
       expect(find.text(_onlyArchivedMessage), findsNothing);
       expect(find.text(_errorMessage), findsNothing);
+    });
+
+    testWidgets('an empty library offers the create action under the message', (
+      tester,
+    ) async {
+      await tester.pumpApp(_libraryOver(FakeRecipeRepository()));
+      await tester.pump();
+
+      // A fresh install lands here with nothing to search and nothing to
+      // unhide, so the message alone would leave the app bar's icon as the
+      // only way forward.
+      expect(_emptyLibraryCreateButton, findsOneWidget);
+    });
+
+    testWidgets("the empty library's create action stores a recipe and lists "
+        'it', (tester) async {
+      final recipes = FakeRecipeRepository();
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      await tester.tap(_emptyLibraryCreateButton);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('recipe-name')), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-name')),
+        'First loaf',
+      );
+      await tester.enterText(find.byKey(const ValueKey('base-yield')), '800');
+      await tester.tap(find.byType(DropdownButtonFormField<Unit>).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('g').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      // The same launcher as the app bar's icon, so the library reads again
+      // when the editor closes: the row is listed and the empty state, with
+      // its button, is gone. Scoped to the list because, at this width, the
+      // sole recipe is also the detail pane's selection.
+      expect(find.byType(RecipeLibraryPage), findsOneWidget);
+      expect(_inLibraryList(find.text('First loaf')), findsOneWidget);
+      expect(find.text(_emptyMessage), findsNothing);
+      expect(_emptyLibraryCreateButton, findsNothing);
+      expect((await recipes.findLatest('first-loaf'))!.revision, 1);
     });
 
     testWidgets(
@@ -415,6 +500,8 @@ void main() {
         expect(find.text(_onlyArchivedMessage), findsOneWidget);
         expect(find.text(_emptyMessage), findsNothing);
         expect(find.text(_noMatchMessage), findsNothing);
+        // The next step here is the switch, not a new recipe.
+        expect(_emptyLibraryCreateButton, findsNothing);
 
         await tester.tap(find.byType(SwitchListTile));
         await tester.pump();
@@ -936,6 +1023,11 @@ void main() {
         'Summer focaccia',
       );
       await tester.enterText(find.byKey(const ValueKey('base-yield')), '2000');
+      // A new recipe starts with no base yield unit, so the save needs one.
+      await tester.tap(find.byType(DropdownButtonFormField<Unit>).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('g').last);
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TextButton, 'Save'));
       await tester.pumpAndSettle();
 

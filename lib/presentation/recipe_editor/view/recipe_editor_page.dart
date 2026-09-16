@@ -354,9 +354,15 @@ class _MetadataSection extends StatelessWidget {
           fieldKey: const ValueKey('base-yield'),
           label: l10n.recipeEditorBaseYieldLabel,
           amount: state.baseYieldAmount,
-          unit: state.baseYieldUnit,
+          // No unit shown until one is chosen: the state's placeholder is
+          // what a save refuses, and showing it would contradict the error
+          // that asks for a choice.
+          unit: state.baseYieldUnitChosen ? state.baseYieldUnit : null,
           choices: state.unitChoices,
           errorText: _baseYieldError(l10n, state),
+          unitErrorText: state.submitted && !state.baseYieldUnitChosen
+              ? l10n.recipeEditorUnitRequired
+              : null,
           onAmountChanged: cubit.baseYieldAmountChanged,
           onUnitChanged: cubit.baseYieldUnitChanged,
         ),
@@ -446,14 +452,20 @@ class _AmountRow extends StatelessWidget {
     required this.errorText,
     required this.onAmountChanged,
     required this.onUnitChanged,
+    this.unitErrorText,
   });
 
   final Key fieldKey;
   final String label;
   final String amount;
-  final Unit unit;
+
+  /// The selected unit, or `null` for a dropdown with nothing selected yet.
+  final Unit? unit;
   final List<Unit> choices;
   final String? errorText;
+
+  /// What is wrong with the unit, shown under its dropdown.
+  final String? unitErrorText;
   final ValueChanged<String> onAmountChanged;
   final ValueChanged<Unit> onUnitChanged;
 
@@ -490,6 +502,7 @@ class _AmountRow extends StatelessWidget {
             decoration: InputDecoration(
               labelText: l10n.recipeEditorUnitLabel,
               border: const OutlineInputBorder(),
+              errorText: unitErrorText,
             ),
             items: [
               for (final choice in choices)
@@ -703,6 +716,12 @@ class _ComponentActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // Disabled rather than opening a picker that says it has nothing to
+    // offer: a fresh install's first recipe lands here, and a dialog that
+    // names the failure but not the step is a dead end. The reason sits
+    // beside the button, where the design document keeps such notes, and
+    // it names the step — save this one, then reference it from the next.
+    final canAddSubRecipe = state.subRecipeChoices.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -726,10 +745,26 @@ class _ComponentActions extends StatelessWidget {
             OutlinedButton.icon(
               icon: const Icon(Icons.account_tree_outlined),
               label: Text(l10n.recipeEditorAddSubRecipe),
-              onPressed: () => _addSubRecipe(context),
+              onPressed: canAddSubRecipe ? () => _addSubRecipe(context) : null,
             ),
           ],
         ),
+        if (!canAddSubRecipe)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            // "Save this one first" is only true of a new recipe. A stored
+            // recipe is in its own choices unless it is archived, so the
+            // only stored recipe that reaches this note is an archived one
+            // in a library where every recipe is — and saving it keeps it
+            // archived, which the choices exclude. That case gets the
+            // picker's own wording, which promises nothing.
+            child: Text(
+              state.isNewRecipe
+                  ? l10n.recipeEditorSubRecipeUnavailable
+                  : l10n.recipeEditorSubRecipeNone,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
       ],
     );
   }

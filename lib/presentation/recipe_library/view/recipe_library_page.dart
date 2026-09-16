@@ -393,7 +393,7 @@ class _LoadedBody extends StatelessWidget {
     if (recipes.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
-        child: _CenteredMessage(message: _emptyMessage(context.l10n)),
+        child: _emptyBody(context.l10n),
       );
     }
     final selectedId = onSelected == null
@@ -413,16 +413,31 @@ class _LoadedBody extends StatelessWidget {
     );
   }
 
-  /// Why the list is empty, in the operator's words.
+  /// Why the list is empty, in the operator's words — and, when the library
+  /// itself holds nothing, the action that fills it.
   ///
   /// The archived case is decided first, and deliberately so. After a
   /// search the hidden rows are that search's own matches, so answering
   /// "no matches" there would deny a result the switch is holding back.
-  String _emptyMessage(AppLocalizations l10n) {
-    if (state.hasHiddenArchived) return l10n.recipeLibraryOnlyArchived;
-    return state.query.isEmpty
-        ? l10n.recipeLibraryEmpty
-        : l10n.recipeLibraryNoMatches;
+  ///
+  /// Only the last case carries a button. The other two already name the
+  /// next step — the switch, the search field — and a fresh install meets
+  /// neither: it lands here with nothing to search and nothing to unhide,
+  /// and the message alone would leave the app bar's icon as the only way
+  /// forward.
+  ///
+  /// `resultsQuery`, not `query`: the rows are explained by the query they
+  /// answer, and the field's text runs ahead of that by a debounce and a
+  /// read. Judged on `query`, clearing a no-match search would offer the
+  /// button over a library that holds several recipes until the read lands.
+  Widget _emptyBody(AppLocalizations l10n) {
+    if (state.hasHiddenArchived) {
+      return _CenteredMessage(message: l10n.recipeLibraryOnlyArchived);
+    }
+    if (state.resultsQuery.isNotEmpty) {
+      return _CenteredMessage(message: l10n.recipeLibraryNoMatches);
+    }
+    return _EmptyLibrary(editor: editor);
   }
 }
 
@@ -632,6 +647,37 @@ class _ErrorBody extends StatelessWidget {
             child: Text(l10n.recipeLibraryRetry),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The unfilled library, with the create action that fills it.
+///
+/// The same action as the app bar's icon, through the same launcher, so a
+/// recipe saved from here is listed the same way when the editor closes.
+class _EmptyLibrary extends StatelessWidget {
+  const _EmptyLibrary({required this.editor});
+
+  final RecipeEditorLauncher editor;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(l10n.recipeLibraryEmpty, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => _openEditor(context, editor),
+              child: Text(l10n.recipeLibraryCreate),
+            ),
+          ],
+        ),
       ),
     );
   }

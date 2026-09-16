@@ -43,23 +43,24 @@ final class RecipeLibraryCubit extends Cubit<RecipeLibraryState> {
   /// Reads the whole library.
   Future<void> load() async {
     emit(state.copyWith(status: RecipeLibraryStatus.loading));
-    await _apply(++_intents, _listLibrary());
+    await _apply(++_intents, _listLibrary(), query: '');
   }
 
   /// Filters the library by [query], keeping the previous rows on screen
   /// while the filtered read runs.
   ///
-  /// [query] is recorded at once, because the field and the empty-state
-  /// message read it, but the read itself waits out the debounce and is
-  /// abandoned entirely if another keystroke, a retry, or a reload arrives
-  /// first. Waiting does not cancel a read already in flight; it keeps the
-  /// next one from starting, which is where the cost is.
+  /// [query] is recorded at once, because the field reads it, but the read
+  /// itself waits out the debounce and is abandoned entirely if another
+  /// keystroke, a retry, or a reload arrives first. Waiting does not cancel
+  /// a read already in flight; it keeps the next one from starting, which
+  /// is where the cost is. The empty state reads `resultsQuery` instead,
+  /// which only moves when the read lands: see its doc comment.
   Future<void> search(String query) async {
     emit(state.copyWith(query: query));
     final intent = ++_intents;
     await Future<void>.delayed(_debounce);
     if (isClosed || intent != _intents) return;
-    await _apply(intent, _searchLibrary(query));
+    await _apply(intent, _searchLibrary(query), query: query);
   }
 
   /// Reads again after a failure, keeping the current query.
@@ -73,23 +74,29 @@ final class RecipeLibraryCubit extends Cubit<RecipeLibraryState> {
   /// deliberate tap, not a keystroke, and it must show `loading` now.
   Future<void> retry() async {
     emit(state.copyWith(status: RecipeLibraryStatus.loading));
-    await _apply(++_intents, _searchLibrary(state.query));
+    final query = state.query;
+    await _apply(++_intents, _searchLibrary(query), query: query);
   }
 
   /// Shows or hides archived recipes. Re-filters what is already loaded.
   void showArchived({required bool show}) =>
       emit(state.copyWith(showArchived: show));
 
-  /// Awaits [read] and emits its outcome, unless a newer intent than
-  /// [intent] arrived while it was in flight or the cubit was closed in the
-  /// meantime.
-  Future<void> _apply(int intent, Future<List<Recipe>> read) async {
-    final next = await _outcomeOf(read);
+  /// Awaits [read], the read for [query], and emits its outcome, unless a
+  /// newer intent than [intent] arrived while it was in flight or the cubit
+  /// was closed in the meantime.
+  Future<void> _apply(
+    int intent,
+    Future<List<Recipe>> read, {
+    required String query,
+  }) async {
+    final next = await _outcomeOf(read, query: query);
     if (isClosed || intent != _intents) return;
     emit(next);
   }
 
-  /// The state [read] produces, whether it succeeds or throws.
+  /// The state [read], the read for [query], produces, whether it succeeds
+  /// or throws.
   ///
   /// Both branches build on the `state` as it is once [read] has finished,
   /// never on a snapshot taken before it suspended: `showArchived` can be
@@ -97,13 +104,18 @@ final class RecipeLibraryCubit extends Cubit<RecipeLibraryState> {
   /// over it would roll the switch back off. That is why the await is
   /// hoisted out of the `copyWith` argument list — Dart evaluates the
   /// receiver `state` before the arguments, so an inline `await read` there
-  /// reads `state` at call time.
-  Future<RecipeLibraryState> _outcomeOf(Future<List<Recipe>> read) async {
+  /// reads `state` at call time. Both also record [query] as what the rows
+  /// now answer, a failure included: its empty rows are that query's.
+  Future<RecipeLibraryState> _outcomeOf(
+    Future<List<Recipe>> read, {
+    required String query,
+  }) async {
     try {
       final rows = await read;
       return state.copyWith(
         status: RecipeLibraryStatus.loaded,
         recipes: _newestFirst(rows),
+        resultsQuery: query,
       );
     } on Object catch (error, stackTrace) {
       // Reported as well as rendered: the screen only says the read
@@ -112,6 +124,7 @@ final class RecipeLibraryCubit extends Cubit<RecipeLibraryState> {
       return state.copyWith(
         status: RecipeLibraryStatus.failure,
         recipes: const [],
+        resultsQuery: query,
       );
     }
   }
