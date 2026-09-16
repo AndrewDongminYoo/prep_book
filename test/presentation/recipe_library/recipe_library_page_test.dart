@@ -11,7 +11,8 @@ import '../../application/fakes.dart';
 import '../../helpers/helpers.dart';
 import '../fakes.dart';
 
-const _emptyMessage = 'No recipes yet.';
+const _emptyMessage =
+    'No recipes yet. Create your first recipe to get started.';
 const _noMatchMessage = 'No recipes match your search.';
 const _onlyArchivedMessage =
     'Every recipe here is archived. Turn the switch on to see them.';
@@ -127,6 +128,13 @@ List<String> _rowTitles(WidgetTester tester) => [
 Finder _inLibraryList(Finder matching) => find.descendant(
   of: find.byKey(const PageStorageKey<String>('recipe-list-pane')),
   matching: matching,
+);
+
+/// The create action the empty state offers, as distinct from the app bar's
+/// icon, which is found by its tooltip.
+final Finder _emptyLibraryCreateButton = find.widgetWithText(
+  FilledButton,
+  'New recipe',
 );
 
 ListTile _recipeTile(WidgetTester tester, String name) => tester
@@ -384,6 +392,8 @@ void main() {
       expect(find.text(_onlyArchivedMessage), findsNothing);
       expect(find.text(_errorMessage), findsNothing);
       expect(find.text('Ciabatta'), findsNothing);
+      // The next step here is the search field, not a new recipe.
+      expect(_emptyLibraryCreateButton, findsNothing);
     });
 
     testWidgets('shows the empty message when the library holds nothing', (
@@ -396,6 +406,30 @@ void main() {
       expect(find.text(_noMatchMessage), findsNothing);
       expect(find.text(_onlyArchivedMessage), findsNothing);
       expect(find.text(_errorMessage), findsNothing);
+    });
+
+    testWidgets('an empty library offers the create action under the message', (
+      tester,
+    ) async {
+      await tester.pumpApp(_libraryOver(FakeRecipeRepository()));
+      await tester.pump();
+
+      // A fresh install lands here with nothing to search and nothing to
+      // unhide, so the message alone would leave the app bar's icon as the
+      // only way forward.
+      expect(_emptyLibraryCreateButton, findsOneWidget);
+    });
+
+    testWidgets("the empty library's create action opens the editor", (
+      tester,
+    ) async {
+      await tester.pumpApp(_libraryOver(FakeRecipeRepository()));
+      await tester.pump();
+
+      await tester.tap(_emptyLibraryCreateButton);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('recipe-name')), findsOneWidget);
     });
 
     testWidgets(
@@ -415,6 +449,8 @@ void main() {
         expect(find.text(_onlyArchivedMessage), findsOneWidget);
         expect(find.text(_emptyMessage), findsNothing);
         expect(find.text(_noMatchMessage), findsNothing);
+        // The next step here is the switch, not a new recipe.
+        expect(_emptyLibraryCreateButton, findsNothing);
 
         await tester.tap(find.byType(SwitchListTile));
         await tester.pump();

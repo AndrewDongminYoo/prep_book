@@ -20,9 +20,9 @@
     "@recipeLibraryProductionRun": {
         "description": "Label of the per-recipe action that starts a production run"
     },
-    "recipeLibraryEmpty": "No recipes yet.",
+    "recipeLibraryEmpty": "No recipes yet. Create your first recipe to get started.",
     "@recipeLibraryEmpty": {
-        "description": "Shown when the library holds nothing to list"
+        "description": "Shown above the create action when the library holds nothing to list"
     },
     "recipeLibraryNoMatches": "No recipes match your search.",
     "@recipeLibraryNoMatches": {
