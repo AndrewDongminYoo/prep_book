@@ -310,6 +310,10 @@
     "@recipeEditorSubRecipeNone": {
         "description": "Shown when the sub-recipe picker has nothing to offer"
     },
+    "recipeEditorSubRecipeUnavailable": "No saved recipe to reference yet. Save this recipe first; other recipes can then add it as a sub-recipe.",
+    "@recipeEditorSubRecipeUnavailable": {
+        "description": "Shown beside the disabled sub-recipe action when the library holds no recipe to reference"
+    },
     "recipeEditorCustomUnitTitle": "New unit",
     "@recipeEditorCustomUnitTitle": {
         "description": "Title of the dialog that declares a custom unit"

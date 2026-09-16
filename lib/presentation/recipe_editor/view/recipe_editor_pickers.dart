@@ -257,6 +257,9 @@ class _SubRecipePicker extends StatelessWidget {
     return SimpleDialog(
       title: Text(l10n.recipeEditorSubRecipePickerTitle),
       children: [
+        // Not dead: the add action is disabled with no choice, but a line
+        // stored earlier still opens this picker from its target, and every
+        // recipe in the library can have been archived since.
         if (recipes.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),

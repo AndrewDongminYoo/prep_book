@@ -703,6 +703,12 @@ class _ComponentActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // Disabled rather than opening a picker that says it has nothing to
+    // offer: a fresh install's first recipe lands here, and a dialog that
+    // names the failure but not the step is a dead end. The reason sits
+    // beside the button, where the design document keeps such notes, and
+    // it names the step — save this one, then reference it from the next.
+    final canAddSubRecipe = state.subRecipeChoices.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -726,10 +732,18 @@ class _ComponentActions extends StatelessWidget {
             OutlinedButton.icon(
               icon: const Icon(Icons.account_tree_outlined),
               label: Text(l10n.recipeEditorAddSubRecipe),
-              onPressed: () => _addSubRecipe(context),
+              onPressed: canAddSubRecipe ? () => _addSubRecipe(context) : null,
             ),
           ],
         ),
+        if (!canAddSubRecipe)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              l10n.recipeEditorSubRecipeUnavailable,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
       ],
     );
   }

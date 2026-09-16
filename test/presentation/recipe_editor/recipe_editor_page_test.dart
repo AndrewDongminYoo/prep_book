@@ -11,6 +11,12 @@ import '../fakes.dart';
 final _piece = Unit.count('piece');
 final _tray = Unit.namedYield('tray');
 
+/// What the editor says beside the sub-recipe action when the library holds
+/// nothing it could reference.
+const _subRecipeUnavailable =
+    'No saved recipe to reference yet. Save this recipe first; other recipes '
+    'can then add it as a sub-recipe.';
+
 /// A screen that opens the editor the way the library screen does, so every
 /// test here goes through [RecipeEditorLauncher] and the editor is a pushed
 /// route — which is what makes the pop after a save observable.
@@ -597,6 +603,9 @@ void main() {
         ..seed(buildRecipe(id: 'old', name: 'Shelved', isArchived: true));
 
       await _openEditor(tester, recipes: recipes, ingredients: ingredients);
+      // The library holds something to reference, so the action is live
+      // and there is nothing to explain.
+      expect(find.text(_subRecipeUnavailable), findsNothing);
       await _tap(tester, find.widgetWithText(OutlinedButton, 'Add sub-recipe'));
 
       // An archived dependency blocks a production run, so offering one
@@ -651,17 +660,21 @@ void main() {
       );
     });
 
-    testWidgets('the sub-recipe picker says when it has nothing to offer', (
-      tester,
-    ) async {
+    testWidgets('with nothing to reference, the sub-recipe action is disabled '
+        'and says why', (tester) async {
       await _openEditor(tester, recipes: recipes, ingredients: ingredients);
+
+      // A fresh install's first recipe lands here. A live button that opens
+      // a dialog saying "nothing to offer" names the failure and not the
+      // step, so the action waits and the reason sits beside it.
+      final action = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Add sub-recipe'),
+      );
+      expect(action.onPressed, isNull);
+      expect(find.text(_subRecipeUnavailable), findsOneWidget);
+
       await _tap(tester, find.widgetWithText(OutlinedButton, 'Add sub-recipe'));
-
-      expect(find.text('No recipe is available to reference.'), findsOneWidget);
-
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
-
+      expect(find.byType(SimpleDialog), findsNothing);
       expect(find.byType(Card), findsNothing);
     });
 
@@ -775,6 +788,50 @@ void main() {
       await tester.tap(find.widgetWithText(ListTile, 'Flour'));
       await tester.pumpAndSettle();
     }
+
+    testWidgets("a stored sub-recipe line's picker says when it has nothing "
+        'to offer', (tester) async {
+      // The one way to reach the picker with no choice: the add action is
+      // disabled then, but a line stored earlier still has a target to tap.
+      // Every recipe here is archived, this one included, because the
+      // choices leave archived recipes out and would otherwise offer the
+      // recipe being edited.
+      final cake = buildRecipe(
+        id: 'cake',
+        name: 'Cake',
+        isArchived: true,
+        components: [
+          RecipeComponent(
+            id: 'sub-dough',
+            target: const SubRecipeRef('dough'),
+            baseQuantity: Quantity.parse('500', Unit.gram),
+            behavior: ScalingBehavior.proportional,
+            displayOrder: 0,
+          ),
+        ],
+      );
+      recipes
+        ..seed(
+          buildRecipe(id: 'dough', name: 'Croissant dough', isArchived: true),
+        )
+        ..seed(cake);
+
+      await _openEditor(
+        tester,
+        recipes: recipes,
+        ingredients: ingredients,
+        recipe: cake,
+      );
+      await changeTarget(tester, 'Croissant dough');
+
+      expect(find.text('No recipe is available to reference.'), findsOneWidget);
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      // The line is untouched: nothing was chosen, so nothing moved.
+      expect(find.widgetWithText(Card, 'Croissant dough'), findsOneWidget);
+    });
 
     testWidgets('a line is pointed at another ingredient, keeping its fields', (
       tester,
