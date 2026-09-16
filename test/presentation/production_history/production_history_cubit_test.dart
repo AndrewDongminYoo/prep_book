@@ -42,6 +42,14 @@ ProductionRunSummary _summary(String id) => ProductionRunSummary(
 );
 
 void main() {
+  test('copyWith keeps the current status when no status is supplied', () {
+    const state = ProductionHistoryState(
+      status: ProductionHistoryStatus.loaded,
+    );
+
+    expect(state.copyWith().status, ProductionHistoryStatus.loaded);
+  });
+
   test('load keeps the repository order and marks the read loaded', () async {
     final repository = _HistoryRepository();
     final cubit = ProductionHistoryCubit(ListProductionHistory(repository));

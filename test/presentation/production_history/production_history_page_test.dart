@@ -93,15 +93,16 @@ ProductionRun _storedRun({required String id}) {
   );
 }
 
-ProductionRunSummary _summary({String id = 'run-1'}) => ProductionRunSummary(
-  id: id,
-  recipeId: 'morning-rolls',
-  recipeName: 'Morning rolls',
-  recipeRevision: 3,
-  targetYield: Quantity.parse('12', Unit.count('roll')),
-  createdAt: DateTime.utc(2026, 9, 15, 23),
-  isDraft: true,
-);
+ProductionRunSummary _summary({String id = 'run-1', bool isDraft = true}) =>
+    ProductionRunSummary(
+      id: id,
+      recipeId: 'morning-rolls',
+      recipeName: 'Morning rolls',
+      recipeRevision: 3,
+      targetYield: Quantity.parse('12', Unit.count('roll')),
+      createdAt: DateTime.utc(2026, 9, 15, 23),
+      isDraft: isDraft,
+    );
 
 Widget _screen(
   _HistoryRepository repository, {
@@ -169,6 +170,16 @@ void main() {
     expect(find.text('생산 이력'), findsOneWidget);
     expect(find.text('3차 버전'), findsOneWidget);
     expect(find.text('초안'), findsOneWidget);
+  });
+
+  testWidgets('separates rows and labels a ready run', (tester) async {
+    final repository = _HistoryRepository()
+      ..summaries = [_summary(), _summary(id: 'run-2', isDraft: false)];
+    await tester.pumpWidget(_screen(repository));
+    await tester.pump();
+
+    expect(find.byType(Divider), findsOneWidget);
+    expect(find.text('Ready'), findsOneWidget);
   });
 
   testWidgets('opens the exact stored snapshot in the sheet route', (

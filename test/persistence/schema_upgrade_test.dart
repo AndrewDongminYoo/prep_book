@@ -5,6 +5,7 @@ import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/database.dart';
 import 'package:prep_book/persistence/errors.dart';
 import 'package:prep_book/persistence/schema/v1.dart';
+import 'package:prep_book/persistence/schema/v2.dart';
 import 'package:prep_book/persistence/sqflite/production_run_repository.dart';
 import 'package:prep_book/persistence/sqflite/quantity_columns.dart';
 import 'package:prep_book/persistence/sqflite/result_codec.dart';
@@ -296,6 +297,27 @@ void main() {
       expect(summary.isDraft, isTrue);
     },
   );
+
+  test('metadata backfill reports a run removed during its update', () async {
+    final db = await openPrepBookDatabase(
+      path: inMemoryDatabasePath,
+      factory: databaseFactoryFfi,
+    );
+    addTearDown(db.close);
+    await SqfliteProductionRunRepository(db).save(legacyDraft());
+    await db.execute('''
+CREATE TRIGGER delete_run_before_metadata_update
+BEFORE UPDATE OF recipe_name ON production_runs
+BEGIN
+  DELETE FROM production_runs WHERE id = OLD.id;
+END
+''');
+
+    await expectLater(
+      backfillProductionRunSummaryMetadata(db),
+      throwsStateError,
+    );
+  });
 
   test('a corrupt version 1 payload rolls back the whole upgrade', () async {
     final directory = await Directory.systemTemp.createTemp(

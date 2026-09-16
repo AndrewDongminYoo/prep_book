@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/database.dart';
@@ -565,6 +567,35 @@ void main() {
 
     expect((await repository.listSummaries()).single.isDraft, isTrue);
     expect((await repository.findById('run-1'))!.isFinalizable, isFalse);
+  });
+
+  test('recordAcknowledgement rejects a missing run', () async {
+    final warning = buildRunWithOneBlockingWarning(
+      id: 'source',
+    ).result.warnings.single;
+
+    await expectLater(
+      repository.recordAcknowledgement('absent', warning),
+      throwsArgumentError,
+    );
+  });
+
+  test('recordAcknowledgement rejects a non-text result payload', () async {
+    final run = buildRunWithOneBlockingWarning(id: 'run-1');
+    await repository.save(run);
+    await db.update(
+      'production_runs',
+      <String, Object?>{
+        'result_json': Uint8List.fromList([1]),
+      },
+      where: 'id = ?',
+      whereArgs: ['run-1'],
+    );
+
+    await expectLater(
+      repository.recordAcknowledgement('run-1', run.result.warnings.single),
+      throwsA(isA<CorruptDatabaseError>()),
+    );
   });
 
   test('save rejects an acknowledgement absent from the run', () async {
