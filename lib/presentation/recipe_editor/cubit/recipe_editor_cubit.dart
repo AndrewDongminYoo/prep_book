@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
+import 'package:prep_book/presentation/identifiers/unique_slug.dart';
 import 'package:prep_book/presentation/units/built_in_units.dart';
 import 'package:prep_book/presentation/units/readable_quantity.dart';
 
@@ -10,11 +11,6 @@ part 'recipe_editor_state.dart';
 /// Matches an identifier this cubit generated for a component, so a new one
 /// can be numbered past every generated id already in the recipe.
 final _generatedComponentId = RegExp(r'^component-(\d+)$');
-
-/// A run of everything a slug drops: anything that is not a letter or a
-/// digit, in any script, so a Korean recipe name slugs to its own words
-/// rather than to nothing.
-final _slugSeparators = RegExp(r'[^\p{L}\p{N}]+', unicode: true);
 
 /// Drives the recipe editor screen.
 ///
@@ -117,7 +113,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   }) async {
     emit(state.copyWith(isWriting: true));
     final ingredient = Ingredient(
-      id: _uniqueSlug(name, {
+      id: uniqueSlug(name, {
         for (final stored in state.ingredients) stored.id,
       }, fallback: 'ingredient'),
       name: name.trim(),
@@ -365,7 +361,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// below are placeholders rather than claims.
   static Recipe _recipeFrom(RecipeEditorState state) => Recipe(
     id: state.isNewRecipe
-        ? _uniqueSlug(state.name, {
+        ? uniqueSlug(state.name, {
             for (final recipe in state.libraryRecipes) recipe.id,
           }, fallback: 'recipe')
         : state.recipeId,
@@ -440,29 +436,6 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
           _amountText(stored) == text.trim()
       ? stored
       : Quantity.fromDecimal(_decimal(text), unit);
-
-  /// A lowercase, dash-joined form of [source] that no id in [taken] uses.
-  ///
-  /// Identifiers are never displayed, so this only has to be stable and
-  /// unique. Uniqueness is the part that matters: a second recipe named like
-  /// an existing one would otherwise slug to the same id and be stored as
-  /// that recipe's *next revision*, silently replacing it in the library
-  /// under its own name.
-  static String _uniqueSlug(
-    String source,
-    Set<String> taken, {
-    required String fallback,
-  }) {
-    final parts = source.toLowerCase().split(_slugSeparators);
-    final slug = parts.where((part) => part.isNotEmpty).join('-');
-    final stem = slug.isEmpty ? fallback : slug;
-    if (!taken.contains(stem)) return stem;
-    var suffix = 2;
-    while (taken.contains('$stem-$suffix')) {
-      suffix++;
-    }
-    return '$stem-$suffix';
-  }
 
   /// The form as [recipe] leaves it, or an empty one when it is `null`.
   static RecipeEditorState _initialState(Recipe? recipe) {
