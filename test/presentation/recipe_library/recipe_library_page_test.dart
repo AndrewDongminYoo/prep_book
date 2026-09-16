@@ -396,6 +396,36 @@ void main() {
       expect(_emptyLibraryCreateButton, findsNothing);
     });
 
+    testWidgets('clearing a no-match search keeps the create action away '
+        'until the read lands', (tester) async {
+      await tester.pumpApp(_libraryOver(recipes));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'zzz');
+      await tester.pump(_pastTheDebounce);
+      await tester.pump();
+      expect(find.text(_noMatchMessage), findsOneWidget);
+
+      // The field is empty at once, but the rows on screen still answer
+      // "zzz" until the debounce and the read have run. In that window the
+      // library is not unfilled, so the empty state must keep describing
+      // the result it shows rather than offer a new recipe over a library
+      // that holds two.
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pump();
+
+      expect(find.text(_noMatchMessage), findsOneWidget);
+      expect(find.text(_emptyMessage), findsNothing);
+      expect(_emptyLibraryCreateButton, findsNothing);
+
+      await tester.pump(_pastTheDebounce);
+      await tester.pump();
+
+      expect(_inLibraryList(find.text('Ciabatta')), findsOneWidget);
+      expect(find.text(_noMatchMessage), findsNothing);
+      expect(_emptyLibraryCreateButton, findsNothing);
+    });
+
     testWidgets('shows the empty message when the library holds nothing', (
       tester,
     ) async {

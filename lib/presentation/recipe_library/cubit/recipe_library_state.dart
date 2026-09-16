@@ -27,6 +27,7 @@ final class RecipeLibraryState {
     this.status = RecipeLibraryStatus.loading,
     this.recipes = const [],
     this.query = '',
+    this.resultsQuery = '',
     this.showArchived = false,
   });
 
@@ -39,6 +40,16 @@ final class RecipeLibraryState {
 
   /// The current search text. An empty query matches everything.
   final String query;
+
+  /// The query [recipes] answers. Trails [query] while a read is pending.
+  ///
+  /// The field shows [query], and the empty state explains [recipes], so
+  /// the two read different fields: after a no-match search is cleared,
+  /// [query] is empty at once while [recipes] still holds that search's
+  /// nothing until the debounce and the read have run. Judging the empty
+  /// state on [query] there calls the library unfilled, and offers to
+  /// create a recipe over one that holds several.
+  final String resultsQuery;
 
   /// Whether archived recipes are included in [visibleRecipes].
   final bool showArchived;
@@ -72,11 +83,13 @@ final class RecipeLibraryState {
     RecipeLibraryStatus? status,
     List<Recipe>? recipes,
     String? query,
+    String? resultsQuery,
     bool? showArchived,
   }) => RecipeLibraryState(
     status: status ?? this.status,
     recipes: recipes ?? this.recipes,
     query: query ?? this.query,
+    resultsQuery: resultsQuery ?? this.resultsQuery,
     showArchived: showArchived ?? this.showArchived,
   );
 }

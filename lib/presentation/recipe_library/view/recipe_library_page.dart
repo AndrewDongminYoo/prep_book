@@ -425,11 +425,16 @@ class _LoadedBody extends StatelessWidget {
   /// neither: it lands here with nothing to search and nothing to unhide,
   /// and the message alone would leave the app bar's icon as the only way
   /// forward.
+  ///
+  /// `resultsQuery`, not `query`: the rows are explained by the query they
+  /// answer, and the field's text runs ahead of that by a debounce and a
+  /// read. Judged on `query`, clearing a no-match search would offer the
+  /// button over a library that holds several recipes until the read lands.
   Widget _emptyBody(AppLocalizations l10n) {
     if (state.hasHiddenArchived) {
       return _CenteredMessage(message: l10n.recipeLibraryOnlyArchived);
     }
-    if (state.query.isNotEmpty) {
+    if (state.resultsQuery.isNotEmpty) {
       return _CenteredMessage(message: l10n.recipeLibraryNoMatches);
     }
     return _EmptyLibrary(editor: editor);
