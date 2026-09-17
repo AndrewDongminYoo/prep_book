@@ -27,6 +27,8 @@ Future<ChampionshipStrings> _stringsFor(
 
 List<String> _allCopy(ChampionshipStrings strings) => [
   strings.title,
+  strings.brandTitle,
+  strings.brandSubtitle,
   strings.boundary,
   strings.source,
   strings.review,
@@ -42,7 +44,6 @@ List<String> _allCopy(ChampionshipStrings strings) => [
   strings.sourceIntro,
   strings.textMode,
   strings.imageMode,
-  strings.sampleTitle,
   strings.sampleDescription,
   strings.useSample,
   strings.recipeText,

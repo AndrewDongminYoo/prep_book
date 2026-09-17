@@ -478,7 +478,6 @@ class _StringReviewField extends StatelessWidget {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: ChampionshipStrings.of(context).currentValueFor(label),
-        border: const OutlineInputBorder(),
       ),
       onChanged: onEdit,
     ),
@@ -521,7 +520,6 @@ class _UnitReviewField extends StatelessWidget {
       isExpanded: true,
       decoration: InputDecoration(
         labelText: ChampionshipStrings.of(context).currentValueFor(label),
-        border: const OutlineInputBorder(),
       ),
       items: [
         for (final unit in _supportedUnits)
@@ -574,10 +572,7 @@ class _BehaviorReviewField extends StatelessWidget {
         initialValue: field.value,
         focusNode: focusNode,
         isExpanded: true,
-        decoration: InputDecoration(
-          labelText: strings.currentValueFor(label),
-          border: const OutlineInputBorder(),
-        ),
+        decoration: InputDecoration(labelText: strings.currentValueFor(label)),
         items: [
           for (final behavior in DraftScalingBehavior.values)
             DropdownMenuItem(
@@ -624,6 +619,81 @@ class _ReviewFieldCard<T> extends StatelessWidget {
         valueLabel?.call(field.sourceValue) ??
         field.sourceValue?.toString() ??
         '—';
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _MetadataLine(label: strings.aiProposal, value: proposal),
+        _MetadataLine(label: strings.evidence, value: field.evidence),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _StatusChip(
+              semanticsKey: ValueKey('$path.confidence-semantics'),
+              label: strings.confidence(field.confidence),
+            ),
+            _StatusChip(
+              semanticsKey: ValueKey('$path.confirmation-semantics'),
+              avatar: Icon(
+                field.isConfirmed ? Icons.check_circle : Icons.pending_outlined,
+                size: 18,
+              ),
+              label: field.isConfirmed
+                  ? strings.confirmed
+                  : strings.needsConfirmation,
+            ),
+            if (field.isEdited)
+              _StatusChip(
+                semanticsKey: ValueKey('$path.edited-semantics'),
+                label: strings.edited,
+              ),
+          ],
+        ),
+      ],
+    );
+    final controls = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (field.activeIssues.isNotEmpty) ...[
+          Text(strings.issues, style: TextStyle(color: colors.error)),
+          for (final issue in [
+            ...field.activeSourceIssues,
+            for (final issue in field.activeLocalIssues)
+              strings.reviewIssue(issue),
+          ])
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('• ', style: TextStyle(color: colors.error)),
+                Expanded(
+                  child: Text(issue, style: TextStyle(color: colors.error)),
+                ),
+              ],
+            ),
+          const SizedBox(height: 12),
+        ],
+        input,
+        const SizedBox(height: 12),
+        Semantics(
+          key: ValueKey('$path.confirm-semantics'),
+          excludeSemantics: true,
+          button: true,
+          enabled: onConfirm != null,
+          label: field.isConfirmed
+              ? strings.confirmedField(label)
+              : strings.confirmField(label),
+          onTap: onConfirm,
+          child: OutlinedButton.icon(
+            key: confirmKey,
+            onPressed: onConfirm,
+            icon: const Icon(Icons.check),
+            label: Text(
+              field.isConfirmed ? strings.confirmed : strings.confirm,
+            ),
+          ),
+        ),
+      ],
+    );
     return Semantics(
       key: ValueKey('$path.field-semantics'),
       container: true,
@@ -648,76 +718,30 @@ class _ReviewFieldCard<T> extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _MetadataLine(label: strings.aiProposal, value: proposal),
-                _MetadataLine(label: strings.evidence, value: field.evidence),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _StatusChip(
-                      semanticsKey: ValueKey('$path.confidence-semantics'),
-                      label: strings.confidence(field.confidence),
-                    ),
-                    _StatusChip(
-                      semanticsKey: ValueKey('$path.confirmation-semantics'),
-                      avatar: Icon(
-                        field.isConfirmed
-                            ? Icons.check_circle
-                            : Icons.pending_outlined,
-                        size: 18,
-                      ),
-                      label: field.isConfirmed
-                          ? strings.confirmed
-                          : strings.needsConfirmation,
-                    ),
-                    if (field.isEdited)
-                      _StatusChip(
-                        semanticsKey: ValueKey('$path.edited-semantics'),
-                        label: strings.edited,
-                      ),
-                  ],
-                ),
-                if (field.activeIssues.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(strings.issues, style: TextStyle(color: colors.error)),
-                  for (final issue in [
-                    ...field.activeSourceIssues,
-                    for (final issue in field.activeLocalIssues)
-                      strings.reviewIssue(issue),
-                  ])
-                    Row(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final sideBySide =
+                        constraints.maxWidth >= 600 &&
+                        MediaQuery.textScalerOf(context).scale(16) <= 24;
+                    if (!sideBySide) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          details,
+                          const SizedBox(height: 12),
+                          controls,
+                        ],
+                      );
+                    }
+                    return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('• ', style: TextStyle(color: colors.error)),
-                        Expanded(
-                          child: Text(
-                            issue,
-                            style: TextStyle(color: colors.error),
-                          ),
-                        ),
+                        Expanded(flex: 5, child: details),
+                        const SizedBox(width: 24),
+                        Expanded(flex: 4, child: controls),
                       ],
-                    ),
-                ],
-                const SizedBox(height: 12),
-                input,
-                const SizedBox(height: 12),
-                Semantics(
-                  key: ValueKey('$path.confirm-semantics'),
-                  excludeSemantics: true,
-                  button: true,
-                  enabled: onConfirm != null,
-                  label: field.isConfirmed
-                      ? strings.confirmedField(label)
-                      : strings.confirmField(label),
-                  onTap: onConfirm,
-                  child: OutlinedButton.icon(
-                    key: confirmKey,
-                    onPressed: onConfirm,
-                    icon: const Icon(Icons.check),
-                    label: Text(
-                      field.isConfirmed ? strings.confirmed : strings.confirm,
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ],
             ),
