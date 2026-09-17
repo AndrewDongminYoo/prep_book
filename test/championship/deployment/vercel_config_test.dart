@@ -12,7 +12,6 @@ void main() {
     expect(
       config['buildCommand'],
       'flutter build web --release --target lib/main_championship.dart '
-      '--dart-define=AI_IMPORT_ENDPOINT=/api/extract-recipe '
       '--tree-shake-icons',
     );
     expect(config['outputDirectory'], 'build/web');
@@ -81,5 +80,13 @@ void main() {
         .map((line) => line.trim())
         .toList();
     expect(setupCommands, ['npm run test:api', config['buildCommand']]);
+    expect(
+      File('merry.yaml').readAsStringSync(),
+      contains('(scripts): ${config['buildCommand']}'),
+    );
+    expect(
+      File('lib/main_championship.dart').readAsStringSync(),
+      contains("defaultValue: '/api/extract-recipe'"),
+    );
   });
 }

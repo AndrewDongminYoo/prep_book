@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
@@ -119,6 +120,81 @@ Widget _screen(
 );
 
 void main() {
+  for (final viewport in [const Size(390, 844), const Size(1000, 900)]) {
+    testWidgets('history stays readable at 300 percent text in $viewport', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = viewport
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final repository = _HistoryRepository()..summaries = [_summary()];
+
+      await tester.pumpWidget(_screen(repository));
+      await tester.pump();
+      final normalTitleHeight = tester
+          .getSize(find.text('Morning rolls'))
+          .height;
+      tester.platformDispatcher.textScaleFactorTestValue = 3;
+      await tester.pumpAndSettle();
+
+      expect(
+        MediaQuery.textScalerOf(
+          tester.element(find.text('Morning rolls')),
+        ).scale(10),
+        30,
+      );
+      expect(
+        tester.getSize(find.text('Morning rolls')).height,
+        greaterThan(normalTitleHeight * 2.5),
+      );
+
+      for (final label in ['Morning rolls', 'Revision 3', '12 roll', 'Draft']) {
+        final text = find.text(label);
+        await tester.ensureVisible(text);
+        await tester.pumpAndSettle();
+        final rect = tester.getRect(text);
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(viewport.width));
+        expect(rect.top, greaterThanOrEqualTo(0));
+        expect(rect.bottom, lessThanOrEqualTo(viewport.height));
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(of: text, matching: find.byType(RichText)).first,
+        );
+        expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+      }
+      expect(tester.takeException(), isNull);
+
+      await tester.ensureVisible(find.text('Morning rolls'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Morning rolls'));
+      await tester.pump();
+      expect(
+        find.text('This production run is no longer available.'),
+        findsOneWidget,
+      );
+    });
+  }
+
+  testWidgets('history row meets compact tap target guidance', (tester) async {
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final semantics = tester.ensureSemantics();
+    try {
+      final repository = _HistoryRepository()..summaries = [_summary()];
+
+      await tester.pumpWidget(_screen(repository));
+      await tester.pump();
+
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    } finally {
+      semantics.dispose();
+    }
+  });
+
   testWidgets('shows loading and then the empty state', (tester) async {
     final repository = _HistoryRepository()
       ..pendingList = Completer<List<ProductionRunSummary>>();

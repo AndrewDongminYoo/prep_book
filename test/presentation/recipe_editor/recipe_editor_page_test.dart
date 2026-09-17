@@ -243,6 +243,92 @@ void main() {
       expect(_editorScroll(tester).pixels, 80);
     });
 
+    for (final viewport in [const Size(390, 844), const Size(1200, 900)]) {
+      testWidgets('keeps the editor usable at 300 percent text in $viewport', (
+        tester,
+      ) async {
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _openEditor(
+          tester,
+          recipes: recipes,
+          ingredients: ingredients,
+          recipe: buildRecipe(id: 'scaled-recipe'),
+          viewport: viewport,
+        );
+        final normalLabelHeight = tester
+            .getSize(find.text('Recipe name'))
+            .height;
+        tester.platformDispatcher.textScaleFactorTestValue = 3;
+        await tester.pumpAndSettle();
+
+        final nameField = find.byKey(const ValueKey('recipe-name'));
+        expect(
+          MediaQuery.textScalerOf(tester.element(nameField)).scale(10),
+          30,
+        );
+        expect(
+          tester.getSize(find.text('Recipe name')).height,
+          greaterThan(normalLabelHeight * 2.5),
+        );
+        final nameRect = tester.getRect(nameField);
+        expect(nameRect.left, greaterThanOrEqualTo(0));
+        expect(nameRect.right, lessThanOrEqualTo(viewport.width));
+        expect(nameRect.top, greaterThanOrEqualTo(0));
+        expect(nameRect.bottom, lessThanOrEqualTo(viewport.height));
+        expect(tester.takeException(), isNull);
+        await tester.tap(nameField);
+        await tester.enterText(nameField, 'Scaled recipe');
+        await tester.pump();
+        expect(find.text('Scaled recipe'), findsOneWidget);
+        final addIngredient = find.widgetWithText(
+          OutlinedButton,
+          'Add ingredient',
+        );
+        await tester.dragUntilVisible(
+          addIngredient,
+          find.byType(ReorderableListView),
+          const Offset(0, -400),
+        );
+        await tester.pumpAndSettle();
+
+        final actionRect = tester.getRect(addIngredient);
+        expect(actionRect.left, greaterThanOrEqualTo(0));
+        expect(actionRect.right, lessThanOrEqualTo(viewport.width));
+        expect(actionRect.top, greaterThanOrEqualTo(0));
+        expect(actionRect.bottom, lessThanOrEqualTo(viewport.height));
+        expect(tester.takeException(), isNull);
+        await tester.tap(addIngredient);
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+      });
+    }
+
+    testWidgets('editor controls meet compact tap target guidance', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await _openEditor(
+          tester,
+          recipes: recipes,
+          ingredients: ingredients,
+          recipe: buildRecipe(id: 'tap-target-recipe'),
+          viewport: const Size(390, 844),
+        );
+
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await tester.dragUntilVisible(
+          find.text('Add ingredient'),
+          find.byType(ReorderableListView),
+          const Offset(0, -400),
+        );
+        await tester.pumpAndSettle();
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      } finally {
+        semantics.dispose();
+      }
+    });
+
     testWidgets('a stored recipe opens filled in', (tester) async {
       final stored = Recipe(
         id: 'croissant-dough',

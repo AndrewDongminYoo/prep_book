@@ -5,6 +5,7 @@ import 'package:prep_book/application/application.dart';
 import 'package:prep_book/backup/backup.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/persistence.dart';
+import 'package:prep_book/persistence/schema/v1.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -92,6 +93,71 @@ void main() {
     await validator.validate(
       candidatePath: candidatePath,
       manifestSchemaVersion: currentSchemaVersion,
+    );
+  });
+
+  test('upgrades and validates a version 1 backup candidate', () async {
+    final candidatePath = await _createRawDatabase(directory, userVersion: 1);
+    final db = await databaseFactoryFfi.openDatabase(
+      candidatePath,
+      options: OpenDatabaseOptions(singleInstance: false),
+    );
+    for (final statement in schemaV1Statements) {
+      await db.execute(statement);
+    }
+    await db.close();
+
+    await validator.validate(
+      candidatePath: candidatePath,
+      manifestSchemaVersion: 1,
+    );
+
+    final upgraded = await databaseFactoryFfi.openDatabase(
+      candidatePath,
+      options: OpenDatabaseOptions(singleInstance: false),
+    );
+    addTearDown(upgraded.close);
+    expect(await upgraded.getVersion(), currentSchemaVersion);
+    await validatePrepBookSchema(upgraded);
+  });
+
+  test('rejects a current-version catalog missing migrated columns', () async {
+    final candidatePath = await _createRawDatabase(
+      directory,
+      userVersion: currentSchemaVersion,
+    );
+    final db = await databaseFactoryFfi.openDatabase(
+      candidatePath,
+      options: OpenDatabaseOptions(singleInstance: false),
+    );
+    for (final statement in schemaV1Statements) {
+      await db.execute(statement);
+    }
+    await db.close();
+
+    await expectLater(
+      validator.validate(
+        candidatePath: candidatePath,
+        manifestSchemaVersion: currentSchemaVersion,
+      ),
+      throwsA(_failureKind(LibraryBackupFailureKind.invalidDatabase)),
+    );
+  });
+
+  test('rejects an altered migrated column', () async {
+    final candidatePath = '${directory.path}/altered-v2.db';
+    final db = await _openCandidate(candidatePath);
+    await db.execute(
+      'ALTER TABLE production_runs RENAME COLUMN recipe_name TO old_name',
+    );
+    await db.close();
+
+    await expectLater(
+      validator.validate(
+        candidatePath: candidatePath,
+        manifestSchemaVersion: currentSchemaVersion,
+      ),
+      throwsA(_failureKind(LibraryBackupFailureKind.invalidDatabase)),
     );
   });
 
