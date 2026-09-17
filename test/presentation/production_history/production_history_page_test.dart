@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
@@ -126,19 +127,53 @@ void main() {
       tester.view
         ..physicalSize = viewport
         ..devicePixelRatio = 1;
-      tester.platformDispatcher.textScaleFactorTestValue = 3;
       addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final repository = _HistoryRepository()..summaries = [_summary()];
 
       await tester.pumpWidget(_screen(repository));
       await tester.pump();
+      final normalTitleHeight = tester
+          .getSize(find.text('Morning rolls'))
+          .height;
+      tester.platformDispatcher.textScaleFactorTestValue = 3;
+      await tester.pumpAndSettle();
 
-      expect(find.text('Morning rolls'), findsOneWidget);
-      expect(find.text('Revision 3'), findsOneWidget);
-      expect(find.text('12 roll'), findsOneWidget);
-      expect(find.text('Draft'), findsOneWidget);
+      expect(
+        MediaQuery.textScalerOf(
+          tester.element(find.text('Morning rolls')),
+        ).scale(10),
+        30,
+      );
+      expect(
+        tester.getSize(find.text('Morning rolls')).height,
+        greaterThan(normalTitleHeight * 2.5),
+      );
+
+      for (final label in ['Morning rolls', 'Revision 3', '12 roll', 'Draft']) {
+        final text = find.text(label);
+        await tester.ensureVisible(text);
+        await tester.pumpAndSettle();
+        final rect = tester.getRect(text);
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(viewport.width));
+        expect(rect.top, greaterThanOrEqualTo(0));
+        expect(rect.bottom, lessThanOrEqualTo(viewport.height));
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(of: text, matching: find.byType(RichText)).first,
+        );
+        expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+      }
       expect(tester.takeException(), isNull);
+
+      await tester.ensureVisible(find.text('Morning rolls'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Morning rolls'));
+      await tester.pump();
+      expect(
+        find.text('This production run is no longer available.'),
+        findsOneWidget,
+      );
     });
   }
 
@@ -148,13 +183,16 @@ void main() {
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final semantics = tester.ensureSemantics();
-    final repository = _HistoryRepository()..summaries = [_summary()];
+    try {
+      final repository = _HistoryRepository()..summaries = [_summary()];
 
-    await tester.pumpWidget(_screen(repository));
-    await tester.pump();
+      await tester.pumpWidget(_screen(repository));
+      await tester.pump();
 
-    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-    semantics.dispose();
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('shows loading and then the empty state', (tester) async {
