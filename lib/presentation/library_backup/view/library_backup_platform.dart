@@ -18,7 +18,7 @@ final class PickedLibraryBackup {
   final int? knownLength;
 
   /// Resolves the size before [openRead] is listened to.
-  final Future<int> Function() resolveLength;
+  final Future<int?> Function() resolveLength;
 
   /// Opens a fresh byte stream after the size check succeeds.
   final Stream<Uint8List> Function() openRead;
@@ -64,6 +64,9 @@ final class FilePickerLibraryBackupPlatform implements LibraryBackupPlatform {
       final picked = await _openPicker();
       if (picked == null) return null;
       final length = picked.knownLength ?? await picked.resolveLength();
+      if (length == null) {
+        throw StateError('The selected backup length could not be determined.');
+      }
       if (length > _maxBackupBytes) _throwTooLarge();
 
       final bytes = Uint8List(length);

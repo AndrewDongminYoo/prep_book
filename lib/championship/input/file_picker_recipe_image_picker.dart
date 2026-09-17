@@ -114,9 +114,15 @@ Future<List<RecipeImagePickerFile>> _pickPlatformFiles(
     allowedExtensions: options.allowedExtensions,
   );
   if (file == null) return const [];
+  final fileLength = await file.length();
+  if (fileLength == null) {
+    throw const RecipeImagePickerException(
+      RecipeImagePickerFailure.missingBytes,
+    );
+  }
   // Refuse by declared size before reading, so a file past the limit is never
   // loaded into browser memory just to be rejected by the check in pick().
-  if (await file.length() > recipeImportMaxSelectedImageBytes) {
+  if (fileLength > recipeImportMaxSelectedImageBytes) {
     throw const RecipeImagePickerException(
       RecipeImagePickerFailure.sourceTooLarge,
     );
