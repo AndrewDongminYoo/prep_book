@@ -6,19 +6,19 @@ part of 'recipe_editor_page.dart';
 /// picked this stored one" and "the operator wants a new one under this
 /// name" are different instructions and only one of them writes.
 sealed class _IngredientChoice {
-  const _IngredientChoice();
+  const new();
 }
 
 /// The operator picked an ingredient the library already holds.
 final class _ExistingIngredient extends _IngredientChoice {
-  const _ExistingIngredient(this.ingredient);
+  const new(this.ingredient);
 
   final Ingredient ingredient;
 }
 
 /// The operator named an ingredient the library does not hold yet.
 final class _NewIngredient extends _IngredientChoice {
-  const _NewIngredient(this.name, this.unit);
+  const new(this.name, this.unit);
 
   final String name;
   final Unit unit;
@@ -137,7 +137,7 @@ Future<void> _declareUnit(BuildContext context) async {
 /// while "Unsalted butter" is already stored sees it before deciding, and
 /// creating is refused outright while an exactly-named ingredient exists.
 class _IngredientPicker extends StatefulWidget {
-  const _IngredientPicker({required this.ingredients, required this.units});
+  const new({required this.ingredients, required this.units});
 
   final List<Ingredient> ingredients;
   final List<Unit> units;
@@ -245,7 +245,7 @@ class _IngredientPickerState extends State<_IngredientPicker> {
 
 /// Picks the recipe a sub-recipe line consumes.
 class _SubRecipePicker extends StatelessWidget {
-  const _SubRecipePicker({required this.recipes});
+  const new({required this.recipes});
 
   final List<Recipe> recipes;
 
@@ -297,7 +297,7 @@ class _SubRecipePicker extends StatelessWidget {
 /// the rows indistinguishable is identical text: `L` and `l` render
 /// differently and are already distinct units in the fixed table.
 class _CustomUnitDialog extends StatefulWidget {
-  const _CustomUnitDialog({required this.offered});
+  const new({required this.offered});
 
   /// Every unit the pickers on this screen already list.
   final List<Unit> offered;

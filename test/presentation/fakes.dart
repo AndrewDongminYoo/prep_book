@@ -79,7 +79,7 @@ final class DeferredRecipeRepository implements RecipeRepository {
 /// a re-read.
 final class FailingLifecycleRecipeRepository implements RecipeRepository {
   /// Creates a repository reading through [reads].
-  FailingLifecycleRecipeRepository(this.reads);
+  new(this.reads);
 
   /// The in-memory library every read is answered from.
   final FakeRecipeRepository reads;
@@ -190,7 +190,7 @@ final class DeferredIngredientRepository implements IngredientRepository {
 /// for this fake too: a write held open is the only way to see that guard.
 final class DeferredWriteRecipeRepository implements RecipeRepository {
   /// Creates a repository reading through [reads].
-  DeferredWriteRecipeRepository(this.reads);
+  new(this.reads);
 
   /// The in-memory library every read is answered from.
   final FakeRecipeRepository reads;
@@ -238,7 +238,7 @@ final class DeferredWriteRecipeRepository implements RecipeRepository {
 /// test chose rather than the moment it happened to run.
 final class FixedClock implements Clock {
   /// Creates the clock.
-  const FixedClock();
+  const new();
 
   @override
   DateTime now() => DateTime.utc(2026, 9, 8, 12);
@@ -252,7 +252,7 @@ final class FixedClock implements Clock {
 /// nothing here is a claim about that.
 final class FixedRunIdSource implements RunIdSource {
   /// Creates the source.
-  const FixedRunIdSource();
+  const new();
 
   @override
   String next() => 'run-1';
@@ -273,7 +273,7 @@ final class FixedRunIdSource implements RunIdSource {
 /// the first would let the rest resolve while the test thought nothing had.
 final class DeferredLookupRecipeRepository implements RecipeRepository {
   /// Creates a repository answering out of [reads].
-  DeferredLookupRecipeRepository(this.reads);
+  new(this.reads);
 
   /// The in-memory library [complete] answers from.
   final FakeRecipeRepository reads;

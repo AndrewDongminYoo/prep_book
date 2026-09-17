@@ -10,7 +10,7 @@ import 'package:prep_book/domain/units/quantity.dart';
 @immutable
 final class Recipe {
   /// Creates a recipe revision, rejecting yields the domain forbids.
-  factory Recipe({
+  factory({
     required String id,
     required int revision,
     required String name,
@@ -57,7 +57,7 @@ final class Recipe {
     );
   }
 
-  const Recipe._({
+  const new _({
     required this.id,
     required this.revision,
     required this.name,

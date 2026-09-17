@@ -21,7 +21,7 @@ const _subRecipeUnavailable =
 /// test here goes through [RecipeEditorLauncher] and the editor is a pushed
 /// route — which is what makes the pop after a save observable.
 class _EditorHost extends StatelessWidget {
-  const _EditorHost({required this.launcher, this.recipe});
+  const new({required this.launcher, this.recipe});
 
   final RecipeEditorLauncher launcher;
   final Recipe? recipe;

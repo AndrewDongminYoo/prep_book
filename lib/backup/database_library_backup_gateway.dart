@@ -9,27 +9,25 @@ import 'package:prep_book/persistence/persistence.dart';
 typedef CreateDatabaseSnapshot = Future<Uint8List> Function();
 
 /// Encodes database bytes into the portable backup envelope.
-typedef EncodeBackupArchive =
-    Uint8List Function({
-      required Uint8List databaseBytes,
-      required int databaseSchemaVersion,
-      required DateTime createdAtUtc,
-    });
+typedef EncodeBackupArchive = Uint8List Function({
+  required Uint8List databaseBytes,
+  required int databaseSchemaVersion,
+  required DateTime createdAtUtc,
+});
 
 /// Decodes and validates the portable backup envelope.
 typedef DecodeBackupArchive = DecodedLibraryBackup Function(Uint8List bytes);
 
 /// Replaces the active database with validated decoded bytes.
-typedef RestoreDatabaseSnapshot =
-    Future<void> Function(
-      Uint8List databaseBytes, {
-      required int manifestSchemaVersion,
-    });
+typedef RestoreDatabaseSnapshot = Future<void> Function(
+  Uint8List databaseBytes, {
+  required int manifestSchemaVersion,
+});
 
 /// Composes archive and database operations behind the application gateway.
 final class DatabaseLibraryBackupGateway implements LibraryBackupGateway {
   /// Creates one serialized backup gateway.
-  DatabaseLibraryBackupGateway({
+  new({
     required CreateDatabaseSnapshot createSnapshot,
     required EncodeBackupArchive encodeArchive,
     required DecodeBackupArchive decodeArchive,
@@ -45,7 +43,7 @@ final class DatabaseLibraryBackupGateway implements LibraryBackupGateway {
          maxArchiveBytes,
        );
 
-  DatabaseLibraryBackupGateway._(
+  new _(
     this._createSnapshot,
     this._encodeArchive,
     this._decodeArchive,

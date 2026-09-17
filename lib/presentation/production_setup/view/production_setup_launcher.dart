@@ -14,7 +14,7 @@ import 'package:prep_book/presentation/production_setup/view/production_setup_pa
 final class ProductionSetupLauncher {
   /// Creates a launcher over the use case the screen calculates through,
   /// and over [result] — where its Continue action goes.
-  const ProductionSetupLauncher(
+  const new(
     this.startProductionRun, {
     required this.result,
   });

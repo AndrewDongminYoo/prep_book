@@ -7,7 +7,7 @@ import 'package:sqflite/sqflite.dart';
 /// [IngredientRepository] backed by the `ingredients` table.
 final class SqfliteIngredientRepository implements IngredientRepository {
   /// Creates a repository over the already-open database [_db].
-  const SqfliteIngredientRepository(this._db);
+  const new(this._db);
 
   final Database _db;
 

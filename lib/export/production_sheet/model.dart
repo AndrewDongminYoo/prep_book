@@ -6,7 +6,7 @@ enum ProductionSheetOrganization { batch, total }
 /// A complete production-sheet document model.
 @immutable
 final class ProductionSheet {
-  ProductionSheet({
+  new({
     required this.organization,
     required this.labels,
     required this.runId,
@@ -40,7 +40,7 @@ final class ProductionSheet {
 /// One recipe occurrence in depth-first display order.
 @immutable
 final class ProductionSheetSection {
-  ProductionSheetSection({
+  new({
     required this.path,
     required this.depth,
     required this.recipeName,
@@ -69,7 +69,7 @@ final class ProductionSheetSection {
 /// One total or batch-oriented component table.
 @immutable
 final class ProductionSheetTable {
-  ProductionSheetTable({
+  new({
     required this.heading,
     required this.batchYield,
     required List<ProductionSheetRow> rows,
@@ -83,7 +83,7 @@ final class ProductionSheetTable {
 /// One component row with stored calculated and operator values.
 @immutable
 final class ProductionSheetRow {
-  const ProductionSheetRow({
+  const new({
     required this.label,
     required this.note,
     required this.calculated,
@@ -107,7 +107,7 @@ final class ProductionSheetRow {
 /// Static copy used by the pure Dart renderer.
 @immutable
 final class ProductionSheetLabels {
-  const ProductionSheetLabels({
+  const new({
     required this.documentTitle,
     required this.recipeRevision,
     required this.targetYield,
@@ -163,7 +163,7 @@ final class ProductionSheetLabels {
 /// One warning whose stored identifiers have been resolved for display.
 @immutable
 final class ProductionSheetWarning {
-  const ProductionSheetWarning({required this.message});
+  const new({required this.message});
 
   final String message;
 }

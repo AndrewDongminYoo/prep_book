@@ -14,7 +14,7 @@ import 'package:prep_book/persistence/sqflite/timestamps.dart';
 /// that ever replaces them — see `encodeRunPayload`.
 final class RunPayload {
   /// Creates a payload from its four immutable parts.
-  const RunPayload({
+  const new({
     required this.recipe,
     required this.dependencySnapshot,
     required this.result,

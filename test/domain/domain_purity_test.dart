@@ -193,7 +193,7 @@ String _dartSdkPath() {
 }
 
 class _DivisionVisitor extends RecursiveAstVisitor<void> {
-  _DivisionVisitor(this.path);
+  new(this.path);
 
   final String path;
   final violations = <String>[];

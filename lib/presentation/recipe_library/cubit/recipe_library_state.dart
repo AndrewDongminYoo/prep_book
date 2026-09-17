@@ -36,7 +36,7 @@ enum RecipeLibraryAction {
 /// from firing again.
 @immutable
 sealed class RecipeLibraryNotice {
-  const RecipeLibraryNotice();
+  const new();
 }
 
 /// [recipe]'s archived flag was set to [isArchived] and the rows were read
@@ -47,7 +47,7 @@ sealed class RecipeLibraryNotice {
 /// was just archived.
 final class RecipeArchivedNotice extends RecipeLibraryNotice {
   /// Creates the notice.
-  const RecipeArchivedNotice(this.recipe, {required this.isArchived});
+  const new(this.recipe, {required this.isArchived});
 
   /// The recipe as it was before the flag moved.
   final Recipe recipe;
@@ -65,7 +65,7 @@ final class RecipeArchivedNotice extends RecipeLibraryNotice {
 /// known.
 final class RecipeDuplicatedNotice extends RecipeLibraryNotice {
   /// Creates the notice.
-  const RecipeDuplicatedNotice(this.copy);
+  const new(this.copy);
 
   /// The stored copy, at revision 1.
   final Recipe copy;
@@ -75,7 +75,7 @@ final class RecipeDuplicatedNotice extends RecipeLibraryNotice {
 /// ones from before it.
 final class RecipeActionFailedNotice extends RecipeLibraryNotice {
   /// Creates the notice.
-  const RecipeActionFailedNotice(this.action);
+  const new(this.action);
 
   /// Which action failed.
   final RecipeLibraryAction action;
@@ -92,7 +92,7 @@ final class RecipeActionFailedNotice extends RecipeLibraryNotice {
 final class RecipeLibraryState {
   /// Creates a state. The defaults are the state the cubit starts in: a
   /// read is assumed to be in flight, because `load` is called immediately.
-  const RecipeLibraryState({
+  const new({
     this.status = RecipeLibraryStatus.loading,
     this.recipes = const [],
     this.query = '',

@@ -4,7 +4,7 @@ import 'package:prep_book/domain/recipe/recipe.dart';
 /// Validates that a recipe's sub-recipe references form a resolvable tree.
 final class RecipeDependencyGraph {
   /// Creates a graph over [recipesById].
-  RecipeDependencyGraph(Map<String, Recipe> recipesById) : _recipes = Map.unmodifiable(recipesById);
+  new(Map<String, Recipe> recipesById) : _recipes = Map.unmodifiable(recipesById);
 
   final Map<String, Recipe> _recipes;
 

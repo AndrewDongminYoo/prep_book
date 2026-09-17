@@ -7,7 +7,7 @@ import 'package:prep_book/domain/domain.dart';
 typedef OpenChampionshipProductionSheet = Future<void> Function(BuildContext context, ProductionRun run);
 
 class ChampionshipResultPanel extends StatelessWidget {
-  const ChampionshipResultPanel({required this.openProductionSheet, super.key});
+  const new({required this.openProductionSheet, super.key});
 
   final OpenChampionshipProductionSheet openProductionSheet;
 
@@ -134,7 +134,7 @@ class ChampionshipResultPanel extends StatelessWidget {
 }
 
 class _ResultOverview extends StatelessWidget {
-  const _ResultOverview({
+  const new({
     required this.target,
     required this.batches,
     required this.targetLabel,
@@ -184,7 +184,7 @@ class _ResultOverview extends StatelessWidget {
 }
 
 class _ExactBoundary extends StatelessWidget {
-  const _ExactBoundary({required this.strings});
+  const new({required this.strings});
 
   final ChampionshipStrings strings;
 
@@ -223,7 +223,7 @@ class _ExactBoundary extends StatelessWidget {
 }
 
 class _ComponentResult extends StatelessWidget {
-  const _ComponentResult({
+  const new({
     required this.index,
     required this.run,
     required this.component,

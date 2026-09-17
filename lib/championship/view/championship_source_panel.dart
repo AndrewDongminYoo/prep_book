@@ -6,7 +6,7 @@ import 'package:prep_book/championship/view/championship_strings.dart';
 import 'package:prep_book/championship/view/championship_word_wrap_text.dart';
 
 class ChampionshipSourcePanel extends StatefulWidget {
-  const ChampionshipSourcePanel({super.key});
+  const new({super.key});
 
   @override
   State<ChampionshipSourcePanel> createState() => _ChampionshipSourcePanelState();
@@ -195,7 +195,7 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
 }
 
 class _PrivacyBoundary extends StatelessWidget {
-  const _PrivacyBoundary({required this.text});
+  const new({required this.text});
 
   final String text;
 
@@ -226,7 +226,7 @@ class _PrivacyBoundary extends StatelessWidget {
 }
 
 class _FailureMessage extends StatelessWidget {
-  const _FailureMessage({required this.text});
+  const new({required this.text});
 
   final String text;
 

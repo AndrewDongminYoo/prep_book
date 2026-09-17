@@ -25,7 +25,7 @@ enum ProductionResultStatus {
 @immutable
 final class OverrideDraft {
   /// Creates a draft measured in [unit], empty unless [amount] is given.
-  const OverrideDraft({required this.unit, this.amount = ''});
+  const new({required this.unit, this.amount = ''});
 
   /// The typed amount.
   final String amount;
@@ -70,7 +70,7 @@ final class OverrideDraft {
 final class BatchGroup {
   /// Creates a group covering batches [firstBatch] to [lastBatch], both
   /// counted from one, each taking [amount].
-  const BatchGroup({
+  const new({
     required this.firstBatch,
     required this.lastBatch,
     required this.amount,
@@ -101,7 +101,7 @@ final class BatchGroup {
 @immutable
 final class ResultRow {
   /// Creates a row.
-  const ResultRow({
+  const new({
     required this.path,
     required this.depth,
     required this.recipeId,
@@ -186,7 +186,7 @@ final class ProductionResultState {
   /// field, and a class carrying one cannot have a const constructor.
   /// Nothing lost a `const` in the trade — every construction of this
   /// state in `lib/` and `test/` was already a plain call.
-  ProductionResultState({
+  new({
     required this.run,
     this.status = ProductionResultStatus.reviewing,
     this.expandedPaths = const {},

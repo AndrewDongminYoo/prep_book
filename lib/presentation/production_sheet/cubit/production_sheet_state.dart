@@ -7,7 +7,7 @@ enum ProductionSheetActionStatus { idle, sharing, printing }
 /// Generation and platform-action state for one production sheet.
 @immutable
 final class ProductionSheetState {
-  const ProductionSheetState({
+  const new({
     this.organization = ProductionSheetOrganization.batch,
     this.status = ProductionSheetStatus.generating,
     this.bytes,

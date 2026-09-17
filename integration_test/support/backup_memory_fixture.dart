@@ -8,7 +8,7 @@ import 'package:sqflite/sqflite.dart';
 /// The generated database fixture used by backup memory profiling.
 final class BackupMemoryFixture {
   /// Creates a completed fixture report.
-  const BackupMemoryFixture({
+  const new({
     required this.path,
     required this.databaseBytes,
     required this.ingredientCount,

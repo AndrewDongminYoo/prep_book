@@ -22,7 +22,7 @@ final class ProductionSetupCubit extends Cubit<ProductionSetupState> {
   /// calculation runs. Not zero, for the reason the library screen's search
   /// gives: a calculation is a read per recipe the run depends on, and
   /// without the wait every keystroke paid all of them.
-  ProductionSetupCubit(
+  new(
     this._startProductionRun, {
     required Recipe recipe,
     Duration previewDebounce = const Duration(milliseconds: 250),

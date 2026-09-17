@@ -13,7 +13,7 @@ import 'package:prep_book/presentation/recipe_editor/view/recipe_editor_page.dar
 final class RecipeEditorLauncher {
   /// Creates a launcher over the use cases the editor reads and writes
   /// through.
-  const RecipeEditorLauncher({
+  const new({
     required this.listLibrary,
     required this.listIngredients,
     required this.saveRecipeRevision,

@@ -9,14 +9,14 @@ import 'package:prep_book/domain/units/quantity.dart';
 @immutable
 final class RoundingRule {
   /// Creates a rule that rounds up to the nearest [increment].
-  factory RoundingRule.upToIncrement(Decimal increment) {
+  factory upToIncrement(Decimal increment) {
     if (increment <= Decimal.zero) {
       throw InvalidRoundingIncrementError(increment);
     }
     return RoundingRule._(increment);
   }
 
-  const RoundingRule._(this.increment);
+  const new _(this.increment);
 
   /// The step the displayed value is rounded up to.
   final Decimal increment;
@@ -45,12 +45,12 @@ final class RoundingRule {
 @immutable
 final class ScaledQuantity {
   /// A value that carries no rounding rule.
-  const ScaledQuantity.unrounded(Quantity value) : exact = value, displayed = value;
+  const new unrounded(Quantity value) : exact = value, displayed = value;
 
   /// A value rounded for display by [rule].
-  ScaledQuantity.rounded({required this.exact, required RoundingRule rule}) : displayed = rule.apply(exact);
+  new rounded({required this.exact, required RoundingRule rule}) : displayed = rule.apply(exact);
 
-  const ScaledQuantity._({required this.exact, required this.displayed});
+  const new _({required this.exact, required this.displayed});
 
   /// The sum of already-computed [parts]: the exact amount is the sum of
   /// the parts' exact amounts, and the displayed amount is the sum of
@@ -68,7 +68,7 @@ final class ScaledQuantity {
   /// meaningless. A production run always has at least one batch, so the
   /// calculator never passes an empty iterable here, but this constructor
   /// is public and must not assume that of every caller.
-  factory ScaledQuantity.summing(Iterable<ScaledQuantity> parts) {
+  factory summing(Iterable<ScaledQuantity> parts) {
     final iterator = parts.iterator;
     if (!iterator.moveNext()) {
       throw ArgumentError.value(parts, 'parts', 'must not be empty');

@@ -15,7 +15,7 @@ import 'package:prep_book/championship/view/championship_strings.dart';
 const _supportedUnits = <String>['', ...UnitAliasResolver.symbols];
 
 class ChampionshipReviewPanel extends StatefulWidget {
-  const ChampionshipReviewPanel({super.key});
+  const new({super.key});
 
   @override
   State<ChampionshipReviewPanel> createState() => _ChampionshipReviewPanelState();
@@ -263,7 +263,7 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
 }
 
 class _ComponentReview extends StatelessWidget {
-  const _ComponentReview({
+  const new({
     required this.index,
     required this.component,
     required this.anchorFor,
@@ -422,7 +422,7 @@ class _ComponentReview extends StatelessWidget {
 }
 
 class _StringReviewField extends StatelessWidget {
-  const _StringReviewField({
+  const new({
     required this.path,
     required this.anchorKey,
     required this.focusNode,
@@ -464,7 +464,7 @@ class _StringReviewField extends StatelessWidget {
 }
 
 class _UnitReviewField extends StatelessWidget {
-  const _UnitReviewField({
+  const new({
     required this.path,
     required this.anchorKey,
     required this.focusNode,
@@ -516,7 +516,7 @@ class _UnitReviewField extends StatelessWidget {
 }
 
 class _BehaviorReviewField extends StatelessWidget {
-  const _BehaviorReviewField({
+  const new({
     required this.path,
     required this.anchorKey,
     required this.focusNode,
@@ -568,7 +568,7 @@ class _BehaviorReviewField extends StatelessWidget {
 }
 
 class _ReviewFieldCard<T> extends StatelessWidget {
-  const _ReviewFieldCard({
+  const new({
     required this.path,
     required this.label,
     required this.field,
@@ -719,7 +719,7 @@ class _ReviewFieldCard<T> extends StatelessWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({
+  const new({
     required this.semanticsKey,
     required this.label,
     this.avatar,
@@ -741,7 +741,7 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _ReadOnlyManualField extends StatelessWidget {
-  const _ReadOnlyManualField({required this.label, required this.field});
+  const new({required this.label, required this.field});
 
   final String label;
   final ReviewField<String> field;
@@ -764,7 +764,7 @@ class _ReadOnlyManualField extends StatelessWidget {
 }
 
 class _AbsentMaximumReview extends StatelessWidget {
-  const _AbsentMaximumReview({
+  const new({
     required this.confirmed,
     required this.onConfirm,
   });
@@ -790,7 +790,7 @@ class _AbsentMaximumReview extends StatelessWidget {
 }
 
 class _MetadataLine extends StatelessWidget {
-  const _MetadataLine({required this.label, required this.value});
+  const new({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -809,7 +809,7 @@ class _MetadataLine extends StatelessWidget {
 }
 
 class _SectionHeading extends StatelessWidget {
-  const _SectionHeading(this.text);
+  const new(this.text);
 
   final String text;
 
@@ -818,7 +818,7 @@ class _SectionHeading extends StatelessWidget {
 }
 
 class _IssueSummary extends StatelessWidget {
-  const _IssueSummary({required this.issues, super.key});
+  const new({required this.issues, super.key});
 
   final List<RecipeDraftVerificationIssue> issues;
 

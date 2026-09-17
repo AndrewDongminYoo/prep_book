@@ -4,17 +4,17 @@ import 'package:prep_book/championship/model/review_recipe_draft.dart';
 import 'package:prep_book/domain/domain.dart';
 
 sealed class RecipeDraftVerification {
-  const RecipeDraftVerification();
+  const new();
 }
 
 final class RecipeDraftVerified extends RecipeDraftVerification {
-  const RecipeDraftVerified(this.draft);
+  const new(this.draft);
 
   final VerifiedRecipeDraft draft;
 }
 
 final class RecipeDraftRejected extends RecipeDraftVerification {
-  RecipeDraftRejected(List<RecipeDraftVerificationIssue> issues) : issues = List.unmodifiable(issues);
+  new(List<RecipeDraftVerificationIssue> issues) : issues = List.unmodifiable(issues);
 
   final List<RecipeDraftVerificationIssue> issues;
 }
@@ -36,21 +36,21 @@ enum RecipeDraftVerificationIssueKind {
 }
 
 final class RecipeDraftVerificationIssue {
-  const RecipeDraftVerificationIssue({required this.kind, this.path});
+  const new({required this.kind, this.path});
 
   final RecipeDraftVerificationIssueKind kind;
   final String? path;
 }
 
 final class VerifiedYieldDraft {
-  const VerifiedYieldDraft._({required this.amount, required this.unit});
+  const new _({required this.amount, required this.unit});
 
   final String amount;
   final String unit;
 }
 
 final class VerifiedRecipeDetails {
-  VerifiedRecipeDetails._({
+  new _({
     required this.name,
     required this.baseYield,
     required this.maxBatchYield,
@@ -64,7 +64,7 @@ final class VerifiedRecipeDetails {
 }
 
 final class VerifiedRecipeComponent {
-  const VerifiedRecipeComponent._({
+  const new _({
     required this.name,
     required this.amount,
     required this.unit,
@@ -80,7 +80,7 @@ final class VerifiedRecipeComponent {
 }
 
 final class VerifiedRecipeDraft {
-  VerifiedRecipeDraft._({
+  new _({
     required this.sourceKind,
     required this.recipe,
     required List<VerifiedRecipeComponent> components,
@@ -92,7 +92,7 @@ final class VerifiedRecipeDraft {
 }
 
 final class RecipeDraftVerifier {
-  const RecipeDraftVerifier({this.units = const UnitAliasResolver()});
+  const new({this.units = const UnitAliasResolver()});
 
   final UnitAliasResolver units;
 

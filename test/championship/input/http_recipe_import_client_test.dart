@@ -10,13 +10,11 @@ import 'package:prep_book/championship/input/recipe_import_client.dart';
 import 'package:prep_book/championship/input/recipe_import_request.dart';
 
 Map<String, Object?> _draftJson() {
-  final json =
-      jsonDecode(
-            File(
-              'assets/championship/sample_croissant_draft.json',
-            ).readAsStringSync(),
-          )
-          as Map<String, Object?>;
+  final json = jsonDecode(
+    File(
+      'assets/championship/sample_croissant_draft.json',
+    ).readAsStringSync(),
+  ) as Map<String, Object?>;
   return {...json, 'sourceKind': 'text'};
 }
 

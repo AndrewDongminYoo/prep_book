@@ -197,7 +197,7 @@ void main() {
 }
 
 final class _LengthReportingBackupFiles implements BackupFiles {
-  const _LengthReportingBackupFiles(this.reportedLength);
+  const new(this.reportedLength);
 
   final int reportedLength;
   static const _delegate = IoBackupFiles();
@@ -233,7 +233,7 @@ final class _LengthReportingBackupFiles implements BackupFiles {
 }
 
 final class _ReadHookDatabaseFactory implements DatabaseFactory {
-  _ReadHookDatabaseFactory(this._delegate, {required this.onRead});
+  new(this._delegate, {required this.onRead});
 
   final DatabaseFactory _delegate;
   final Future<void> Function() onRead;
@@ -265,7 +265,7 @@ final class _ReadHookDatabaseFactory implements DatabaseFactory {
 }
 
 final class _CheckpointHookDatabase implements Database {
-  _CheckpointHookDatabase(this._delegate, {required this.afterCheckpoint});
+  new(this._delegate, {required this.afterCheckpoint});
 
   final Database _delegate;
   final Future<void> Function() afterCheckpoint;

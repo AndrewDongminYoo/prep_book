@@ -12,7 +12,7 @@ import 'package:prep_book/presentation/responsive/window_width_class.dart';
 
 /// Previews and distributes one saved production-run snapshot.
 class ProductionSheetPage extends StatelessWidget {
-  const ProductionSheetPage({
+  const new({
     required this.run,
     required this.platform,
     this.builder = const ProductionSheetBuilder(),
@@ -49,7 +49,7 @@ class ProductionSheetPage extends StatelessWidget {
 }
 
 class _ProductionSheetView extends StatelessWidget {
-  const _ProductionSheetView({required this.platform});
+  const new({required this.platform});
 
   final ProductionSheetPlatform platform;
 
@@ -138,7 +138,7 @@ class _ProductionSheetView extends StatelessWidget {
 }
 
 class _Controls extends StatelessWidget {
-  const _Controls({required this.state});
+  const new({required this.state});
 
   final ProductionSheetState state;
 

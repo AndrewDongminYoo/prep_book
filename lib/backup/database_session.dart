@@ -21,7 +21,7 @@ typedef OpenSessionDatabase = Future<Database> Function(String path);
 /// Owns the live connection and performs recoverable database replacement.
 final class DatabaseSession {
   /// Creates a session over an already-open [connection].
-  DatabaseSession({
+  new({
     required Database connection,
     required String databasePath,
     required DatabaseFactory factory,
@@ -48,7 +48,7 @@ final class DatabaseSession {
          reportError ?? _logDatabaseSessionError,
        );
 
-  DatabaseSession._(
+  new _(
     this._connection,
     this._databasePath,
     this._files,

@@ -6,7 +6,7 @@ import 'package:prep_book/persistence/repositories.dart';
 @immutable
 final class IngredientDeletion {
   /// Creates an outcome.
-  const IngredientDeletion({required this.deleted, required this.blockedBy});
+  const new({required this.deleted, required this.blockedBy});
 
   /// Whether the ingredient was removed.
   final bool deleted;
@@ -24,7 +24,7 @@ final class IngredientDeletion {
 /// so — which is why the rule lives here.
 final class DeleteIngredient {
   /// Creates the use case over [_ingredients] and [_recipes].
-  const DeleteIngredient(this._ingredients, this._recipes);
+  const new(this._ingredients, this._recipes);
 
   final IngredientRepository _ingredients;
   final RecipeRepository _recipes;

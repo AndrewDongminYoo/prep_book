@@ -66,7 +66,7 @@ abstract interface class RecipeRepository {
 /// Enough of a run to list it without deserializing its result.
 final class ProductionRunSummary {
   /// Creates a summary.
-  const ProductionRunSummary({
+  const new({
     required this.id,
     required this.recipeId,
     required this.recipeName,

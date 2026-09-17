@@ -5,7 +5,7 @@ import 'package:prep_book/export/export.dart';
 import 'fixtures.dart';
 
 final class _EnglishSheetLocalizations implements ProductionSheetLocalizations {
-  const _EnglishSheetLocalizations();
+  const new();
 
   @override
   ProductionSheetLabels get labels => const ProductionSheetLabels(

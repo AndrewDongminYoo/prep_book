@@ -4,7 +4,7 @@ import 'package:prep_book/persistence/repositories.dart';
 /// The latest revision of every recipe, archived ones included.
 final class ListLibrary {
   /// Creates the use case over [_recipes].
-  const ListLibrary(this._recipes);
+  const new(this._recipes);
 
   final RecipeRepository _recipes;
 
@@ -20,7 +20,7 @@ final class ListLibrary {
 /// signature.
 final class SearchLibrary {
   /// Creates the use case over [_recipes].
-  const SearchLibrary(this._recipes);
+  const new(this._recipes);
 
   final RecipeRepository _recipes;
 

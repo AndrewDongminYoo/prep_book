@@ -41,8 +41,7 @@ format:
     # `dart fix` takes exactly one path per invocation — a second one makes it
     # print its usage instead — so lib and test get a line each.
     (scripts):
-      - dart fix --apply lib
-      - dart fix --apply test
+      - dart fix --apply
       - dart format lib test integration_test
 
   check:

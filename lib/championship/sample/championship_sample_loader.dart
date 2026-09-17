@@ -6,7 +6,7 @@ import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 const _sampleAssetPath = 'assets/championship/sample_croissant_draft.json';
 
 final class ChampionshipSampleLoader {
-  const ChampionshipSampleLoader({required this.bundle});
+  const new({required this.bundle});
 
   final AssetBundle bundle;
 

@@ -6,7 +6,7 @@ import 'dart:math';
 /// One process-RSS measurement for a named profiling phase.
 final class ProcessRssMeasurement {
   /// Creates an immutable phase result.
-  const ProcessRssMeasurement({
+  const new({
     required this.phase,
     required this.baselineBytes,
     required this.peakBytes,
@@ -47,7 +47,7 @@ final class ProcessRssMeasurement {
 /// The measured value and its process-RSS samples.
 final class ProcessRssResult<T> {
   /// Creates a completed measurement result.
-  const ProcessRssResult({required this.value, required this.measurement});
+  const new({required this.value, required this.measurement});
 
   /// The operation result.
   final T value;
@@ -58,7 +58,7 @@ final class ProcessRssResult<T> {
 
 /// Samples process RSS from a helper isolate during synchronous work.
 final class ProcessRssSampler {
-  ProcessRssSampler._({
+  new _({
     required this._interval,
     required this._samples,
     required this._samplePort,

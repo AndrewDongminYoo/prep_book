@@ -6,7 +6,7 @@ import 'package:prep_book/presentation/production_sheet/view/production_sheet_pl
 /// Opens the production-sheet preview for one stored run.
 @immutable
 final class ProductionSheetLauncher {
-  const ProductionSheetLauncher({required this.platform});
+  const new({required this.platform});
 
   final ProductionSheetPlatform platform;
 

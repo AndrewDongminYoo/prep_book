@@ -46,7 +46,7 @@ abstract interface class DecodedRecipeImage {
 /// The image as it will be uploaded, with what was done to the selection.
 @immutable
 final class PreparedRecipeImage {
-  const PreparedRecipeImage({
+  const new({
     required this.image,
     required this.width,
     required this.height,
@@ -64,7 +64,7 @@ final class PreparedRecipeImage {
 enum RecipeImageReducerFailure { undecodable, tooLarge }
 
 final class RecipeImageReducerException implements Exception {
-  const RecipeImageReducerException(this.failure);
+  const new(this.failure);
 
   final RecipeImageReducerFailure failure;
 
@@ -79,7 +79,7 @@ final class RecipeImageReducerException implements Exception {
 /// keeps its lossless PNG bytes; anything else is scaled and re-encoded as
 /// JPEG down [recipeImageReductionLadder] until it fits.
 final class RecipeImageReducer {
-  const RecipeImageReducer({required this.codec});
+  const new({required this.codec});
 
   final RecipeImageCodec codec;
 

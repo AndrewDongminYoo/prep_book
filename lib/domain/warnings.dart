@@ -3,7 +3,7 @@ import 'package:meta/meta.dart';
 /// Something the operator must see before a run is finalized.
 @immutable
 sealed class ProductionWarning {
-  const ProductionWarning();
+  const new();
 
   /// Whether the run may not be finalized until this is acknowledged.
   bool get isBlocking;
@@ -12,7 +12,7 @@ sealed class ProductionWarning {
 /// A manual component has no numeric result until the operator supplies one.
 final class ManualComponentWarning extends ProductionWarning {
   /// Creates the warning for [componentId] of the recipe [recipeId].
-  const ManualComponentWarning(this.recipeId, this.componentId);
+  const new(this.recipeId, this.componentId);
 
   /// The recipe the component belongs to.
   ///
@@ -42,7 +42,7 @@ final class ManualComponentWarning extends ProductionWarning {
 /// Display rounding moved a component away from its calculated value.
 final class RoundingAdjustedWarning extends ProductionWarning {
   /// Creates the warning for [componentId] of the recipe [recipeId].
-  const RoundingAdjustedWarning(this.recipeId, this.componentId);
+  const new(this.recipeId, this.componentId);
 
   /// The recipe the component belongs to. See
   /// [ManualComponentWarning.recipeId] for why a component id alone is not a
@@ -66,7 +66,7 @@ final class RoundingAdjustedWarning extends ProductionWarning {
 /// A referenced recipe is archived.
 final class ArchivedDependencyWarning extends ProductionWarning {
   /// Creates the warning for [recipeId].
-  const ArchivedDependencyWarning(this.recipeId);
+  const new(this.recipeId);
 
   /// The archived recipe.
   final String recipeId;

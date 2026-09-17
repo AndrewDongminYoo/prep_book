@@ -10,7 +10,7 @@ import 'package:prep_book/presentation/library_backup/view/library_backup_platfo
 @immutable
 final class LibraryBackupLauncher {
   /// Creates the launcher over its application and native operations.
-  const LibraryBackupLauncher({
+  const new({
     required this.createBackup,
     required this.restoreBackup,
     required this.platform,

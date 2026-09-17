@@ -10,7 +10,7 @@ part 'production_sheet_state.dart';
 
 /// Generates one production sheet and owns its reusable PDF bytes.
 final class ProductionSheetCubit extends Cubit<ProductionSheetState> {
-  ProductionSheetCubit({
+  new({
     required ProductionRun run,
     required ProductionSheetBuilder builder,
     required ProductionSheetPdfRenderer renderer,

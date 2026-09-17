@@ -5,7 +5,7 @@ enum ExtractionConfidence { high, medium, low }
 enum DraftScalingBehavior { proportional, perBatch, fixedOnce, manual }
 
 final class ExtractedField<T> {
-  ExtractedField({
+  new({
     required this.value,
     required this.evidence,
     required this.confidence,
@@ -26,7 +26,7 @@ final class ExtractedField<T> {
 }
 
 final class ExtractedYieldDraft {
-  const ExtractedYieldDraft({required this.amount, required this.unit});
+  const new({required this.amount, required this.unit});
 
   final ExtractedField<String> amount;
   final ExtractedField<String> unit;
@@ -38,7 +38,7 @@ final class ExtractedYieldDraft {
 }
 
 final class ExtractedRecipeDetails {
-  ExtractedRecipeDetails({
+  new({
     required this.name,
     required this.baseYield,
     required this.maxBatchYield,
@@ -61,7 +61,7 @@ final class ExtractedRecipeDetails {
 }
 
 final class ExtractedRecipeComponent {
-  const ExtractedRecipeComponent({
+  const new({
     required this.name,
     required this.amount,
     required this.unit,
@@ -85,14 +85,14 @@ final class ExtractedRecipeComponent {
 }
 
 final class ExtractedRecipeDraft {
-  ExtractedRecipeDraft._({
+  new _({
     required this.schemaVersion,
     required this.sourceKind,
     required this.recipe,
     required List<ExtractedRecipeComponent> components,
   }) : components = List.unmodifiable(components);
 
-  factory ExtractedRecipeDraft.fromJson(Map<String, Object?> json) {
+  factory fromJson(Map<String, Object?> json) {
     _expectKeys(json, const {
       'schemaVersion',
       'sourceKind',

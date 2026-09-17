@@ -14,7 +14,7 @@ import 'package:prep_book/l10n/l10n.dart';
 /// localization delegates, so the message is in the operator's language.
 class StartupFailureApp extends StatelessWidget {
   /// Creates the failure screen. [onRetry] runs startup again.
-  const StartupFailureApp({required this.onRetry, super.key});
+  const new({required this.onRetry, super.key});
 
   /// Runs the whole startup sequence again, replacing this widget with the
   /// app when it succeeds. A retry is worth offering because the failures
@@ -34,7 +34,7 @@ class StartupFailureApp extends StatelessWidget {
 /// The message and the retry, split out so this widget's context sits below
 /// the [MaterialApp] that provides the localizations it reads.
 class _StartupFailureView extends StatelessWidget {
-  const _StartupFailureView({required this.onRetry});
+  const new({required this.onRetry});
 
   final VoidCallback onRetry;
 

@@ -20,7 +20,7 @@ import 'package:prep_book/presentation/units/readable_quantity.dart';
 /// its own.
 class ProductionResultPage extends StatelessWidget {
   /// Creates the page over the use cases its cubit reviews [run] through.
-  const ProductionResultPage({
+  const new({
     required this.acknowledgeWarning,
     required this.applyOverride,
     required this.saveProductionRun,
@@ -64,7 +64,7 @@ class ProductionResultPage extends StatelessWidget {
 /// that provides the cubit is not also the widget that reads it.
 class ProductionResultView extends StatefulWidget {
   /// Creates the view.
-  const ProductionResultView({required this.productionSheet, super.key});
+  const new({required this.productionSheet, super.key});
 
   /// Opens share and print for the stored snapshot.
   final ProductionSheetLauncher productionSheet;
@@ -302,7 +302,7 @@ const _maxIndentedDepth = 6;
 /// One line of the run: what it is, what it takes, and — once opened — its
 /// batches and the amount the operator will actually use.
 class _ComponentRow extends StatelessWidget {
-  const _ComponentRow({
+  const new({
     required this.state,
     required this.row,
     required this.showWarnings,
@@ -417,7 +417,7 @@ class _ComponentRow extends StatelessWidget {
 /// one word for it. What differs is only what the line reads above them —
 /// a calculated amount, or that there is none.
 class _OverrideControl extends StatelessWidget {
-  const _OverrideControl({required this.state, required this.row});
+  const new({required this.state, required this.row});
 
   final ProductionResultState state;
   final ResultRow row;
@@ -497,7 +497,7 @@ class _OverrideControl extends StatelessWidget {
 /// draft whenever this element is, which is what keeps the text through a
 /// `ListView` recycling the row past its cache extent.
 class _OverrideAmountField extends StatefulWidget {
-  const _OverrideAmountField({
+  const new({
     required this.draft,
     required this.enabled,
     required this.onChanged,
@@ -565,7 +565,7 @@ class _OverrideAmountFieldState extends State<_OverrideAmountField> {
 /// One warning, the action that finds the line it names, and the action
 /// that marks it seen.
 class _WarningTile extends StatelessWidget {
-  const _WarningTile({
+  const new({
     required this.state,
     required this.warning,
     required this.onReveal,
@@ -634,7 +634,7 @@ class _WarningTile extends StatelessWidget {
 
 /// What the run is saved as, and the action that saves it.
 class _SaveSection extends StatelessWidget {
-  const _SaveSection({required this.state, required this.productionSheet});
+  const new({required this.state, required this.productionSheet});
 
   final ProductionResultState state;
   final ProductionSheetLauncher productionSheet;
@@ -687,7 +687,7 @@ class _SaveSection extends StatelessWidget {
 /// layout is shared, so a common widget would be one caller's layout with
 /// a second caller attached to it.
 class _Fact extends StatelessWidget {
-  const _Fact({required this.label, required this.value});
+  const new({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -708,7 +708,7 @@ class _Fact extends StatelessWidget {
 
 /// A section heading.
 class _Heading extends StatelessWidget {
-  const _Heading({required this.text});
+  const new({required this.text});
 
   final String text;
 

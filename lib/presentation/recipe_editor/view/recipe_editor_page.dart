@@ -21,7 +21,7 @@ part 'recipe_editor_pickers.dart';
 /// can reach a database directly.
 class RecipeEditorPage extends StatelessWidget {
   /// Creates the page over the use cases its cubit reads and writes through.
-  const RecipeEditorPage({
+  const new({
     required this.listLibrary,
     required this.listIngredients,
     required this.saveRecipeRevision,
@@ -71,7 +71,7 @@ class RecipeEditorPage extends StatelessWidget {
 /// provides the cubit is not also the widget that reads it.
 class RecipeEditorView extends StatefulWidget {
   /// Creates the view.
-  const RecipeEditorView({super.key});
+  const new({super.key});
 
   @override
   State<RecipeEditorView> createState() => _RecipeEditorViewState();
@@ -182,7 +182,7 @@ class _RecipeEditorViewState extends State<RecipeEditorView> {
 
 /// Whichever of the three bodies the current [state] calls for.
 class _EditorBody extends StatelessWidget {
-  const _EditorBody({required this.state, required this.scrollController});
+  const new({required this.state, required this.scrollController});
 
   final RecipeEditorState state;
   final ScrollController scrollController;
@@ -216,7 +216,7 @@ class _EditorBody extends StatelessWidget {
 /// pickers would be empty and an operator cannot tell an empty library from
 /// one that could not be read.
 class _LoadErrorBody extends StatelessWidget {
-  const _LoadErrorBody();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +247,7 @@ class _LoadErrorBody extends StatelessWidget {
 /// scroll view — and so dragging a component is the list's own behaviour
 /// rather than something this screen implements.
 class _EditorForm extends StatelessWidget {
-  const _EditorForm({required this.state, required this.scrollController});
+  const new({required this.state, required this.scrollController});
 
   final RecipeEditorState state;
   final ScrollController scrollController;
@@ -302,7 +302,7 @@ class _EditorForm extends StatelessWidget {
 
 /// Name, category, the two yields, and the preparation notes.
 class _MetadataSection extends StatelessWidget {
-  const _MetadataSection({required this.state});
+  const new({required this.state});
 
   final RecipeEditorState state;
 
@@ -426,7 +426,7 @@ class _MetadataSection extends StatelessWidget {
 
 /// An amount and the unit it is measured in, side by side.
 class _AmountRow extends StatelessWidget {
-  const _AmountRow({
+  const new({
     required this.fieldKey,
     required this.label,
     required this.amount,
@@ -505,7 +505,7 @@ class _AmountRow extends StatelessWidget {
 
 /// One component: what it consumes, how it scales, and how it reads.
 class _ComponentCard extends StatelessWidget {
-  const _ComponentCard({
+  const new({
     required this.state,
     required this.draft,
     required this.index,
@@ -684,7 +684,7 @@ class _ComponentCard extends StatelessWidget {
 
 /// The two ways to add a line, and what to say when there are none.
 class _ComponentActions extends StatelessWidget {
-  const _ComponentActions({required this.state});
+  const new({required this.state});
 
   final RecipeEditorState state;
 

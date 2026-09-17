@@ -10,13 +10,13 @@ part 'library_backup_state.dart';
 /// Drives one backup or restore dialog.
 final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
   /// Creates the state machine over application and platform operations.
-  LibraryBackupCubit({
+  new({
     required CreateLibraryBackup createBackup,
     required RestoreLibraryBackup restoreBackup,
     required LibraryBackupPlatform platform,
   }) : this._(createBackup, restoreBackup, platform);
 
-  LibraryBackupCubit._(this._createBackup, this._restoreBackup, this._platform) : super(const LibraryBackupState());
+  new _(this._createBackup, this._restoreBackup, this._platform) : super(const LibraryBackupState());
 
   final CreateLibraryBackup _createBackup;
   final RestoreLibraryBackup _restoreBackup;

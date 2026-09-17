@@ -6,9 +6,9 @@ import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/championship/model/review_recipe_draft.dart';
 
 final class ChampionshipStrings {
-  const ChampionshipStrings._({required this.isKorean});
+  const new _({required this.isKorean});
 
-  factory ChampionshipStrings.of(BuildContext context) {
+  factory of(BuildContext context) {
     return ChampionshipStrings._(
       isKorean: Localizations.localeOf(context).languageCode == 'ko',
     );

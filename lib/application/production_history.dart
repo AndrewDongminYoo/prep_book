@@ -4,7 +4,7 @@ import 'package:prep_book/persistence/repositories.dart';
 /// The storage-neutral fields a production history row renders.
 final class ProductionHistoryEntry {
   /// Creates one history entry from stored snapshot metadata.
-  const ProductionHistoryEntry({
+  const new({
     required this.id,
     required this.recipeId,
     required this.recipeName,
@@ -26,7 +26,7 @@ final class ProductionHistoryEntry {
 /// Every stored run, newest first.
 final class ListProductionHistory {
   /// Creates the use case over [_runs].
-  const ListProductionHistory(this._runs);
+  const new(this._runs);
 
   final ProductionRunRepository _runs;
 
@@ -48,7 +48,7 @@ final class ListProductionHistory {
 /// Reopens one stored run.
 final class OpenProductionRun {
   /// Creates the use case over [_runs].
-  const OpenProductionRun(this._runs);
+  const new(this._runs);
 
   final ProductionRunRepository _runs;
 

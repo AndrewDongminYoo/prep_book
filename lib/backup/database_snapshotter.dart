@@ -7,16 +7,15 @@ import 'package:prep_book/persistence/persistence.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// Validates a staged database snapshot.
-typedef ValidateBackupCandidate =
-    Future<void> Function({
-      required String candidatePath,
-      required int manifestSchemaVersion,
-    });
+typedef ValidateBackupCandidate = Future<void> Function({
+  required String candidatePath,
+  required int manifestSchemaVersion,
+});
 
 /// Captures a consistent copy of an owned live database connection.
 final class DatabaseSnapshotter {
   /// Creates a snapshotter for [connection] at [databasePath].
-  DatabaseSnapshotter({
+  new({
     required Database connection,
     required String databasePath,
     required DatabaseFactory factory,
@@ -32,7 +31,7 @@ final class DatabaseSnapshotter {
          createCandidatePath ?? (() => '$databasePath.backup-candidate-${_randomToken()}'),
        );
 
-  DatabaseSnapshotter._(
+  new _(
     this._connection,
     this._databasePath,
     this._factory,

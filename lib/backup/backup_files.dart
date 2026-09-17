@@ -22,7 +22,7 @@ abstract interface class BackupFiles {
 
 /// `dart:io` implementation used on the supported mobile platforms.
 final class IoBackupFiles implements BackupFiles {
-  const IoBackupFiles();
+  const new();
 
   @override
   Future<int> length(String path) => File(path).length();

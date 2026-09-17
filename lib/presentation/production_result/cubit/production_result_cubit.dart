@@ -17,7 +17,7 @@ part 'production_result_state.dart';
 /// received.
 final class ProductionResultCubit extends Cubit<ProductionResultState> {
   /// Creates the cubit over the use cases it reviews [run] through.
-  ProductionResultCubit(
+  new(
     this._acknowledgeWarning,
     this._applyOverride,
     this._saveProductionRun, {

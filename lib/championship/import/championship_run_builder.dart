@@ -3,7 +3,7 @@ import 'package:prep_book/championship/import/recipe_draft_verifier.dart';
 import 'package:prep_book/domain/domain.dart';
 
 final class ChampionshipRunBuilder {
-  const ChampionshipRunBuilder({
+  const new({
     this.mapper = const ChampionshipRecipeMapper(),
     this.calculator = const ProductionCalculator(maxPlannedBatches: 1000),
   });

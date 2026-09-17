@@ -192,7 +192,7 @@ Matcher _failureWithCause(LibraryBackupFailureKind kind, Object cause) => isA<Li
     .having((error) => error.stackTrace, 'stackTrace', isNotNull);
 
 final class _TestPlatformFile extends PlatformFile {
-  _TestPlatformFile(this._bytes);
+  new(this._bytes);
 
   final Uint8List _bytes;
 
@@ -219,7 +219,7 @@ final class _TestPlatformFile extends PlatformFile {
 }
 
 final class _TestFilePickerPlatform extends FilePickerPlatform {
-  _TestFilePickerPlatform(this.file);
+  new(this.file);
 
   final PlatformFile? file;
   FileType? pickType;

@@ -25,7 +25,7 @@ enum ProductionSetupStatus {
 @immutable
 final class ProductionSetupState {
   /// Creates a state.
-  const ProductionSetupState({
+  const new({
     required this.recipe,
     required this.targetUnit,
     this.status = ProductionSetupStatus.idle,

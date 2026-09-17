@@ -29,7 +29,7 @@ final class FileChampionshipAssetBundle extends CachingAssetBundle {
 }
 
 final class RecordingRecipeImportClient implements RecipeImportClient {
-  RecordingRecipeImportClient(this.extractCall);
+  new(this.extractCall);
 
   final Future<ExtractedRecipeDraft> Function(
     RecipeImportRequest request,
@@ -51,7 +51,7 @@ final class RecordingRecipeImportClient implements RecipeImportClient {
 }
 
 final class StubRecipeImagePicker implements RecipeImagePicker {
-  StubRecipeImagePicker(this.pickCall);
+  new(this.pickCall);
 
   final Future<SelectedRecipeImage?> Function() pickCall;
 
@@ -64,7 +64,7 @@ typedef RecipeImageEncodeCall = ({int width, int height, double quality});
 /// Scripts the pixel size of every decoded image and the byte count each
 /// encode produces; the defaults describe a small image that needs no work.
 final class FakeRecipeImageCodec implements RecipeImageCodec {
-  FakeRecipeImageCodec({
+  new({
     this.width = 1200,
     this.height = 800,
     int Function(RecipeImageEncodeCall call)? encodedBytesFor,
@@ -93,7 +93,7 @@ final class FakeRecipeImageCodec implements RecipeImageCodec {
 }
 
 final class _FakeDecodedRecipeImage implements DecodedRecipeImage {
-  _FakeDecodedRecipeImage(this.codec);
+  new(this.codec);
 
   final FakeRecipeImageCodec codec;
 

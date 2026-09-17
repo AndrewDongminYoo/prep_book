@@ -24,7 +24,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// Creates the cubit over the use cases it reads and writes through: the
   /// two reads the pickers need first, then the two writes. [recipe] is the
   /// revision being edited, or `null` to create one.
-  RecipeEditorCubit(
+  new(
     this._listLibrary,
     this._listIngredients,
     this._saveRecipeRevision,

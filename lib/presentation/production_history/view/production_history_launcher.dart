@@ -7,7 +7,7 @@ import 'package:prep_book/presentation/production_sheet/view/production_sheet_la
 @immutable
 final class ProductionHistoryLauncher {
   /// Creates the route over its history reads and sheet destination.
-  const ProductionHistoryLauncher({
+  const new({
     required this.listHistory,
     required this.openProductionRun,
     required this.productionSheet,

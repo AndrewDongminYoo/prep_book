@@ -6,9 +6,9 @@ import 'package:sqflite/sqflite.dart';
 /// Validates a staged database without sharing its handle with the live one.
 final class BackupDatabaseValidator {
   /// Creates a validator over the platform or test database [factory].
-  BackupDatabaseValidator({required DatabaseFactory factory}) : this._(factory);
+  new({required DatabaseFactory factory}) : this._(factory);
 
-  const BackupDatabaseValidator._(this._factory);
+  const new _(this._factory);
 
   final DatabaseFactory _factory;
 

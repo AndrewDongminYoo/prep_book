@@ -19,13 +19,13 @@ enum UnitDimension {
 /// A unit of measure with a defined position in its dimension.
 @immutable
 final class Unit {
-  const Unit._(this.symbol, this.dimension, this.factorToCanonical);
+  const new _(this.symbol, this.dimension, this.factorToCanonical);
 
   /// A named count unit. Count units never convert into one another.
-  factory Unit.count(String symbol) => Unit._(symbol, UnitDimension.count, Decimal.one);
+  factory count(String symbol) => Unit._(symbol, UnitDimension.count, Decimal.one);
 
   /// A recipe-defined output unit. These never convert into one another.
-  factory Unit.namedYield(String symbol) => Unit._(symbol, UnitDimension.yieldOnly, Decimal.one);
+  factory namedYield(String symbol) => Unit._(symbol, UnitDimension.yieldOnly, Decimal.one);
 
   static final Unit milligram = Unit._(
     'mg',

@@ -335,7 +335,7 @@ enum _FaultPoint {
 }
 
 final class _FaultingBackupFiles implements BackupFiles {
-  const _FaultingBackupFiles(
+  const new(
     this._delegate, {
     required this.fault,
     required this.candidatePath,
@@ -400,7 +400,7 @@ final class _FaultingBackupFiles implements BackupFiles {
 }
 
 final class _CloseFailingDatabase implements Database {
-  const _CloseFailingDatabase(this._delegate);
+  const new(this._delegate);
 
   final Database _delegate;
 

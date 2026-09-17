@@ -22,14 +22,14 @@ const _databaseFileName = 'prep_book.db';
 /// on its own.
 final class SystemClock implements Clock {
   /// Creates the clock.
-  const SystemClock();
+  const new();
 
   @override
   DateTime now() => DateTime.now();
 }
 
 class AppBlocObserver extends BlocObserver {
-  const AppBlocObserver();
+  const new();
 
   @override
   void onChange(BlocBase<dynamic> bloc, Change<dynamic> change) {
@@ -58,24 +58,22 @@ class AppBlocObserver extends BlocObserver {
 Future<void>? _startupInFlight;
 
 /// Builds one application root from active repositories and backup use cases.
-typedef PrepBookAppBuilder =
-    FutureOr<Widget> Function({
-      required RecipeRepository recipes,
-      required IngredientRepository ingredients,
-      required ProductionRunRepository runs,
-      required CreateLibraryBackup createLibraryBackup,
-      required RestoreLibraryBackup restoreLibraryBackup,
-      required bool restored,
-      required LibraryBackupFailureKind? restoreFailure,
-    });
+typedef PrepBookAppBuilder = FutureOr<Widget> Function({
+  required RecipeRepository recipes,
+  required IngredientRepository ingredients,
+  required ProductionRunRepository runs,
+  required CreateLibraryBackup createLibraryBackup,
+  required RestoreLibraryBackup restoreLibraryBackup,
+  required bool restored,
+  required LibraryBackupFailureKind? restoreFailure,
+});
 
 /// Performs flavor-specific database preparation during initial startup only.
-typedef PrepareDatabase =
-    FutureOr<void> Function({
-      required RecipeRepository recipes,
-      required IngredientRepository ingredients,
-      required ProductionRunRepository runs,
-    });
+typedef PrepareDatabase = FutureOr<void> Function({
+  required RecipeRepository recipes,
+  required IngredientRepository ingredients,
+  required ProductionRunRepository runs,
+});
 
 /// Resolves the live SQLite file used by one startup attempt.
 typedef ResolveDatabasePath = Future<String> Function();

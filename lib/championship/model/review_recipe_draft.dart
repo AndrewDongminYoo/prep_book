@@ -21,7 +21,7 @@ enum ReviewIssue {
   manualHasUnit('A manual component cannot contain a unit.'),
   behaviorRequired('A scaling behavior is required.', isAbsence: true);
 
-  const ReviewIssue(this.message, {this.isAbsence = false});
+  new(this.message, {this.isAbsence = false});
 
   final String message;
 
@@ -31,7 +31,7 @@ enum ReviewIssue {
 }
 
 final class ReviewField<T> {
-  ReviewField({
+  new({
     required this.sourceValue,
     required this.value,
     required this.evidence,
@@ -112,7 +112,7 @@ final class ReviewField<T> {
 }
 
 final class ReviewYieldDraft {
-  const ReviewYieldDraft({required this.amount, required this.unit});
+  const new({required this.amount, required this.unit});
 
   final ReviewField<String> amount;
   final ReviewField<String> unit;
@@ -129,7 +129,7 @@ final class ReviewYieldDraft {
 }
 
 final class ReviewRecipeDetails {
-  ReviewRecipeDetails({
+  new({
     required this.name,
     required this.baseYield,
     required this.maxBatchYield,
@@ -196,7 +196,7 @@ final class ReviewRecipeDetails {
 }
 
 final class ReviewRecipeComponent {
-  const ReviewRecipeComponent({
+  const new({
     required this.name,
     required this.amount,
     required this.unit,
@@ -234,14 +234,14 @@ final class ReviewRecipeComponent {
 }
 
 final class ReviewRecipeDraft {
-  ReviewRecipeDraft._({
+  new _({
     required this.sourceKind,
     required this.recipe,
     required List<ReviewRecipeComponent> components,
     required this.units,
   }) : components = List.unmodifiable(components);
 
-  factory ReviewRecipeDraft.fromExtracted(
+  factory fromExtracted(
     ExtractedRecipeDraft draft, {
     UnitAliasResolver units = const UnitAliasResolver(),
   }) {

@@ -7,7 +7,7 @@ import 'package:prep_book/persistence/repositories.dart';
 final class SaveRecipeRevision {
   /// Creates the use case over [_recipes], stamping the saved revision's
   /// `modifiedAt` from [_clock].
-  const SaveRecipeRevision(this._recipes, this._clock);
+  const new(this._recipes, this._clock);
 
   final RecipeRepository _recipes;
   final Clock _clock;

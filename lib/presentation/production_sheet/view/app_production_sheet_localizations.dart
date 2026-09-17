@@ -7,7 +7,7 @@ import 'package:prep_book/presentation/units/readable_quantity.dart';
 
 /// Adapts generated application copy to the presentation-independent export.
 final class AppProductionSheetLocalizations implements ProductionSheetLocalizations {
-  const AppProductionSheetLocalizations({
+  const new({
     required this.localizations,
     required this.locale,
   });

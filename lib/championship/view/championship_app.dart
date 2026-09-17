@@ -7,7 +7,7 @@ import 'package:prep_book/championship/view/championship_strings.dart';
 import 'package:prep_book/l10n/l10n.dart';
 
 class ChampionshipApp extends StatelessWidget {
-  const ChampionshipApp({
+  const new({
     required this.cubit,
     required this.openProductionSheet,
     this.locale,
@@ -142,7 +142,7 @@ ThemeData _championshipTheme() {
 }
 
 class _ResolvedLocaleReporter extends StatefulWidget {
-  const _ResolvedLocaleReporter({
+  const new({
     required this.onResolvedLocale,
     required this.child,
   });

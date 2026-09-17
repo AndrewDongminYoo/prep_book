@@ -1,7 +1,7 @@
 import 'package:prep_book/domain/domain.dart';
 
 final class UnitAliasResolver {
-  const UnitAliasResolver();
+  const new();
 
   /// One display symbol per resolvable unit, in the order the unit tables
   /// list them. Each symbol resolves back to the unit it names, so a picker

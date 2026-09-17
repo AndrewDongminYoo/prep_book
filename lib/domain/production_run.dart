@@ -21,7 +21,7 @@ typedef OverrideKey = (String recipeId, String componentId);
 @immutable
 final class ProductionRun {
   /// Creates a run snapshot.
-  ProductionRun({
+  new({
     required this.id,
     required this.createdAt,
     required this.recipe,

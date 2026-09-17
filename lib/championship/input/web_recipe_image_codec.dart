@@ -10,7 +10,7 @@ import 'package:web/web.dart' as web;
 /// so it is absent from the coverage report the same way `bootstrap.dart` is,
 /// and its behavior is checked by hand in Chrome (plan Task 8.8).
 final class WebRecipeImageCodec implements RecipeImageCodec {
-  const WebRecipeImageCodec();
+  const new();
 
   @override
   Future<DecodedRecipeImage> decode(Uint8List bytes, String mimeType) async {
@@ -31,7 +31,7 @@ final class WebRecipeImageCodec implements RecipeImageCodec {
 }
 
 final class _WebDecodedRecipeImage implements DecodedRecipeImage {
-  _WebDecodedRecipeImage(this._bitmap);
+  new(this._bitmap);
 
   final web.ImageBitmap _bitmap;
 

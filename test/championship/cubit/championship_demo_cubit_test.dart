@@ -32,7 +32,7 @@ final class _FailingAssetBundle extends CachingAssetBundle {
 }
 
 final class _FakeImportClient implements RecipeImportClient {
-  _FakeImportClient(this.extractCall);
+  new(this.extractCall);
 
   final Future<ExtractedRecipeDraft> Function(
     RecipeImportRequest request,
@@ -54,7 +54,7 @@ final class _FakeImportClient implements RecipeImportClient {
 }
 
 final class _FakeImagePicker implements RecipeImagePicker {
-  _FakeImagePicker(this.pickCall);
+  new(this.pickCall);
 
   final Future<SelectedRecipeImage?> Function() pickCall;
 
@@ -677,7 +677,7 @@ void main() {
 }
 
 final class _CompletingAssetBundle extends CachingAssetBundle {
-  _CompletingAssetBundle(this.result);
+  new(this.result);
 
   final Future<ByteData> result;
 

@@ -66,7 +66,7 @@ void main() {
 }
 
 final class _RecordingLibraryBackupGateway implements LibraryBackupGateway {
-  _RecordingLibraryBackupGateway({
+  new({
     this.createResult,
     this.createError,
     this.restoreError,

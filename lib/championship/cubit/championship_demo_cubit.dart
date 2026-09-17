@@ -15,7 +15,7 @@ typedef ChampionshipNow = DateTime Function();
 typedef ChampionshipRunId = String Function();
 
 final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
-  ChampionshipDemoCubit({
+  new({
     required RecipeImportClient importClient,
     required RecipeImagePicker imagePicker,
     required RecipeImageReducer imageReducer,

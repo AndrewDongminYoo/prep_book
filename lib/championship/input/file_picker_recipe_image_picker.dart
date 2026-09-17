@@ -4,13 +4,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:prep_book/championship/input/recipe_image_picker.dart';
 import 'package:prep_book/championship/input/recipe_import_request.dart';
 
-typedef PickRecipeImageFiles =
-    Future<List<RecipeImagePickerFile>> Function(
-      RecipeImagePickerOptions options,
-    );
+typedef PickRecipeImageFiles = Future<List<RecipeImagePickerFile>> Function(
+  RecipeImagePickerOptions options,
+);
 
 final class RecipeImagePickerOptions {
-  const RecipeImagePickerOptions({
+  const new({
     required this.allowMultiple,
     required this.loadBytesInMemory,
     required this.allowedExtensions,
@@ -22,7 +21,7 @@ final class RecipeImagePickerOptions {
 }
 
 final class RecipeImagePickerFile {
-  const RecipeImagePickerFile({
+  const new({
     required this.name,
     required this.mimeType,
     required this.bytes,
@@ -34,7 +33,7 @@ final class RecipeImagePickerFile {
 }
 
 final class FilePickerRecipeImagePicker implements RecipeImagePicker {
-  const FilePickerRecipeImagePicker({PickRecipeImageFiles? pickFiles}) : _injections = (pickFiles: pickFiles);
+  const new({PickRecipeImageFiles? pickFiles}) : _injections = (pickFiles: pickFiles);
 
   static const _options = RecipeImagePickerOptions(
     allowMultiple: false,

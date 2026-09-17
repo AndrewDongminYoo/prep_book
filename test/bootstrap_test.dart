@@ -70,16 +70,15 @@ void main() {
     final mounts = <Widget>[];
 
     await bootstrap(
-      builder:
-          ({
-            required recipes,
-            required ingredients,
-            required runs,
-            required createLibraryBackup,
-            required restoreLibraryBackup,
-            required restored,
-            required restoreFailure,
-          }) => const SizedBox(),
+      builder: ({
+        required recipes,
+        required ingredients,
+        required runs,
+        required createLibraryBackup,
+        required restoreLibraryBackup,
+        required restored,
+        required restoreFailure,
+      }) => const SizedBox(),
       mount: mounts.add,
     );
 
@@ -194,16 +193,15 @@ void main() {
     await prepareStarted.future;
 
     final second = bootstrap(
-      builder:
-          ({
-            required recipes,
-            required ingredients,
-            required runs,
-            required createLibraryBackup,
-            required restoreLibraryBackup,
-            required restored,
-            required restoreFailure,
-          }) => throw StateError('the joined builder must not run'),
+      builder: ({
+        required recipes,
+        required ingredients,
+        required runs,
+        required createLibraryBackup,
+        required restoreLibraryBackup,
+        required restored,
+        required restoreFailure,
+      }) => throw StateError('the joined builder must not run'),
       resolveDatabasePath: () async => '${directory.path}/other.db',
       factory: factory,
       mount: (_) => throw StateError('the joined mount must not run'),
@@ -270,16 +268,15 @@ void main() {
     );
 
     await bootstrap(
-      builder:
-          ({
-            required recipes,
-            required ingredients,
-            required runs,
-            required createLibraryBackup,
-            required restoreLibraryBackup,
-            required restored,
-            required restoreFailure,
-          }) => throw StateError('builder failed'),
+      builder: ({
+        required recipes,
+        required ingredients,
+        required runs,
+        required createLibraryBackup,
+        required restoreLibraryBackup,
+        required restored,
+        required restoreFailure,
+      }) => throw StateError('builder failed'),
       resolveDatabasePath: () async => databasePath,
       factory: closeFailingFactory,
       mount: mounts.add,
@@ -529,11 +526,11 @@ void main() {
 }
 
 final class _ObserverProbe extends BlocBase<int> {
-  _ObserverProbe() : super(0);
+  new() : super(0);
 }
 
 final class _MountIdentityProbe extends StatefulWidget {
-  const _MountIdentityProbe(this.label);
+  const new(this.label);
 
   final String label;
 
@@ -573,7 +570,7 @@ Future<Uint8List> _backupArchive(
 }
 
 final class _RecordingDatabaseFactory implements DatabaseFactory {
-  _RecordingDatabaseFactory(this._delegate, {this.wrapDatabase});
+  new(this._delegate, {this.wrapDatabase});
 
   final DatabaseFactory _delegate;
   final Database Function(Database database)? wrapDatabase;
@@ -609,7 +606,7 @@ final class _RecordingDatabaseFactory implements DatabaseFactory {
 }
 
 final class _CloseFailingDatabase implements Database {
-  const _CloseFailingDatabase(this._delegate, {required this.closeError});
+  const new(this._delegate, {required this.closeError});
 
   final Database _delegate;
   final Object closeError;

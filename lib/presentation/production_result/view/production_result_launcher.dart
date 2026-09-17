@@ -13,7 +13,7 @@ import 'package:prep_book/presentation/production_sheet/view/production_sheet_la
 @immutable
 final class ProductionResultLauncher {
   /// Creates a launcher over the use cases the screen reviews through.
-  const ProductionResultLauncher({
+  const new({
     required this.acknowledgeWarning,
     required this.applyOverride,
     required this.saveProductionRun,

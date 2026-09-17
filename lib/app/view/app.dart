@@ -4,7 +4,7 @@ import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/presentation.dart';
 
 class App extends StatelessWidget {
-  const App({
+  const new({
     required this.listLibrary,
     required this.searchLibrary,
     required this.archiveRecipe,

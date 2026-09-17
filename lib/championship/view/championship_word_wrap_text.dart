@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 final class ChampionshipWordWrapText extends StatelessWidget {
-  const ChampionshipWordWrapText({required this.text, this.style, super.key});
+  const new({required this.text, this.style, super.key});
 
   final String text;
   final TextStyle? style;

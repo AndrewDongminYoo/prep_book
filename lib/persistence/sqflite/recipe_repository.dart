@@ -111,7 +111,7 @@ bool _archivedFromColumn(Object? stored, {required String rowLabel}) => switch (
 /// is never visible to a reader.
 final class SqfliteRecipeRepository implements RecipeRepository {
   /// Creates a repository over the already-open database [_db].
-  const SqfliteRecipeRepository(this._db);
+  const new(this._db);
 
   final Database _db;
 

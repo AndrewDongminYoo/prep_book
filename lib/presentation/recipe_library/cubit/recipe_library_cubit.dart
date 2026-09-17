@@ -21,7 +21,7 @@ final class RecipeLibraryCubit extends Cubit<RecipeLibraryState> {
   /// out of storage and only then filters it, and that read costs one query
   /// per recipe plus one for the list. Without the wait, every keystroke
   /// paid all of them.
-  RecipeLibraryCubit(
+  new(
     this._listLibrary,
     this._searchLibrary,
     this._archiveRecipe,

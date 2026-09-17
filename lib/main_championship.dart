@@ -17,7 +17,7 @@ void updateChampionshipDocumentLanguage(Locale locale) =>
     web.document.documentElement?.setAttribute('lang', locale.languageCode);
 
 class ChampionshipRoot extends StatefulWidget {
-  const ChampionshipRoot({this.locale, super.key});
+  const new({this.locale, super.key});
 
   final Locale? locale;
 

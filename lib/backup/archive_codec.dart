@@ -13,13 +13,13 @@ const _backupFormatVersion = 1;
 /// The validated contents of one portable library backup.
 final class DecodedLibraryBackup {
   /// Creates decoded backup data with owned database bytes.
-  DecodedLibraryBackup({
+  new({
     required Uint8List databaseBytes,
     required this.databaseSchemaVersion,
     required this.createdAtUtc,
   }) : _databaseBytes = Uint8List.fromList(databaseBytes);
 
-  DecodedLibraryBackup._owned({
+  new _owned({
     required this._databaseBytes,
     required this.databaseSchemaVersion,
     required this.createdAtUtc,
@@ -40,7 +40,7 @@ final class DecodedLibraryBackup {
 /// Encodes and decodes version 1 PrepBook backup archives.
 final class BackupArchiveCodec {
   /// Creates the codec.
-  const BackupArchiveCodec({
+  const new({
     int maxArchiveBytes = maxLibraryBackupBytes,
     int maxDatabaseBytes = maxLibraryBackupBytes,
     int maxManifestBytes = 64 * 1024,
@@ -171,11 +171,11 @@ Uint8List _readAndVerify(ArchiveFile entry, {required int maxBytes}) {
 }
 
 final class _ArchiveEntryTooLarge implements Exception {
-  const _ArchiveEntryTooLarge();
+  const new();
 }
 
 final class _BoundedOutputMemoryStream extends OutputMemoryStream {
-  _BoundedOutputMemoryStream(this._maxBytes);
+  new(this._maxBytes);
 
   final int _maxBytes;
 

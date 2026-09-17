@@ -38,7 +38,7 @@ const _labels = ProductionSheetLabels(
 );
 
 final class _Localizations implements ProductionSheetLocalizations {
-  const _Localizations();
+  const new();
 
   @override
   ProductionSheetLabels get labels => _labels;

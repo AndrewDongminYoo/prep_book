@@ -12,7 +12,7 @@ import 'package:prep_book/presentation/units/readable_quantity.dart';
 /// Lists stored production runs and reopens their immutable sheets.
 class ProductionHistoryPage extends StatelessWidget {
   /// Creates the page over its read use cases and sheet route.
-  const ProductionHistoryPage({
+  const new({
     required this.listHistory,
     required this.openProductionRun,
     required this.productionSheet,
@@ -45,7 +45,7 @@ class ProductionHistoryPage extends StatelessWidget {
 /// The production history rendering and row-open interaction.
 class ProductionHistoryView extends StatefulWidget {
   /// Creates the view.
-  const ProductionHistoryView({
+  const new({
     required this.openProductionRun,
     required this.productionSheet,
     super.key,
@@ -125,7 +125,7 @@ class _ProductionHistoryViewState extends State<ProductionHistoryView> {
 }
 
 class _FailureBody extends StatelessWidget {
-  const _FailureBody({required this.onRetry});
+  const new({required this.onRetry});
 
   final VoidCallback onRetry;
 
@@ -152,7 +152,7 @@ class _FailureBody extends StatelessWidget {
 }
 
 class _HistoryRow extends StatelessWidget {
-  const _HistoryRow({
+  const new({
     required this.summary,
     required this.opening,
     required this.onOpen,

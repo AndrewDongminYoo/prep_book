@@ -12,18 +12,18 @@ import 'package:rational/rational.dart';
 @immutable
 final class Quantity implements Comparable<Quantity> {
   /// Creates a quantity from an exact rational amount.
-  factory Quantity.fromRational(Rational amount, Unit unit) {
+  factory fromRational(Rational amount, Unit unit) {
     if (amount.signum < 0) throw NegativeQuantityError(amount);
     return Quantity._(amount, unit);
   }
 
   /// Creates a quantity from a decimal amount.
-  factory Quantity.fromDecimal(Decimal amount, Unit unit) => Quantity.fromRational(amount.toRational(), unit);
+  factory fromDecimal(Decimal amount, Unit unit) => Quantity.fromRational(amount.toRational(), unit);
 
   /// Creates a quantity by parsing a decimal literal such as `'250.5'`.
-  factory Quantity.parse(String amount, Unit unit) => Quantity.fromDecimal(Decimal.parse(amount), unit);
+  factory parse(String amount, Unit unit) => Quantity.fromDecimal(Decimal.parse(amount), unit);
 
-  const Quantity._(this.amount, this.unit);
+  const new _(this.amount, this.unit);
 
   /// The exact amount. Never rounded.
   final Rational amount;

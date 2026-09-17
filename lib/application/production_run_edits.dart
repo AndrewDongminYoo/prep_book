@@ -8,7 +8,7 @@ import 'package:prep_book/persistence/repositories.dart';
 /// rule about which warnings may be acknowledged has one place to live.
 final class AcknowledgeWarning {
   /// Creates the use case.
-  const AcknowledgeWarning();
+  const new();
 
   /// [run] with [warning] marked as seen.
   ProductionRun call(ProductionRun run, ProductionWarning warning) => run.acknowledge(warning);
@@ -17,7 +17,7 @@ final class AcknowledgeWarning {
 /// Records an operator-entered quantity for one component.
 final class ApplyOverride {
   /// Creates the use case.
-  const ApplyOverride();
+  const new();
 
   /// [run] with [value] recorded for [componentId] of [recipeId].
   ///
@@ -34,7 +34,7 @@ final class ApplyOverride {
 /// Commits a calculated run and the state it carries.
 final class SaveProductionRun {
   /// Creates the use case over [_runs].
-  const SaveProductionRun(this._runs);
+  const new(this._runs);
 
   final ProductionRunRepository _runs;
 

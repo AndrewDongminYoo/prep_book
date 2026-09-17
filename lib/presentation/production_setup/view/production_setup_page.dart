@@ -17,7 +17,7 @@ import 'package:prep_book/presentation/units/readable_quantity.dart';
 class ProductionSetupPage extends StatelessWidget {
   /// Creates the page over the use case its cubit calculates through, for
   /// [recipe] — the revision the library screen listed.
-  const ProductionSetupPage({
+  const new({
     required this.startProductionRun,
     required this.recipe,
     required this.result,
@@ -51,7 +51,7 @@ class ProductionSetupPage extends StatelessWidget {
 /// that provides the cubit is not also the widget that reads it.
 class ProductionSetupView extends StatefulWidget {
   /// Creates the view over the launcher its Continue action opens.
-  const ProductionSetupView({required this.result, super.key});
+  const new({required this.result, super.key});
 
   /// Opens the production result screen over the calculated run.
   final ProductionResultLauncher result;
@@ -158,7 +158,7 @@ class _ProductionSetupViewState extends State<ProductionSetupView> {
 }
 
 class _RecipeName extends StatelessWidget {
-  const _RecipeName({required this.state});
+  const new({required this.state});
 
   final ProductionSetupState state;
 
@@ -169,7 +169,7 @@ class _RecipeName extends StatelessWidget {
 /// The action that carries the calculated run through to the production
 /// result screen.
 class _Continue extends StatelessWidget {
-  const _Continue({required this.state, required this.result});
+  const new({required this.state, required this.result});
 
   final ProductionSetupState state;
   final ProductionResultLauncher result;
@@ -216,7 +216,7 @@ class _Continue extends StatelessWidget {
 /// and a dimensionally impossible target is the error this screen exists to
 /// report before it is submitted.
 class _TargetRow extends StatelessWidget {
-  const _TargetRow({required this.state});
+  const new({required this.state});
 
   final ProductionSetupState state;
 
@@ -294,7 +294,7 @@ class _TargetRow extends StatelessWidget {
 
 /// Whichever outcome the current [state] calls for.
 class _Outcome extends StatelessWidget {
-  const _Outcome({required this.state});
+  const new({required this.state});
 
   final ProductionSetupState state;
 
@@ -336,7 +336,7 @@ class _Outcome extends StatelessWidget {
 /// What the calculated run says: what blocks it, how it splits into
 /// batches, and how it compares against the recipe as written.
 class _Calculated extends StatelessWidget {
-  const _Calculated({required this.state, required this.run});
+  const new({required this.state, required this.run});
 
   final ProductionSetupState state;
   final ProductionRun run;
@@ -410,7 +410,7 @@ class _Calculated extends StatelessWidget {
 /// intrinsic widths: a long recipe-defined unit symbol at a large text
 /// scale is what would otherwise run off the row.
 class _Fact extends StatelessWidget {
-  const _Fact({required this.label, required this.value});
+  const new({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -437,7 +437,7 @@ class _Fact extends StatelessWidget {
 
 /// Something the operator has to read before this run can start.
 class _ErrorText extends StatelessWidget {
-  const _ErrorText({required this.message});
+  const new({required this.message});
 
   final String message;
 

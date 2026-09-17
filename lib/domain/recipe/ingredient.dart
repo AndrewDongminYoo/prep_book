@@ -8,7 +8,7 @@ import 'package:prep_book/domain/units/unit.dart';
 @immutable
 final class Ingredient {
   /// Creates an ingredient.
-  const Ingredient({
+  const new({
     required this.id,
     required this.name,
     required this.defaultUnit,

@@ -6,7 +6,7 @@ import 'package:prep_book/persistence/repositories.dart';
 /// Archives or restores every revision of a recipe.
 final class ArchiveRecipe {
   /// Creates the use case over [_recipes].
-  const ArchiveRecipe(this._recipes);
+  const new(this._recipes);
 
   final RecipeRepository _recipes;
 
@@ -32,7 +32,7 @@ final class ArchiveRecipe {
 final class DuplicateRecipe {
   /// Creates the use case over [_recipes], passing [_clock] on to
   /// [SaveRecipeRevision] so the copy's `modifiedAt` is stamped from it.
-  const DuplicateRecipe(this._recipes, this._clock);
+  const new(this._recipes, this._clock);
 
   final RecipeRepository _recipes;
   final Clock _clock;

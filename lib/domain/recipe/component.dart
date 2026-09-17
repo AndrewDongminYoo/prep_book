@@ -7,13 +7,13 @@ import 'package:prep_book/domain/units/rounding.dart';
 /// What a component points at.
 @immutable
 sealed class ComponentTarget {
-  const ComponentTarget();
+  const new();
 }
 
 /// A component that consumes a library ingredient.
 final class IngredientRef extends ComponentTarget {
   /// Creates a reference to [ingredientId].
-  const IngredientRef(this.ingredientId);
+  const new(this.ingredientId);
 
   /// The referenced ingredient.
   final String ingredientId;
@@ -28,7 +28,7 @@ final class IngredientRef extends ComponentTarget {
 /// A component that consumes the output of another recipe.
 final class SubRecipeRef extends ComponentTarget {
   /// Creates a reference to [recipeId].
-  const SubRecipeRef(this.recipeId);
+  const new(this.recipeId);
 
   /// The referenced recipe.
   final String recipeId;
@@ -44,7 +44,7 @@ final class SubRecipeRef extends ComponentTarget {
 @immutable
 final class RecipeComponent {
   /// Creates a component, rejecting combinations the domain forbids.
-  factory RecipeComponent({
+  factory({
     required String id,
     required ComponentTarget target,
     required Quantity? baseQuantity,
@@ -78,7 +78,7 @@ final class RecipeComponent {
     );
   }
 
-  const RecipeComponent._({
+  const new _({
     required this.id,
     required this.target,
     required this.baseQuantity,

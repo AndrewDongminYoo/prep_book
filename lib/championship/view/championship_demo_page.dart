@@ -15,7 +15,7 @@ const _completedStepBackgroundColor = Color(0xFFE7F1EB);
 const _completedStepForegroundColor = Color(0xFF397553);
 
 class ChampionshipDemoPage extends StatefulWidget {
-  const ChampionshipDemoPage({required this.openProductionSheet, super.key});
+  const new({required this.openProductionSheet, super.key});
 
   final OpenChampionshipProductionSheet openProductionSheet;
 
@@ -115,7 +115,7 @@ class _ChampionshipDemoPageState extends State<ChampionshipDemoPage> {
 }
 
 class _WorkflowShell extends StatelessWidget {
-  const _WorkflowShell({
+  const new({
     required this.phaseFocusNode,
     required this.openProductionSheet,
     super.key,
@@ -159,7 +159,7 @@ class _WorkflowShell extends StatelessWidget {
 }
 
 class _BrandHeader extends StatelessWidget {
-  const _BrandHeader();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +204,7 @@ class _BrandHeader extends StatelessWidget {
 }
 
 class _PaperGridPainter extends CustomPainter {
-  const _PaperGridPainter();
+  const new();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -225,7 +225,7 @@ class _PaperGridPainter extends CustomPainter {
 }
 
 class _PhasePanel extends StatelessWidget {
-  const _PhasePanel({
+  const new({
     required this.phaseFocusNode,
     required this.openProductionSheet,
   });
@@ -270,7 +270,7 @@ class _PhasePanel extends StatelessWidget {
 }
 
 class _PhaseSteps extends StatelessWidget {
-  const _PhaseSteps();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -378,7 +378,7 @@ class _PhaseSteps extends StatelessWidget {
 }
 
 class _CurrentPanel extends StatelessWidget {
-  const _CurrentPanel({required this.state, required this.openProductionSheet});
+  const new({required this.state, required this.openProductionSheet});
 
   final ChampionshipDemoState state;
   final OpenChampionshipProductionSheet openProductionSheet;
@@ -395,7 +395,7 @@ class _CurrentPanel extends StatelessWidget {
 }
 
 class _PhaseLabel extends StatelessWidget {
-  const _PhaseLabel({
+  const new({
     required this.phase,
     required this.label,
     required this.currentPhase,

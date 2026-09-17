@@ -19,7 +19,7 @@ enum ChampionshipSourceFailure {
 enum ChampionshipTargetFailure { invalidTarget, batchLimit }
 
 final class ChampionshipDemoState {
-  ChampionshipDemoState({
+  new({
     required this.phase,
     required this.sourceMode,
     required this.sourceText,
@@ -39,7 +39,7 @@ final class ChampionshipDemoState {
     required this.run,
   }) : reviewIssues = List.unmodifiable(reviewIssues);
 
-  factory ChampionshipDemoState.initial() => ChampionshipDemoState(
+  factory initial() => ChampionshipDemoState(
     phase: ChampionshipPhase.source,
     sourceMode: ChampionshipSourceMode.text,
     sourceText: '',

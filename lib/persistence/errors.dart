@@ -3,7 +3,7 @@
 /// Always names the row. Never repaired by guessing a value, because a guess
 /// here would put an invented quantity into a production record.
 final class CorruptDatabaseError implements Exception {
-  const CorruptDatabaseError(this.message);
+  const new(this.message);
 
   final String message;
 

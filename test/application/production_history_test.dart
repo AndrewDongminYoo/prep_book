@@ -6,7 +6,7 @@ import 'package:prep_book/persistence/repositories.dart';
 import 'fakes.dart';
 
 final class _Ids implements RunIdSource {
-  _Ids(this._values);
+  new(this._values);
   final List<String> _values;
   var _index = 0;
 
@@ -15,7 +15,7 @@ final class _Ids implements RunIdSource {
 }
 
 final class _Clock implements Clock {
-  _Clock(this._values);
+  new(this._values);
   final List<DateTime> _values;
   var _index = 0;
 
@@ -30,7 +30,7 @@ final class _Clock implements Clock {
 /// what this repository handed it, unsorted, produces the sequence the test
 /// asserts.
 final class _FixedOrderRunRepository implements ProductionRunRepository {
-  _FixedOrderRunRepository(this._summaries);
+  new(this._summaries);
   final List<ProductionRunSummary> _summaries;
 
   @override

@@ -17,7 +17,7 @@ enum LibraryBackupStatus {
 @immutable
 final class LibraryBackupState {
   /// Creates one state value.
-  const LibraryBackupState({
+  const new({
     this.status = LibraryBackupStatus.idle,
     this.action,
     this.pendingRestoreBytes,

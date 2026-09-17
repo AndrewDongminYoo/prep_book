@@ -18,7 +18,7 @@ enum LibraryBackupFailureKind {
 
 /// A localized-message-safe backup or restore failure.
 final class LibraryBackupException implements Exception {
-  const LibraryBackupException(this.kind, {this.cause, this.stackTrace});
+  const new(this.kind, {this.cause, this.stackTrace});
 
   /// The category presentation code maps to operator-facing copy.
   final LibraryBackupFailureKind kind;
@@ -33,11 +33,11 @@ final class LibraryBackupException implements Exception {
 /// A complete portable library backup and its suggested filename.
 final class LibraryBackupFile {
   /// Creates a backup value that cannot be changed through [bytes].
-  LibraryBackupFile({required Uint8List bytes, required this.suggestedName}) : _bytes = Uint8List.fromList(bytes);
+  new({required Uint8List bytes, required this.suggestedName}) : _bytes = Uint8List.fromList(bytes);
 
   /// Creates a backup value by taking ownership of [bytes].
   /// The caller must not change [bytes] after this call.
-  LibraryBackupFile.takeOwnership({
+  new takeOwnership({
     required this._bytes,
     required this.suggestedName,
   });
@@ -62,7 +62,7 @@ abstract interface class LibraryBackupGateway {
 
 /// Creates a complete portable library backup.
 final class CreateLibraryBackup {
-  const CreateLibraryBackup(this._gateway);
+  const new(this._gateway);
 
   final LibraryBackupGateway _gateway;
 
@@ -72,7 +72,7 @@ final class CreateLibraryBackup {
 
 /// Replaces the active library from a validated portable backup.
 final class RestoreLibraryBackup {
-  const RestoreLibraryBackup(this._gateway);
+  const new(this._gateway);
 
   final LibraryBackupGateway _gateway;
 

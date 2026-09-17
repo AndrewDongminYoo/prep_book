@@ -8,7 +8,7 @@ import 'package:prep_book/presentation/library_backup/view/android_backup_save.d
 /// A selected file exposed without native paths or plugin types.
 final class PickedLibraryBackup {
   /// Creates a readable selected-file value.
-  const PickedLibraryBackup({
+  const new({
     required this.resolveLength,
     required this.openRead,
     this.knownLength,
@@ -28,11 +28,10 @@ final class PickedLibraryBackup {
 typedef OpenLibraryBackupPicker = Future<PickedLibraryBackup?> Function();
 
 /// Saves backup bytes through the native picker.
-typedef SaveLibraryBackupPicker =
-    Future<bool> Function({
-      required String suggestedName,
-      required Uint8List bytes,
-    });
+typedef SaveLibraryBackupPicker = Future<bool> Function({
+  required String suggestedName,
+  required Uint8List bytes,
+});
 
 /// Native file operations used by the library backup feature.
 abstract interface class LibraryBackupPlatform {
@@ -46,7 +45,7 @@ abstract interface class LibraryBackupPlatform {
 /// Adapts `file_picker` to the path-free presentation interface.
 final class FilePickerLibraryBackupPlatform implements LibraryBackupPlatform {
   /// Creates the production adapter or one with injected picker functions.
-  const FilePickerLibraryBackupPlatform({
+  const new({
     OpenLibraryBackupPicker? openPicker,
     SaveLibraryBackupPicker? savePicker,
     int maxBackupBytes = maxLibraryBackupBytes,

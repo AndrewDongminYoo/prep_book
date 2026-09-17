@@ -17,7 +17,7 @@ const _repeatableTableCellChunkLines = 8;
 
 /// Renders an immutable production sheet as an A4 portrait PDF.
 class ProductionSheetPdfRenderer {
-  const ProductionSheetPdfRenderer();
+  const new();
 
   Future<Uint8List> render(
     ProductionSheet sheet, {

@@ -10,7 +10,7 @@ import 'package:prep_book/export/production_sheet/model.dart';
 
 /// Maps one frozen production run to a presentation-independent document.
 class ProductionSheetBuilder {
-  const ProductionSheetBuilder();
+  const new();
 
   ProductionSheet build({
     required ProductionRun run,
@@ -245,7 +245,7 @@ class ProductionSheetBuilder {
 }
 
 final class _BatchTable {
-  _BatchTable({required this.yield, required this.rows});
+  new({required this.yield, required this.rows});
 
   final Quantity yield;
   final List<_SourceRow> rows;
@@ -260,7 +260,7 @@ final class _BatchTable {
 }
 
 final class _SourceRow {
-  _SourceRow({
+  new({
     required this.sourceId,
     required this.quantity,
     required this.row,
@@ -277,7 +277,7 @@ final class _SourceRow {
 }
 
 final class _WarningGroups {
-  _WarningGroups({required this.outstanding, required this.acknowledged});
+  new({required this.outstanding, required this.acknowledged});
 
   final List<ProductionSheetWarning> outstanding;
   final List<ProductionSheetWarning> acknowledged;

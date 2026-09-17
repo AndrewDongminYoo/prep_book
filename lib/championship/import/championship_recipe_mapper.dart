@@ -4,7 +4,7 @@ import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/domain/domain.dart';
 
 final class ChampionshipRecipeBundle {
-  ChampionshipRecipeBundle({
+  new({
     required this.recipe,
     required List<Ingredient> ingredients,
   }) : ingredients = List.unmodifiable(ingredients),
@@ -18,7 +18,7 @@ final class ChampionshipRecipeBundle {
 }
 
 final class ChampionshipRecipeMapper {
-  const ChampionshipRecipeMapper({this.units = const UnitAliasResolver()});
+  const new({this.units = const UnitAliasResolver()});
 
   final UnitAliasResolver units;
 

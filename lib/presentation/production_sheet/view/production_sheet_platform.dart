@@ -5,13 +5,12 @@ import 'package:printing/printing.dart';
 
 typedef _LoadAsset = Future<ByteData> Function(String key);
 typedef _SharePdf = Future<bool> Function({required Uint8List bytes, required String filename});
-typedef _LayoutPdf =
-    Future<bool> Function({
-      required LayoutCallback onLayout,
-      required String name,
-      required PdfPageFormat format,
-      required bool dynamicLayout,
-    });
+typedef _LayoutPdf = Future<bool> Function({
+  required LayoutCallback onLayout,
+  required String name,
+  required PdfPageFormat format,
+  required bool dynamicLayout,
+});
 
 /// The platform operations used by the production-sheet feature.
 abstract interface class ProductionSheetPlatform {
@@ -30,7 +29,7 @@ abstract interface class ProductionSheetPlatform {
 
 /// Adapts bundled assets and the printing plugin to the feature boundary.
 final class PrintingProductionSheetPlatform implements ProductionSheetPlatform {
-  const PrintingProductionSheetPlatform({
+  const new({
     Future<ByteData> Function(String key)? loadAsset,
     Future<bool> Function({required Uint8List bytes, required String filename})? sharePdf,
     Future<bool> Function({

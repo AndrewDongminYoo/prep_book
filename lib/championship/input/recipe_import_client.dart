@@ -20,7 +20,7 @@ enum RecipeImportFailureCode {
   invalidModelOutput('invalid_model_output'),
   serviceFailure('service_failure');
 
-  const RecipeImportFailureCode(this.wireName);
+  new(this.wireName);
 
   final String wireName;
 
@@ -33,7 +33,7 @@ enum RecipeImportFailureCode {
 }
 
 final class RecipeImportException implements Exception {
-  const RecipeImportException(this.code, this.message);
+  const new(this.code, this.message);
 
   final RecipeImportFailureCode code;
   final String message;

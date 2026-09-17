@@ -7,7 +7,7 @@ import 'package:prep_book/championship/input/recipe_import_request.dart';
 import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 
 final class HttpRecipeImportClient implements RecipeImportClient {
-  const HttpRecipeImportClient({
+  const new({
     required http.Client client,
     required Uri endpoint,
     Duration timeout = const Duration(seconds: 27),

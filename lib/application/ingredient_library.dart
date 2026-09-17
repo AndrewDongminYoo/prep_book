@@ -10,7 +10,7 @@ import 'package:prep_book/persistence/repositories.dart';
 /// duplicate a guarantee that already holds.
 final class ListIngredients {
   /// Creates the use case over [_ingredients].
-  const ListIngredients(this._ingredients);
+  const new(this._ingredients);
 
   final IngredientRepository _ingredients;
 
@@ -25,7 +25,7 @@ final class ListIngredients {
 /// here needs to tell the two apart.
 final class SaveIngredient {
   /// Creates the use case over [_ingredients].
-  const SaveIngredient(this._ingredients);
+  const new(this._ingredients);
 
   final IngredientRepository _ingredients;
 

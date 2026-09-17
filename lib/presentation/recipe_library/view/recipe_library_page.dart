@@ -19,7 +19,7 @@ import 'package:prep_book/presentation/units/readable_quantity.dart';
 /// screen can reach storage directly.
 class RecipeLibraryPage extends StatelessWidget {
   /// Creates the page over the use cases its cubit reads and writes through.
-  const RecipeLibraryPage({
+  const new({
     required this.listLibrary,
     required this.searchLibrary,
     required this.archiveRecipe,
@@ -96,7 +96,7 @@ class RecipeLibraryPage extends StatelessWidget {
 /// that provides the cubit is not also the widget that reads it.
 class RecipeLibraryView extends StatefulWidget {
   /// Creates the view.
-  const RecipeLibraryView({
+  const new({
     required this.editor,
     required this.production,
     required this.history,
@@ -364,7 +364,7 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
 }
 
 class _LibraryList extends StatelessWidget {
-  const _LibraryList({
+  const new({
     required this.controller,
     required this.searchController,
     required this.editor,
@@ -463,7 +463,7 @@ double _recipeListPaneWidth(double width, TextScaler textScaler) {
 /// never asks for. Absent entirely — not an "All" chip alone — when there
 /// is no category, because a filter with one setting is not a filter.
 class _CategoryChips extends StatelessWidget {
-  const _CategoryChips({
+  const new({
     required this.categories,
     required this.selectedCategory,
     required this.onSelected,
@@ -513,7 +513,7 @@ class _CategoryChips extends StatelessWidget {
 /// a message still centres on a tall screen, and shrink to their own height
 /// when the filter row above has already used the space up.
 class _LibraryBody extends StatelessWidget {
-  const _LibraryBody({
+  const new({
     required this.state,
     required this.editor,
     required this.production,
@@ -550,7 +550,7 @@ class _LibraryBody extends StatelessWidget {
 /// The list of rows, or the empty state when nothing is visible. A sliver
 /// either way, because the whole screen is one scroll view.
 class _LoadedBody extends StatelessWidget {
-  const _LoadedBody({
+  const new({
     required this.state,
     required this.editor,
     required this.production,
@@ -629,7 +629,7 @@ enum _RowMenuAction { duplicate, toggleArchived }
 /// One recipe: its name, its base yield, the run action, and a menu of the
 /// secondary ones.
 class _RecipeRow extends StatelessWidget {
-  const _RecipeRow({
+  const new({
     required this.recipe,
     required this.editor,
     required this.production,
@@ -745,7 +745,7 @@ class _RecipeRow extends StatelessWidget {
 }
 
 class _RecipeDetailPane extends StatefulWidget {
-  const _RecipeDetailPane({
+  const new({
     required this.state,
     required this.selectedRecipeId,
     required this.editor,
@@ -877,7 +877,7 @@ class _RecipeDetailPaneState extends State<_RecipeDetailPane> {
 
 /// The failed-read state, with the retry that makes it recoverable.
 class _ErrorBody extends StatelessWidget {
-  const _ErrorBody();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -906,7 +906,7 @@ class _ErrorBody extends StatelessWidget {
 /// The same action as the app bar's icon, through the same launcher, so a
 /// recipe saved from here is listed the same way when the editor closes.
 class _EmptyLibrary extends StatelessWidget {
-  const _EmptyLibrary({required this.editor});
+  const new({required this.editor});
 
   final RecipeEditorLauncher editor;
 
@@ -934,7 +934,7 @@ class _EmptyLibrary extends StatelessWidget {
 
 /// A single centred line of text, padded so it never touches the edges.
 class _CenteredMessage extends StatelessWidget {
-  const _CenteredMessage({required this.message});
+  const new({required this.message});
 
   final String message;
 

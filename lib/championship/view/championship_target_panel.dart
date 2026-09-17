@@ -6,7 +6,7 @@ import 'package:prep_book/championship/import/unit_alias_resolver.dart';
 import 'package:prep_book/championship/view/championship_strings.dart';
 
 class ChampionshipTargetPanel extends StatelessWidget {
-  const ChampionshipTargetPanel({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) {

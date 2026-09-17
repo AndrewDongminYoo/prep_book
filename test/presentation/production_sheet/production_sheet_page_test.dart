@@ -126,7 +126,7 @@ final class _RecordingPlatform implements ProductionSheetPlatform {
 }
 
 final class _Harness {
-  _Harness()
+  new()
     : run = buildProductionSheetRun(),
       builder = _RecordingBuilder(),
       renderer = _ControlledRenderer(),

@@ -11,7 +11,7 @@ abstract interface class RecipeImagePicker {
 }
 
 final class SelectedRecipeImage {
-  factory SelectedRecipeImage({
+  factory({
     required String name,
     required String mimeType,
     required Uint8List bytes,
@@ -21,7 +21,7 @@ final class SelectedRecipeImage {
     bytes: Uint8List.fromList(bytes),
   );
 
-  const SelectedRecipeImage._({
+  const new _({
     required this.name,
     required this.mimeType,
     required this.bytes,
@@ -42,7 +42,7 @@ enum RecipeImagePickerFailure {
 }
 
 final class RecipeImagePickerException implements Exception {
-  const RecipeImagePickerException(this.failure);
+  const new(this.failure);
 
   final RecipeImagePickerFailure failure;
 

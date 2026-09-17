@@ -7,7 +7,7 @@ enum ProductionHistoryStatus { loading, loaded, failure }
 @immutable
 final class ProductionHistoryState {
   /// Creates a state that starts in the loading phase.
-  const ProductionHistoryState({
+  const new({
     this.status = ProductionHistoryStatus.loading,
     this.runs = const [],
   });

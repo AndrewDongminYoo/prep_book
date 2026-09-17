@@ -35,7 +35,7 @@ enum RecipeEditorStatus {
 @immutable
 final class ComponentDraft {
   /// Creates a draft.
-  const ComponentDraft({
+  const new({
     required this.id,
     required this.target,
     required this.behavior,
@@ -106,7 +106,7 @@ final class ComponentDraft {
 @immutable
 final class RecipeEditorState {
   /// Creates a state.
-  const RecipeEditorState({
+  const new({
     required this.recipeId,
     required this.isNewRecipe,
     required this.baseYieldUnit,

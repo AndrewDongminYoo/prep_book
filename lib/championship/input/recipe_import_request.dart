@@ -6,13 +6,13 @@ const int recipeImportMaxImageBytes = 3 * 1024 * 1024;
 const recipeImportImageMimeTypes = {'image/jpeg', 'image/png', 'image/webp'};
 
 sealed class RecipeImportRequest {
-  const RecipeImportRequest();
+  const new();
 
   Map<String, Object?> toJson(String locale);
 }
 
 final class TextRecipeImportRequest extends RecipeImportRequest {
-  factory TextRecipeImportRequest(String text) {
+  factory(String text) {
     if (text.trim().isEmpty) {
       throw ArgumentError.value(text, 'text', 'must not be blank');
     }
@@ -22,7 +22,7 @@ final class TextRecipeImportRequest extends RecipeImportRequest {
     return TextRecipeImportRequest._(text);
   }
 
-  const TextRecipeImportRequest._(this.text);
+  const new _(this.text);
 
   final String text;
 
@@ -39,7 +39,7 @@ final class TextRecipeImportRequest extends RecipeImportRequest {
 }
 
 final class ImageRecipeImportRequest extends RecipeImportRequest {
-  factory ImageRecipeImportRequest({
+  factory({
     required Uint8List bytes,
     required String mimeType,
   }) {
@@ -55,7 +55,7 @@ final class ImageRecipeImportRequest extends RecipeImportRequest {
     return ImageRecipeImportRequest._(Uint8List.fromList(bytes), mimeType);
   }
 
-  const ImageRecipeImportRequest._(this._bytes, this.mimeType);
+  const new _(this._bytes, this.mimeType);
 
   final Uint8List _bytes;
   final String mimeType;

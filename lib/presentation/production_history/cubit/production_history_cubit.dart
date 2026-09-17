@@ -7,7 +7,7 @@ part 'production_history_state.dart';
 /// Drives the read-only production history screen.
 final class ProductionHistoryCubit extends Cubit<ProductionHistoryState> {
   /// Creates the cubit over the history list use case.
-  ProductionHistoryCubit(this._listHistory) : super(const ProductionHistoryState());
+  new(this._listHistory) : super(const ProductionHistoryState());
 
   final ListProductionHistory _listHistory;
 

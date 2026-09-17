@@ -17,7 +17,7 @@ final class BatchPlan {
   /// No caller can ask for that deliberately at any plausible scale, and
   /// the refusal is here rather than in a caller's bound because a caller
   /// may set no bound at all.
-  factory BatchPlan.decompose({
+  factory decompose({
     required Quantity target,
     Quantity? maxBatchYield,
   }) {
@@ -58,7 +58,7 @@ final class BatchPlan {
     );
   }
 
-  const BatchPlan._({
+  const new _({
     required this.fullBatchCount,
     required this.fullBatchYield,
     required this.remainderYield,

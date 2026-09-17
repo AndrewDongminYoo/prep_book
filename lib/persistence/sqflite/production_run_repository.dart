@@ -34,7 +34,7 @@ const _summaryColumns = <String>[
 /// afterwards can never reach a row already saved here.
 final class SqfliteProductionRunRepository implements ProductionRunRepository {
   /// Creates a repository over the already-open database [_db].
-  const SqfliteProductionRunRepository(this._db);
+  const new(this._db);
 
   final Database _db;
 

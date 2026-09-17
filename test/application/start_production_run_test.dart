@@ -19,7 +19,7 @@ final class _FixedIds implements RunIdSource {
 /// draws, and a source reaching for [nextDouble] would be spelling one out of
 /// a float's mantissa instead. The throwing members are what says so.
 final class _ScriptedRandom implements Random {
-  _ScriptedRandom(this._draws);
+  new(this._draws);
 
   final List<int> _draws;
 

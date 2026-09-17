@@ -8,7 +8,7 @@ import 'package:prep_book/presentation/library_backup/cubit/library_backup_cubit
 
 /// Modal progress, confirmation, and failure UI for one library operation.
 final class LibraryBackupDialog extends StatefulWidget {
-  const LibraryBackupDialog({required this.action, super.key});
+  const new({required this.action, super.key});
 
   final LibraryBackupAction action;
 
@@ -88,7 +88,7 @@ class _LibraryBackupDialogState extends State<LibraryBackupDialog> {
 }
 
 final class _ProgressDialog extends StatelessWidget {
-  const _ProgressDialog({required this.message});
+  const new({required this.message});
 
   final String message;
 

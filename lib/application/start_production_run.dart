@@ -35,7 +35,7 @@ abstract interface class RunIdSource {
 /// a seeded one.
 final class RandomRunIdSource implements RunIdSource {
   /// Creates the source, drawing from [random] when one is given.
-  RandomRunIdSource([Random? random]) : _random = random ?? Random.secure();
+  new([Random? random]) : _random = random ?? Random.secure();
 
   final Random _random;
 
@@ -71,7 +71,7 @@ abstract interface class Clock {
 /// passes it to `SaveProductionRun`.
 final class StartProductionRun {
   /// Creates the use case.
-  const StartProductionRun(
+  const new(
     this._recipes,
     this._ingredients,
     this._ids,

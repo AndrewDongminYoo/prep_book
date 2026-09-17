@@ -13,7 +13,7 @@ import 'package:rational/rational.dart';
 /// Turns a recipe and a target yield into an exact production result.
 final class ProductionCalculator {
   /// Creates a calculator. It holds no state beyond [maxPlannedBatches].
-  const ProductionCalculator({this.maxPlannedBatches});
+  const new({this.maxPlannedBatches});
 
   /// The largest number of batches any one recipe in a run may be split
   /// into, or `null` — the default — for no bound at all.
@@ -135,9 +135,11 @@ final class ProductionCalculator {
       // is reported. Archival is a property of the reference itself rather
       // than of the numbers, so it is checked here too; the index lookup is
       // safe for the reason _expand gives below.
-      if (component.target case SubRecipeRef(
-        recipeId: final targetRecipeId,
-      ) when recipeIndex[targetRecipeId]!.isArchived) {
+      if (component.target
+          case SubRecipeRef(
+            recipeId: final targetRecipeId,
+          )
+          when recipeIndex[targetRecipeId]!.isArchived) {
         _addUnique(warnings, ArchivedDependencyWarning(targetRecipeId));
       }
       return ScaledComponent(
