@@ -74,7 +74,10 @@ class _ChampionshipDemoPageState extends State<ChampionshipDemoPage> {
           children: [
             const Positioned.fill(
               child: IgnorePointer(
-                child: CustomPaint(painter: _PaperGridPainter()),
+                child: CustomPaint(
+                  key: ValueKey('championship-paper-grid'),
+                  painter: _PaperGridPainter(),
+                ),
               ),
             ),
             SafeArea(

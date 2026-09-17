@@ -147,6 +147,11 @@ void main() {
       lessThanOrEqualTo(900),
     );
     expect((tester.getRect(phasePanel).center.dx - 720).abs(), lessThan(1));
+    final grid = tester.widget<CustomPaint>(
+      find.byKey(const ValueKey('championship-paper-grid')),
+    );
+    expect(grid.painter, isNotNull);
+    expect(grid.painter!.shouldRepaint(grid.painter!), isFalse);
     for (var index = 0; index < 3; index += 1) {
       final connector = find.byKey(
         ValueKey('championship-step-connector-$index'),
