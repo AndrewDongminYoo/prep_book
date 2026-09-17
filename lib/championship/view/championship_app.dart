@@ -31,21 +31,118 @@ class ChampionshipApp extends StatelessWidget {
         onResolvedLocale: onResolvedLocale,
         child: child ?? const SizedBox.shrink(),
       ),
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF81552D)),
-        scaffoldBackgroundColor: const Color(0xFFFFF8F1),
-        cardTheme: const CardThemeData(
-          clipBehavior: Clip.antiAlias,
-          margin: EdgeInsets.zero,
-        ),
-        useMaterial3: true,
-      ),
+      theme: _championshipTheme(),
       home: BlocProvider.value(
         value: cubit,
         child: ChampionshipDemoPage(openProductionSheet: openProductionSheet),
       ),
     );
   }
+}
+
+ThemeData _championshipTheme() {
+  final colors = ColorScheme.fromSeed(
+    seedColor: const Color(0xFF2D4C7C),
+    surface: Colors.white,
+  );
+  final base = ThemeData(colorScheme: colors, useMaterial3: true);
+  final inputBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(6),
+    borderSide: BorderSide(color: colors.outlineVariant),
+  );
+  return base.copyWith(
+    scaffoldBackgroundColor: const Color(0xFFFDFEFE),
+    textTheme: base.textTheme.copyWith(
+      headlineLarge: base.textTheme.headlineLarge?.copyWith(
+        fontSize: 30,
+        height: 1.2,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.5,
+      ),
+      headlineSmall: base.textTheme.headlineSmall?.copyWith(
+        fontSize: 24,
+        height: 1.2,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+      ),
+      titleLarge: base.textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+      titleMedium: base.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+      ),
+      bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.5),
+    ),
+    cardTheme: CardThemeData(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      color: colors.surface,
+      elevation: 2,
+      shadowColor: colors.shadow.withValues(alpha: 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: colors.surface,
+      contentPadding: const EdgeInsets.all(16),
+      border: inputBorder,
+      enabledBorder: inputBorder,
+      focusedBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: colors.primary, width: 1.5),
+      ),
+      errorBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: colors.error),
+      ),
+      focusedErrorBorder: inputBorder.copyWith(
+        borderSide: BorderSide(color: colors.error, width: 1.5),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(0, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style:
+          OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+            foregroundColor: colors.primary,
+          ).copyWith(
+            side: WidgetStateProperty.resolveWith(
+              (states) => BorderSide(
+                color: states.contains(WidgetState.disabled)
+                    ? colors.outlineVariant.withValues(alpha: 0.6)
+                    : colors.outlineVariant,
+              ),
+            ),
+          ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+        side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant)),
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? const Color(0xFFF0F3F7)
+              : colors.surface,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? colors.onSurface
+              : colors.onSurfaceVariant,
+        ),
+      ),
+    ),
+  );
 }
 
 class _ResolvedLocaleReporter extends StatefulWidget {

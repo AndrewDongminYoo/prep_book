@@ -43,10 +43,7 @@ class ChampionshipTargetPanel extends StatelessWidget {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: InputDecoration(
-                labelText: strings.targetAmount,
-                border: const OutlineInputBorder(),
-              ),
+              decoration: InputDecoration(labelText: strings.targetAmount),
               onChanged: cubit.setTargetAmount,
             ),
             const SizedBox(height: 16),
@@ -56,10 +53,7 @@ class ChampionshipTargetPanel extends StatelessWidget {
                   ? state.targetUnit
                   : units.first,
               isExpanded: true,
-              decoration: InputDecoration(
-                labelText: strings.targetUnit,
-                border: const OutlineInputBorder(),
-              ),
+              decoration: InputDecoration(labelText: strings.targetUnit),
               items: [
                 for (final unit in units)
                   DropdownMenuItem(

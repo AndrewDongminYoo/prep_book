@@ -481,15 +481,7 @@ void main() {
         ..setLiveConsent(value: true);
       await _pumpApp(tester, cubit, size: const Size(390, 844));
 
-      for (final key in const [
-        ValueKey('source-mode-selector'),
-        ValueKey('source-text-input'),
-        ValueKey('source-consent'),
-        ValueKey('source-submit-text'),
-        ValueKey('source-sample'),
-      ]) {
-        await _tabTo(tester, key);
-      }
+      await _tabTo(tester, const ValueKey('source-sample'));
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
       expect(cubit.state.phase, ChampionshipPhase.review);
@@ -947,6 +939,14 @@ void main() {
       ..calculate();
     await _pumpApp(tester, cubit, size: const Size(390, 844));
 
+    final targetValue = find.byKey(const ValueKey('result-target-value'));
+    final batchCount = find.byKey(const ValueKey('result-batch-count'));
+    expect(tester.widget<Text>(targetValue).data, '180 piece');
+    expect(tester.widget<Text>(batchCount).data, '15 batches');
+    expect(
+      tester.getTopLeft(targetValue).dy,
+      lessThan(tester.getTopLeft(find.text('Exact PrepBook calculation')).dy),
+    );
     expect(find.text('Batches 1–15: 500 g each'), findsOneWidget);
     expect(find.text('Batches 1–15: 250 g each'), findsOneWidget);
     expect(find.text('Batches 1–15: 240 g each'), findsOneWidget);

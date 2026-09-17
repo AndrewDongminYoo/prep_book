@@ -19,6 +19,11 @@ final class ChampionshipStrings {
   String get title =>
       isKorean ? 'PrepBook AI 레시피 가져오기' : 'PrepBook AI Recipe Import';
 
+  String get brandTitle => 'PrepBook AI';
+  String get brandSubtitle => isKorean
+      ? '텍스트·사진 레시피를 생산 계획으로'
+      : 'Turn recipe text and photos into a production plan';
+
   String get boundary => isKorean
       ? 'AI는 원본을 해석합니다. PrepBook은 생산 계획을 계산합니다.'
       : 'AI interprets the source. PrepBook calculates the production plan.';
@@ -62,9 +67,6 @@ final class ChampionshipStrings {
 
   String get textMode => isKorean ? '텍스트' : 'Text';
   String get imageMode => isKorean ? '이미지' : 'Image';
-  String get sampleTitle =>
-      isKorean ? '합성 크루아상 샘플' : 'Synthetic croissant sample';
-
   String get sampleDescription => isKorean
       ? '네트워크와 동의 절차 없이 전체 흐름을 실행합니다.'
       : 'Complete the full workflow without network access or consent.';

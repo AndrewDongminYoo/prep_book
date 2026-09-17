@@ -39,15 +39,17 @@ class ChampionshipResultPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _ExactBoundary(strings: strings),
-                  const SizedBox(height: 20),
                   Text(
                     run.recipe.name,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const SizedBox(height: 4),
-                  Text(run.targetYield.toString()),
-                  Text(strings.batches(batchPlan.batchCount)),
+                  const SizedBox(height: 16),
+                  _ResultOverview(
+                    target: run.targetYield.toString(),
+                    batches: strings.batches(batchPlan.batchCount),
+                    targetLabel: strings.target,
+                  ),
+                  const SizedBox(height: 20),
                   if (batchPlan.fullBatchCount > 0)
                     Text(
                       strings.fullBatches(
@@ -57,6 +59,8 @@ class ChampionshipResultPanel extends StatelessWidget {
                     ),
                   if (batchPlan.remainderYield case final remainder?)
                     Text(strings.remainderBatch(remainder)),
+                  const SizedBox(height: 20),
+                  _ExactBoundary(strings: strings),
                 ],
               ),
             ),
@@ -123,6 +127,56 @@ class ChampionshipResultPanel extends StatelessWidget {
                     child: Text(strings.reset),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ResultOverview extends StatelessWidget {
+  const _ResultOverview({
+    required this.target,
+    required this.batches,
+    required this.targetLabel,
+  });
+
+  final String target;
+  final String batches;
+  final String targetLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.primaryContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(targetLabel, style: textTheme.labelLarge),
+            const SizedBox(height: 4),
+            Text(
+              target,
+              key: const ValueKey('result-target-value'),
+              style: textTheme.displaySmall?.copyWith(
+                color: colors.onPrimaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              batches,
+              key: const ValueKey('result-batch-count'),
+              style: textTheme.titleLarge?.copyWith(
+                color: colors.onPrimaryContainer,
               ),
             ),
           ],
