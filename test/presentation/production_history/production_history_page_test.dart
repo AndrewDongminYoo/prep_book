@@ -119,6 +119,44 @@ Widget _screen(
 );
 
 void main() {
+  for (final viewport in [const Size(390, 844), const Size(1000, 900)]) {
+    testWidgets('history stays readable at 300 percent text in $viewport', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = viewport
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 3;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final repository = _HistoryRepository()..summaries = [_summary()];
+
+      await tester.pumpWidget(_screen(repository));
+      await tester.pump();
+
+      expect(find.text('Morning rolls'), findsOneWidget);
+      expect(find.text('Revision 3'), findsOneWidget);
+      expect(find.text('12 roll'), findsOneWidget);
+      expect(find.text('Draft'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('history row meets compact tap target guidance', (tester) async {
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final semantics = tester.ensureSemantics();
+    final repository = _HistoryRepository()..summaries = [_summary()];
+
+    await tester.pumpWidget(_screen(repository));
+    await tester.pump();
+
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    semantics.dispose();
+  });
+
   testWidgets('shows loading and then the empty state', (tester) async {
     final repository = _HistoryRepository()
       ..pendingList = Completer<List<ProductionRunSummary>>();

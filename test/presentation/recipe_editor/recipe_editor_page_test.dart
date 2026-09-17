@@ -243,6 +243,61 @@ void main() {
       expect(_editorScroll(tester).pixels, 80);
     });
 
+    for (final viewport in [const Size(390, 844), const Size(1200, 900)]) {
+      testWidgets('keeps the editor usable at 300 percent text in $viewport', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _openEditor(
+          tester,
+          recipes: recipes,
+          ingredients: ingredients,
+          recipe: buildRecipe(id: 'scaled-recipe'),
+          viewport: viewport,
+        );
+
+        expect(find.byKey(const ValueKey('recipe-name')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.enterText(
+          find.byKey(const ValueKey('recipe-name')),
+          'Scaled recipe',
+        );
+        await tester.dragUntilVisible(
+          find.text('Add ingredient'),
+          find.byType(ReorderableListView),
+          const Offset(0, -400),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Add ingredient'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('editor controls meet compact tap target guidance', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await _openEditor(
+        tester,
+        recipes: recipes,
+        ingredients: ingredients,
+        recipe: buildRecipe(id: 'tap-target-recipe'),
+        viewport: const Size(390, 844),
+      );
+
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await tester.dragUntilVisible(
+        find.text('Add ingredient'),
+        find.byType(ReorderableListView),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      semantics.dispose();
+    });
+
     testWidgets('a stored recipe opens filled in', (tester) async {
       final stored = Recipe(
         id: 'croissant-dough',
