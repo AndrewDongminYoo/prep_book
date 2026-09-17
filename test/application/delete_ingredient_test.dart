@@ -5,8 +5,7 @@ import 'fakes.dart';
 
 void main() {
   test('an unused ingredient is deleted on the first call', () async {
-    final ingredients = FakeIngredientRepository()
-      ..stored['flour'] = buildIngredient(id: 'flour');
+    final ingredients = FakeIngredientRepository()..stored['flour'] = buildIngredient(id: 'flour');
     final recipes = FakeRecipeRepository();
 
     final outcome = await DeleteIngredient(ingredients, recipes).call('flour');
@@ -19,8 +18,7 @@ void main() {
   test(
     'an ingredient in use is not deleted, and its recipes come back',
     () async {
-      final ingredients = FakeIngredientRepository()
-        ..stored['flour'] = buildIngredient(id: 'flour');
+      final ingredients = FakeIngredientRepository()..stored['flour'] = buildIngredient(id: 'flour');
       final recipes = FakeRecipeRepository()
         ..seed(buildRecipe(id: 'a'))
         ..seed(buildRecipe(id: 'b'));
@@ -43,8 +41,7 @@ void main() {
       // blocks only once more than one recipe is found (e.g. checking
       // `users.length > 1` instead of `users.isNotEmpty`) would pass the
       // two-recipe case above but wrongly allow this one through.
-      final ingredients = FakeIngredientRepository()
-        ..stored['flour'] = buildIngredient(id: 'flour');
+      final ingredients = FakeIngredientRepository()..stored['flour'] = buildIngredient(id: 'flour');
       final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a'));
 
       final outcome = await DeleteIngredient(
@@ -64,10 +61,8 @@ void main() {
     // whether to block would pass every other test here (none of them
     // seed an archived user) while silently deleting an ingredient an
     // archived recipe still names.
-    final ingredients = FakeIngredientRepository()
-      ..stored['flour'] = buildIngredient(id: 'flour');
-    final recipes = FakeRecipeRepository()
-      ..seed(buildRecipe(id: 'a', isArchived: true));
+    final ingredients = FakeIngredientRepository()..stored['flour'] = buildIngredient(id: 'flour');
+    final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a', isArchived: true));
 
     final outcome = await DeleteIngredient(ingredients, recipes).call('flour');
 
@@ -77,8 +72,7 @@ void main() {
   });
 
   test('forcing deletes it and still reports what used it', () async {
-    final ingredients = FakeIngredientRepository()
-      ..stored['flour'] = buildIngredient(id: 'flour');
+    final ingredients = FakeIngredientRepository()..stored['flour'] = buildIngredient(id: 'flour');
     final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a'));
 
     final outcome = await DeleteIngredient(

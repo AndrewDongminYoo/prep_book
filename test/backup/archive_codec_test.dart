@@ -117,8 +117,7 @@ void main() {
     group('manifest', () {
       test('rejects every missing required field', () {
         for (final field in _validManifestMap.keys) {
-          final manifest = Map<String, Object?>.of(_validManifestMap)
-            ..remove(field);
+          final manifest = Map<String, Object?>.of(_validManifestMap)..remove(field);
 
           _expectFailure(
             _archiveWithManifest(manifest),
@@ -147,8 +146,7 @@ void main() {
           'databaseEntry': 1,
         };
         for (final entry in wrongValues.entries) {
-          final manifest = Map<String, Object?>.of(_validManifestMap)
-            ..[entry.key] = entry.value;
+          final manifest = Map<String, Object?>.of(_validManifestMap)..[entry.key] = entry.value;
 
           _expectFailure(
             _archiveWithManifest(manifest),
@@ -287,8 +285,7 @@ void main() {
 
       for (final compression in [CompressionType.none, CompressionType.bzip2]) {
         test('decodes a ${compression.name} database entry within bounds', () {
-          final database = ArchiveFile.bytes('library.db', [1, 2, 3])
-            ..compression = compression;
+          final database = ArchiveFile.bytes('library.db', [1, 2, 3])..compression = compression;
           final bytes = _zipEntries([_manifestEntry(), database]);
 
           final decoded = const BackupArchiveCodec().decode(bytes);
@@ -367,15 +364,13 @@ const _validManifestMap = <String, Object?>{
   'databaseEntry': 'library.db',
 };
 
-ArchiveFile _manifestEntry({String name = 'manifest.json'}) =>
-    ArchiveFile.string(name, jsonEncode(_validManifestMap));
+ArchiveFile _manifestEntry({String name = 'manifest.json'}) => ArchiveFile.string(name, jsonEncode(_validManifestMap));
 
 ArchiveFile _databaseEntry() => ArchiveFile.bytes('library.db', [1, 2, 3]);
 
 Uint8List _zipEntries(List<ArchiveFile> entries) {
   final output = OutputMemoryStream();
-  final encoder = ZipEncoder()
-    ..startEncode(output, modified: DateTime.utc(2026, 9, 13));
+  final encoder = ZipEncoder()..startEncode(output, modified: DateTime.utc(2026, 9, 13));
   for (final entry in entries) {
     encoder.add(entry, autoClose: false);
   }
@@ -384,8 +379,7 @@ Uint8List _zipEntries(List<ArchiveFile> entries) {
 }
 
 Uint8List _zipWithManifestSymlink() {
-  final symlink = ArchiveFile.bytes('manifest.json', utf8.encode('library.db'))
-    ..mode = 0xa1ff;
+  final symlink = ArchiveFile.bytes('manifest.json', utf8.encode('library.db'))..mode = 0xa1ff;
   final bytes = _zipEntries([symlink, _databaseEntry()]);
   _markCentralEntryAsUnix(bytes, 'manifest.json');
   return bytes;
@@ -393,10 +387,7 @@ Uint8List _zipWithManifestSymlink() {
 
 void _markCentralEntryAsUnix(Uint8List bytes, String entryName) {
   for (var index = 0; index <= bytes.length - 6; index++) {
-    if (bytes[index] == 0x50 &&
-        bytes[index + 1] == 0x4b &&
-        bytes[index + 2] == 0x01 &&
-        bytes[index + 3] == 0x02) {
+    if (bytes[index] == 0x50 && bytes[index + 1] == 0x4b && bytes[index + 2] == 0x01 && bytes[index + 3] == 0x02) {
       final nameLength = bytes[index + 28] | bytes[index + 29] << 8;
       final name = utf8.decode(
         bytes.sublist(index + 46, index + 46 + nameLength),
@@ -409,8 +400,7 @@ void _markCentralEntryAsUnix(Uint8List bytes, String entryName) {
   fail('Central directory entry not found: $entryName');
 }
 
-Uint8List _archiveWithManifest(Map<String, Object?> manifest) =>
-    _archiveWithManifestText(jsonEncode(manifest));
+Uint8List _archiveWithManifest(Map<String, Object?> manifest) => _archiveWithManifestText(jsonEncode(manifest));
 
 Uint8List _archiveWithManifestText(String manifest) => _zipEntries([
   ArchiveFile.string('manifest.json', manifest),
@@ -424,10 +414,7 @@ void _patchCentralUint32(
   required int value,
 }) {
   for (var index = 0; index <= bytes.length - 46; index++) {
-    if (bytes[index] != 0x50 ||
-        bytes[index + 1] != 0x4b ||
-        bytes[index + 2] != 0x01 ||
-        bytes[index + 3] != 0x02) {
+    if (bytes[index] != 0x50 || bytes[index + 1] != 0x4b || bytes[index + 2] != 0x01 || bytes[index + 3] != 0x02) {
       continue;
     }
     final nameLength = bytes[index + 28] | bytes[index + 29] << 8;
@@ -450,10 +437,7 @@ void _patchLocalUint32(
   required int value,
 }) {
   for (var index = 0; index <= bytes.length - 30; index++) {
-    if (bytes[index] != 0x50 ||
-        bytes[index + 1] != 0x4b ||
-        bytes[index + 2] != 0x03 ||
-        bytes[index + 3] != 0x04) {
+    if (bytes[index] != 0x50 || bytes[index + 1] != 0x4b || bytes[index + 2] != 0x03 || bytes[index + 3] != 0x04) {
       continue;
     }
     final nameLength = bytes[index + 26] | bytes[index + 27] << 8;
@@ -475,10 +459,7 @@ void _patchEocdUint32(
   required int value,
 }) {
   for (var index = bytes.length - 22; index >= 0; index--) {
-    if (bytes[index] != 0x50 ||
-        bytes[index + 1] != 0x4b ||
-        bytes[index + 2] != 0x05 ||
-        bytes[index + 3] != 0x06) {
+    if (bytes[index] != 0x50 || bytes[index + 1] != 0x4b || bytes[index + 2] != 0x05 || bytes[index + 3] != 0x06) {
       continue;
     }
     for (var byte = 0; byte < 4; byte++) {
@@ -495,17 +476,11 @@ void _overwriteLocalContent(
   required int value,
 }) {
   for (var index = 0; index <= bytes.length - 30; index++) {
-    if (bytes[index] != 0x50 ||
-        bytes[index + 1] != 0x4b ||
-        bytes[index + 2] != 0x03 ||
-        bytes[index + 3] != 0x04) {
+    if (bytes[index] != 0x50 || bytes[index + 1] != 0x4b || bytes[index + 2] != 0x03 || bytes[index + 3] != 0x04) {
       continue;
     }
     final compressedSize =
-        bytes[index + 18] |
-        bytes[index + 19] << 8 |
-        bytes[index + 20] << 16 |
-        bytes[index + 21] << 24;
+        bytes[index + 18] | bytes[index + 19] << 8 | bytes[index + 20] << 16 | bytes[index + 21] << 24;
     final nameLength = bytes[index + 26] | bytes[index + 27] << 8;
     final extraLength = bytes[index + 28] | bytes[index + 29] << 8;
     final name = utf8.decode(

@@ -61,35 +61,28 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   void categoryChanged(String value) => emit(state.copyWith(category: value));
 
   /// Records the typed base yield amount.
-  void baseYieldAmountChanged(String value) =>
-      emit(state.copyWith(baseYieldAmount: value));
+  void baseYieldAmountChanged(String value) => emit(state.copyWith(baseYieldAmount: value));
 
   /// Records the chosen base yield unit.
-  void baseYieldUnitChanged(Unit unit) =>
-      emit(state.copyWith(baseYieldUnit: unit));
+  void baseYieldUnitChanged(Unit unit) => emit(state.copyWith(baseYieldUnit: unit));
 
   /// Records the typed maximum batch yield.
-  void maxBatchAmountChanged(String value) =>
-      emit(state.copyWith(maxBatchAmount: value));
+  void maxBatchAmountChanged(String value) => emit(state.copyWith(maxBatchAmount: value));
 
   /// Records the chosen maximum batch yield unit.
-  void maxBatchUnitChanged(Unit unit) =>
-      emit(state.copyWith(maxBatchUnit: unit));
+  void maxBatchUnitChanged(Unit unit) => emit(state.copyWith(maxBatchUnit: unit));
 
   /// Records the typed preparation notes, one per line.
-  void preparationNotesChanged(String value) =>
-      emit(state.copyWith(preparationNotes: value));
+  void preparationNotesChanged(String value) => emit(state.copyWith(preparationNotes: value));
 
   /// Offers [unit] in every unit picker on this screen.
   ///
   /// The domain builds count and yield-only units from arbitrary symbols, so
   /// this is how an operator names one the data does not already contain.
-  void addCustomUnit(Unit unit) =>
-      emit(state.copyWith(customUnits: [...state.customUnits, unit]));
+  void addCustomUnit(Unit unit) => emit(state.copyWith(customUnits: [...state.customUnits, unit]));
 
   /// Appends a component consuming [ingredient].
-  void addIngredientComponent(Ingredient ingredient) =>
-      emit(_withComponent(state, _draftFor(ingredient)));
+  void addIngredientComponent(Ingredient ingredient) => emit(_withComponent(state, _draftFor(ingredient)));
 
   /// Stores a new ingredient named [name] and puts it on a component.
   ///
@@ -146,8 +139,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// The amount, unit, behavior and note are deliberately kept: retargeting
   /// a line answers "this is the wrong ingredient", not "start this line
   /// again", and the operator can still edit every one of those fields.
-  void componentTargetChanged(String id, ComponentTarget target) =>
-      emit(_withTarget(state, id, target));
+  void componentTargetChanged(String id, ComponentTarget target) => emit(_withTarget(state, id, target));
 
   /// Points the component [id] at the output of [recipe].
   ///
@@ -183,8 +175,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
       _updateComponent(id, (draft) => draft.copyWith(amount: value));
 
   /// Records the chosen unit of the component [id].
-  void componentUnitChanged(String id, Unit unit) =>
-      _updateComponent(id, (draft) => draft.copyWith(unit: unit));
+  void componentUnitChanged(String id, Unit unit) => _updateComponent(id, (draft) => draft.copyWith(unit: unit));
 
   /// Records the chosen scaling behavior of the component [id].
   ///
@@ -200,8 +191,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
       _updateComponent(id, (draft) => draft.copyWith(roundingIncrement: value));
 
   /// Records the typed note of the component [id].
-  void componentNoteChanged(String id, String value) =>
-      _updateComponent(id, (draft) => draft.copyWith(note: value));
+  void componentNoteChanged(String id, String value) => _updateComponent(id, (draft) => draft.copyWith(note: value));
 
   /// Removes the component [id].
   void removeComponent(String id) => emit(
@@ -276,8 +266,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
       await _saveIngredient(ingredient);
       final added = state.copyWith(
         isWriting: false,
-        ingredients: [...state.ingredients, ingredient]
-          ..sort((a, b) => a.name.compareTo(b.name)),
+        ingredients: [...state.ingredients, ingredient]..sort((a, b) => a.name.compareTo(b.name)),
       );
       return forComponentId == null
           ? _withComponent(added, _draftFor(ingredient))
@@ -406,8 +395,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   ///
   /// A manual line never rounds: it produces no numeric result to round.
   static RoundingRule? _roundingOf(ComponentDraft draft) =>
-      draft.behavior == ScalingBehavior.manual ||
-          draft.roundingIncrement.trim().isEmpty
+      draft.behavior == ScalingBehavior.manual || draft.roundingIncrement.trim().isEmpty
       ? null
       : RoundingRule.upToIncrement(_decimal(draft.roundingIncrement));
 
@@ -431,9 +419,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// reaches storage is parsed from a decimal — so this guards the store
   /// against a future writer rather than fixing a value being lost now.
   static Quantity _quantity(Quantity? stored, String text, Unit unit) =>
-      stored != null &&
-          stored.unit == unit &&
-          _amountText(stored) == text.trim()
+      stored != null && stored.unit == unit && _amountText(stored) == text.trim()
       ? stored
       : Quantity.fromDecimal(_decimal(text), unit);
 
@@ -466,8 +452,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
       preparationNotes: recipe.preparationNotes.join('\n'),
       isArchived: recipe.isArchived,
       components: [
-        for (final component in _byDisplayOrder(recipe.components))
-          _draftOf(component),
+        for (final component in _byDisplayOrder(recipe.components)) _draftOf(component),
       ],
     );
   }
@@ -494,8 +479,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// [components] in display order, whatever order they arrived in.
   static List<RecipeComponent> _byDisplayOrder(
     List<RecipeComponent> components,
-  ) =>
-      [...components]..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+  ) => [...components]..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
   /// [quantity]'s amount as the operator would type it.
   static String _amountText(Quantity quantity) => readableAmountOf(quantity);

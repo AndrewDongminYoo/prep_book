@@ -20,12 +20,10 @@ final class _HistoryRepository implements ProductionRunRepository {
   Future<ProductionRun?> findById(String id) => throw UnimplementedError();
 
   @override
-  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
-      throw UnimplementedError();
+  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) => throw UnimplementedError();
 
   @override
-  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) =>
-      throw UnimplementedError();
+  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) => throw UnimplementedError();
 
   @override
   Future<void> save(ProductionRun run) => throw UnimplementedError();

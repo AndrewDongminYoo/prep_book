@@ -169,8 +169,7 @@ class _Controls extends StatelessWidget {
               ),
             ],
             selected: {state.organization},
-            onSelectionChanged:
-                state.actionStatus == ProductionSheetActionStatus.idle
+            onSelectionChanged: state.actionStatus == ProductionSheetActionStatus.idle
                 ? (selected) => cubit.organizationChanged(selected.single)
                 : null,
           ),

@@ -53,8 +53,7 @@ void main() {
         ).create(),
         encodeArchive: codec.encode,
         decodeArchive: codec.decode,
-        restoreDatabase: (_, {required manifestSchemaVersion}) =>
-            throw UnimplementedError(),
+        restoreDatabase: (_, {required manifestSchemaVersion}) => throw UnimplementedError(),
         now: () => DateTime(2026, 9, 13, 12, 34, 56),
       );
 
@@ -334,21 +333,17 @@ Object _runValue(ProductionRun value) => <String, Object?>{
   'createdAt': value.createdAt,
   'recipe': _recipeValue(value.recipe),
   'dependencies': {
-    for (final entry in value.dependencySnapshot.entries)
-      entry.key: _recipeValue(entry.value),
+    for (final entry in value.dependencySnapshot.entries) entry.key: _recipeValue(entry.value),
   },
   'ingredients': {
-    for (final entry in value.ingredientSnapshot.entries)
-      entry.key: _ingredientValue(entry.value),
+    for (final entry in value.ingredientSnapshot.entries) entry.key: _ingredientValue(entry.value),
   },
   'targetYield': value.targetYield,
   'result': _resultValue(value.result),
   'overrides': {
-    for (final entry in value.overrides.entries)
-      '${entry.key.$1}/${entry.key.$2}': entry.value,
+    for (final entry in value.overrides.entries) '${entry.key.$1}/${entry.key.$2}': entry.value,
   },
-  'acknowledgedWarnings': value.acknowledgedWarnings.map(_warningValue).toList()
-    ..sort(),
+  'acknowledgedWarnings': value.acknowledgedWarnings.map(_warningValue).toList()..sort(),
 };
 
 Object _resultValue(ProductionResult value) => <String, Object?>{
@@ -369,14 +364,11 @@ Object _scaledValue(ScaledComponent value) => <String, Object?>{
   'subRecipe': value.subRecipe == null ? null : _resultValue(value.subRecipe!),
 };
 
-Object? _scaledQuantityValue(ScaledQuantity? value) => value == null
-    ? null
-    : <String, Object?>{'exact': value.exact, 'displayed': value.displayed};
+Object? _scaledQuantityValue(ScaledQuantity? value) =>
+    value == null ? null : <String, Object?>{'exact': value.exact, 'displayed': value.displayed};
 
 String _warningValue(ProductionWarning value) => switch (value) {
-  ManualComponentWarning(:final recipeId, :final componentId) =>
-    'manual:$recipeId:$componentId',
-  RoundingAdjustedWarning(:final recipeId, :final componentId) =>
-    'rounding:$recipeId:$componentId',
+  ManualComponentWarning(:final recipeId, :final componentId) => 'manual:$recipeId:$componentId',
+  RoundingAdjustedWarning(:final recipeId, :final componentId) => 'rounding:$recipeId:$componentId',
   ArchivedDependencyWarning(:final recipeId) => 'archived:$recipeId',
 };

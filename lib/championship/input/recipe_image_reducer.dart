@@ -94,8 +94,7 @@ final class RecipeImageReducer {
     }
     try {
       final longestEdge = math.max(decoded.width, decoded.height);
-      if (image.bytes.length <= recipeImportMaxImageBytes &&
-          longestEdge <= recipeImportMaxImageEdge) {
+      if (image.bytes.length <= recipeImportMaxImageBytes && longestEdge <= recipeImportMaxImageEdge) {
         return PreparedRecipeImage(
           image: image,
           width: decoded.width,

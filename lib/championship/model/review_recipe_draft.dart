@@ -120,8 +120,7 @@ final class ReviewYieldDraft {
   ReviewYieldDraft copyWith({
     ReviewField<String>? amount,
     ReviewField<String>? unit,
-  }) =>
-      ReviewYieldDraft(amount: amount ?? this.amount, unit: unit ?? this.unit);
+  }) => ReviewYieldDraft(amount: amount ?? this.amount, unit: unit ?? this.unit);
 
   ReviewYieldDraft confirmAllUnambiguous() => ReviewYieldDraft(
     amount: amount.confirmIfUnambiguous(),
@@ -157,8 +156,7 @@ final class ReviewRecipeDetails {
     baseYield: baseYield ?? this.baseYield,
     maxBatchYield: maxBatchYield ?? this.maxBatchYield,
     maxBatchYieldProposal: maxBatchYieldProposal,
-    isMaxBatchYieldAbsentConfirmed:
-        isMaxBatchYieldAbsentConfirmed ?? this.isMaxBatchYieldAbsentConfirmed,
+    isMaxBatchYieldAbsentConfirmed: isMaxBatchYieldAbsentConfirmed ?? this.isMaxBatchYieldAbsentConfirmed,
     preparationNotes: preparationNotes ?? this.preparationNotes,
   );
 
@@ -230,9 +228,7 @@ final class ReviewRecipeComponent {
     name: name.confirmIfUnambiguous(),
     amount: amount.confirmIfUnambiguous(),
     unit: unit.confirmIfUnambiguous(),
-    behavior: behavior.value == DraftScalingBehavior.manual
-        ? behavior
-        : behavior.confirmIfUnambiguous(),
+    behavior: behavior.value == DraftScalingBehavior.manual ? behavior : behavior.confirmIfUnambiguous(),
     note: note?.confirmIfUnambiguous(),
   );
 }
@@ -265,13 +261,11 @@ final class ReviewRecipeDraft {
         maxBatchYieldProposal: maxBatchYield,
         isMaxBatchYieldAbsentConfirmed: false,
         preparationNotes: [
-          for (final note in draft.recipe.preparationNotes)
-            _reviewField(note, _requiredTextIssues),
+          for (final note in draft.recipe.preparationNotes) _reviewField(note, _requiredTextIssues),
         ],
       ),
       components: [
-        for (final component in draft.components)
-          _reviewComponent(component, units),
+        for (final component in draft.components) _reviewComponent(component, units),
       ],
       units: units,
     );
@@ -315,8 +309,7 @@ final class ReviewRecipeDraft {
     ),
   );
 
-  ReviewRecipeDraft confirmRecipeName() =>
-      _replaceRecipe(recipe.copyWith(name: recipe.name.confirm()));
+  ReviewRecipeDraft confirmRecipeName() => _replaceRecipe(recipe.copyWith(name: recipe.name.confirm()));
 
   ReviewRecipeDraft editBaseYieldAmount(String? value) => _replaceRecipe(
     recipe.copyWith(
@@ -423,25 +416,22 @@ final class ReviewRecipeDraft {
     );
   }
 
-  ReviewRecipeDraft removeMaxBatchYield() =>
-      _replaceRecipe(recipe.removeMaxBatchYield());
+  ReviewRecipeDraft removeMaxBatchYield() => _replaceRecipe(recipe.removeMaxBatchYield());
 
-  ReviewRecipeDraft confirmMaxBatchYieldAbsent() =>
-      _replaceRecipe(recipe.confirmMaxBatchYieldAbsent());
+  ReviewRecipeDraft confirmMaxBatchYieldAbsent() => _replaceRecipe(recipe.confirmMaxBatchYieldAbsent());
 
-  ReviewRecipeDraft editPreparationNote(int index, String? value) =>
-      _replaceRecipe(
-        recipe.copyWith(
-          preparationNotes: _replaceAt(
-            recipe.preparationNotes,
-            index,
-            recipe.preparationNotes[index].edit(
-              value,
-              localIssues: _requiredTextIssues(value),
-            ),
-          ),
+  ReviewRecipeDraft editPreparationNote(int index, String? value) => _replaceRecipe(
+    recipe.copyWith(
+      preparationNotes: _replaceAt(
+        recipe.preparationNotes,
+        index,
+        recipe.preparationNotes[index].edit(
+          value,
+          localIssues: _requiredTextIssues(value),
         ),
-      );
+      ),
+    ),
+  );
 
   ReviewRecipeDraft confirmPreparationNote(int index) => _replaceRecipe(
     recipe.copyWith(
@@ -453,49 +443,44 @@ final class ReviewRecipeDraft {
     ),
   );
 
-  ReviewRecipeDraft editComponentName(int index, String? value) =>
-      _replaceComponent(
-        index,
-        components[index].copyWith(
-          name: components[index].name.edit(
-            value,
-            localIssues: _requiredTextIssues(value),
-          ),
-        ),
-      );
+  ReviewRecipeDraft editComponentName(int index, String? value) => _replaceComponent(
+    index,
+    components[index].copyWith(
+      name: components[index].name.edit(
+        value,
+        localIssues: _requiredTextIssues(value),
+      ),
+    ),
+  );
 
   ReviewRecipeDraft confirmComponentName(int index) => _replaceComponent(
     index,
     components[index].copyWith(name: components[index].name.confirm()),
   );
 
-  ReviewRecipeDraft editComponentUnit(int index, String? value) =>
-      _replaceComponent(
-        index,
-        components[index].copyWith(
-          unit: components[index].unit.edit(
-            value,
-            localIssues:
-                components[index].behavior.value == DraftScalingBehavior.manual
-                ? _manualUnitIssues(value)
-                : _unitIssues(value, units),
-          ),
-        ),
-      );
+  ReviewRecipeDraft editComponentUnit(int index, String? value) => _replaceComponent(
+    index,
+    components[index].copyWith(
+      unit: components[index].unit.edit(
+        value,
+        localIssues: components[index].behavior.value == DraftScalingBehavior.manual
+            ? _manualUnitIssues(value)
+            : _unitIssues(value, units),
+      ),
+    ),
+  );
 
-  ReviewRecipeDraft editComponentAmount(int index, String? value) =>
-      _replaceComponent(
-        index,
-        components[index].copyWith(
-          amount: components[index].amount.edit(
-            value,
-            localIssues:
-                components[index].behavior.value == DraftScalingBehavior.manual
-                ? _manualAmountIssues(value)
-                : _positiveAmountIssues(value),
-          ),
-        ),
-      );
+  ReviewRecipeDraft editComponentAmount(int index, String? value) => _replaceComponent(
+    index,
+    components[index].copyWith(
+      amount: components[index].amount.edit(
+        value,
+        localIssues: components[index].behavior.value == DraftScalingBehavior.manual
+            ? _manualAmountIssues(value)
+            : _positiveAmountIssues(value),
+      ),
+    ),
+  );
 
   /// Changes a component's scaling behavior.
   ///
@@ -595,13 +580,12 @@ final class ReviewRecipeDraft {
     );
   }
 
-  ReviewRecipeDraft _replaceRecipe(ReviewRecipeDetails nextRecipe) =>
-      ReviewRecipeDraft._(
-        sourceKind: sourceKind,
-        recipe: nextRecipe,
-        components: components,
-        units: units,
-      );
+  ReviewRecipeDraft _replaceRecipe(ReviewRecipeDetails nextRecipe) => ReviewRecipeDraft._(
+    sourceKind: sourceKind,
+    recipe: nextRecipe,
+    components: components,
+    units: units,
+  );
 
   ReviewRecipeDraft _replaceComponent(
     int index,
@@ -643,9 +627,7 @@ ReviewRecipeComponent _reviewComponent(
       isManual ? _manualUnitIssues : (value) => _unitIssues(value, units),
     ),
     behavior: _reviewField(component.behavior, _requiredBehaviorIssues),
-    note: component.note == null
-        ? null
-        : _reviewField(component.note!, _requiredTextIssues),
+    note: component.note == null ? null : _reviewField(component.note!, _requiredTextIssues),
   );
 }
 
@@ -691,9 +673,7 @@ ReviewField<Object?> _asObjectField<T>(ReviewField<T> field) => ReviewField(
 );
 
 List<ReviewIssue> _requiredTextIssues(String? value) =>
-    value == null || value.trim().isEmpty
-    ? const [ReviewIssue.valueRequired]
-    : const [];
+    value == null || value.trim().isEmpty ? const [ReviewIssue.valueRequired] : const [];
 
 List<ReviewIssue> _positiveAmountIssues(String? value) {
   if (value == null || value.trim().isEmpty) {
@@ -715,9 +695,7 @@ List<ReviewIssue> _unitIssues(String? value, UnitAliasResolver units) {
   if (value == null || value.trim().isEmpty) {
     return const [ReviewIssue.unitRequired];
   }
-  return units.resolve(value) == null
-      ? const [ReviewIssue.unitUnsupported]
-      : const [];
+  return units.resolve(value) == null ? const [ReviewIssue.unitUnsupported] : const [];
 }
 
 List<ReviewIssue> _maximumUnitIssues(
@@ -729,16 +707,13 @@ List<ReviewIssue> _maximumUnitIssues(
   if (unitIssues.isNotEmpty) return unitIssues;
   final baseUnit = units.resolve(baseValue);
   final maxUnit = units.resolve(maxValue)!;
-  return baseUnit == null || baseUnit.canConvertTo(maxUnit)
-      ? const []
-      : const [ReviewIssue.maxUnitIncompatible];
+  return baseUnit == null || baseUnit.canConvertTo(maxUnit) ? const [] : const [ReviewIssue.maxUnitIncompatible];
 }
 
 List<ReviewIssue> _manualAmountIssues(String? value) =>
     value == null ? const [] : const [ReviewIssue.manualHasQuantity];
 
-List<ReviewIssue> _manualUnitIssues(String? value) =>
-    value == null ? const [] : const [ReviewIssue.manualHasUnit];
+List<ReviewIssue> _manualUnitIssues(String? value) => value == null ? const [] : const [ReviewIssue.manualHasUnit];
 
 List<ReviewIssue> _requiredBehaviorIssues(DraftScalingBehavior? value) =>
     value == null ? const [ReviewIssue.behaviorRequired] : const [];

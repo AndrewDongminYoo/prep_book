@@ -205,9 +205,7 @@ void main() {
     final error = harness.platform.previewErrorBuilder!(StateError('preview'));
     expect(((error as Center).child! as Text).data, contains('could not'));
     expect(
-      tester
-          .widget<ButtonStyleButton>(find.widgetWithText(FilledButton, 'Share'))
-          .onPressed,
+      tester.widget<ButtonStyleButton>(find.widgetWithText(FilledButton, 'Share')).onPressed,
       isNotNull,
     );
     expect(
@@ -326,9 +324,7 @@ void main() {
     expect(find.text('The print service could not be opened.'), findsOneWidget);
     expect(find.byKey(const ValueKey('fake-pdf-preview')), findsOneWidget);
     expect(
-      tester
-          .widget<ButtonStyleButton>(find.widgetWithText(FilledButton, 'Share'))
-          .onPressed,
+      tester.widget<ButtonStyleButton>(find.widgetWithText(FilledButton, 'Share')).onPressed,
       isNotNull,
     );
   });

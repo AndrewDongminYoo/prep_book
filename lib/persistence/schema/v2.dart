@@ -62,8 +62,7 @@ Future<void> backfillProductionRunSummaryMetadata(DatabaseExecutor db) async {
     final acknowledgements = await db.query(
       'run_acknowledgements',
       columns: ['warning_kind', 'recipe_id', 'component_id'],
-      where:
-          "run_id = ? AND warning_kind IN ('manual_component', 'archived_dependency')",
+      where: "run_id = ? AND warning_kind IN ('manual_component', 'archived_dependency')",
       whereArgs: [id],
     );
     for (final acknowledgement in acknowledgements) {
@@ -90,9 +89,7 @@ Future<void> backfillProductionRunSummaryMetadata(DatabaseExecutor db) async {
         );
       }
     }
-    final blockingWarningCount = payload.result.warnings
-        .where((warning) => warning.isBlocking)
-        .length;
+    final blockingWarningCount = payload.result.warnings.where((warning) => warning.isBlocking).length;
     final changed = await db.update(
       'production_runs',
       <String, Object?>{

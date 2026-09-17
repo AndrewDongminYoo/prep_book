@@ -61,19 +61,10 @@ ProductionSheet _sheet({
     rootBatchCount: 3,
     isDraft: isDraft,
     outstandingWarnings:
-        outstandingWarnings ??
-        (isDraft
-            ? const [ProductionSheetWarning(message: '소금 양을 입력하세요.')]
-            : const []),
-    acknowledgedWarnings:
-        acknowledgedWarnings ??
-        const [ProductionSheetWarning(message: '반올림 값을 확인했습니다.')],
+        outstandingWarnings ?? (isDraft ? const [ProductionSheetWarning(message: '소금 양을 입력하세요.')] : const []),
+    acknowledgedWarnings: acknowledgedWarnings ?? const [ProductionSheetWarning(message: '반올림 값을 확인했습니다.')],
     sections: [
-      for (
-        var sectionIndex = 0;
-        sectionIndex < sectionRowCounts.length;
-        sectionIndex++
-      )
+      for (var sectionIndex = 0; sectionIndex < sectionRowCounts.length; sectionIndex++)
         ProductionSheetSection(
           path: sectionIndex == 0 ? 'root' : 'root/$sectionIndex',
           depth: sectionIndex,
@@ -83,19 +74,14 @@ ProductionSheet _sheet({
           targetYield: sectionTargetYield ?? '${sectionIndex + 1} kg',
           baseYield: sectionIndex.isEven ? '${sectionIndex + 1} kg' : null,
           batchCount: 3,
-          preparationNotes:
-              preparationNotesBySection?[sectionIndex] ?? preparationNotes,
+          preparationNotes: preparationNotesBySection?[sectionIndex] ?? preparationNotes,
           tables: [
             if (hasTables)
               ProductionSheetTable(
                 heading: 'Batches 1–2',
                 batchYield: batchYield ?? '40 kg',
                 rows: [
-                  for (
-                    var rowIndex = 0;
-                    rowIndex < sectionRowCounts[sectionIndex];
-                    rowIndex++
-                  )
+                  for (var rowIndex = 0; rowIndex < sectionRowCounts[sectionIndex]; rowIndex++)
                     ProductionSheetRow(
                       label: rowIndex == 0 && componentLabel != null
                           ? componentLabel
@@ -109,12 +95,8 @@ ProductionSheet _sheet({
                       calculated: rowIndex == 0 && calculatedAmount != null
                           ? calculatedAmount
                           : 'calc-${sectionIndex + 1}-${rowIndex + 1}',
-                      exact: rowIndex.isEven
-                          ? 'exact-${sectionIndex + 1}-${rowIndex + 1}'
-                          : null,
-                      base: rowIndex.isEven
-                          ? 'base-${sectionIndex + 1}-${rowIndex + 1}'
-                          : null,
+                      exact: rowIndex.isEven ? 'exact-${sectionIndex + 1}-${rowIndex + 1}' : null,
+                      base: rowIndex.isEven ? 'base-${sectionIndex + 1}-${rowIndex + 1}' : null,
                       actualWholeRun: rowIndex == 0 ? '2 g' : null,
                     ),
                 ],
@@ -147,8 +129,7 @@ List<List<String>> _drawnStringsByPage(Uint8List bytes) {
   final drawnString = RegExp(r'% drawString\("([^"]*)"\)');
   return [
     for (final stream in streams.allMatches(source))
-      if (drawnString.allMatches(stream.group(1)!).toList() case final drawn
-          when drawn.isNotEmpty)
+      if (drawnString.allMatches(stream.group(1)!).toList() case final drawn when drawn.isNotEmpty)
         [for (final match in drawn) match.group(1)!],
   ];
 }
@@ -418,10 +399,7 @@ void main() {
 
     final pages = _drawnStringsByPage(bytes);
     expect(pages, hasLength(greaterThan(1)));
-    final renderedText = pages
-        .expand((page) => page)
-        .join()
-        .replaceAll(RegExp(r'\s'), '');
+    final renderedText = pages.expand((page) => page).join().replaceAll(RegExp(r'\s'), '');
     expect(renderedText, contains('component-start-'));
     expect(renderedText, contains('-component-end'));
   });

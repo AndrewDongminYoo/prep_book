@@ -62,11 +62,7 @@ List<File> _dartFilesUnder(String path) {
   if (!dir.existsSync()) {
     throw StateError('$path does not exist, so nothing was checked.');
   }
-  return dir
-      .listSync(recursive: true)
-      .whereType<File>()
-      .where((file) => file.path.endsWith('.dart'))
-      .toList();
+  return dir.listSync(recursive: true).whereType<File>().where((file) => file.path.endsWith('.dart')).toList();
 }
 
 void main() {

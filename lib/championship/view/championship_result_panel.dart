@@ -4,8 +4,7 @@ import 'package:prep_book/championship/cubit/championship_demo_cubit.dart';
 import 'package:prep_book/championship/view/championship_strings.dart';
 import 'package:prep_book/domain/domain.dart';
 
-typedef OpenChampionshipProductionSheet =
-    Future<void> Function(BuildContext context, ProductionRun run);
+typedef OpenChampionshipProductionSheet = Future<void> Function(BuildContext context, ProductionRun run);
 
 class ChampionshipResultPanel extends StatelessWidget {
   const ChampionshipResultPanel({required this.openProductionSheet, super.key});
@@ -57,8 +56,7 @@ class ChampionshipResultPanel extends StatelessWidget {
                         batchPlan.fullBatchYield,
                       ),
                     ),
-                  if (batchPlan.remainderYield case final remainder?)
-                    Text(strings.remainderBatch(remainder)),
+                  if (batchPlan.remainderYield case final remainder?) Text(strings.remainderBatch(remainder)),
                   const SizedBox(height: 20),
                   _ExactBoundary(strings: strings),
                 ],
@@ -86,8 +84,7 @@ class ChampionshipResultPanel extends StatelessWidget {
                   if (run.result.warnings.isEmpty)
                     Text(strings.noWarnings)
                   else
-                    for (final warning in run.result.warnings)
-                      Text('• ${_warningLabel(warning, run)}'),
+                    for (final warning in run.result.warnings) Text('• ${_warningLabel(warning, run)}'),
                 ],
               ),
             ),
@@ -240,11 +237,9 @@ class _ComponentResult extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = ChampionshipStrings.of(context);
     // ChampionshipRecipeMapper emits ingredient references only.
-    final ingredientId =
-        (component.source.target as IngredientRef).ingredientId;
+    final ingredientId = (component.source.target as IngredientRef).ingredientId;
     final name = run.ingredientSnapshot[ingredientId]?.name ?? ingredientId;
-    final total =
-        component.total?.displayed.toString() ?? strings.manualAsNeeded;
+    final total = component.total?.displayed.toString() ?? strings.manualAsNeeded;
     final groups = _groupBatches(component.perBatch);
     return Semantics(
       key: ValueKey('result-component-$index-semantics'),
@@ -271,9 +266,7 @@ class _ComponentResult extends StatelessWidget {
                   strings.batchQuantity(
                     first: group.first,
                     last: group.last,
-                    amount:
-                        group.amount?.displayed.toString() ??
-                        strings.manualAsNeeded,
+                    amount: group.amount?.displayed.toString() ?? strings.manualAsNeeded,
                     manual: group.amount == null,
                   ),
                 ),

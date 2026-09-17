@@ -34,8 +34,7 @@ final class RecipeImagePickerFile {
 }
 
 final class FilePickerRecipeImagePicker implements RecipeImagePicker {
-  const FilePickerRecipeImagePicker({PickRecipeImageFiles? pickFiles})
-    : _injections = (pickFiles: pickFiles);
+  const FilePickerRecipeImagePicker({PickRecipeImageFiles? pickFiles}) : _injections = (pickFiles: pickFiles);
 
   static const _options = RecipeImagePickerOptions(
     allowMultiple: false,
@@ -87,8 +86,7 @@ final class FilePickerRecipeImagePicker implements RecipeImagePicker {
     }
     final declaredMimeType = file.mimeType;
     if (declaredMimeType != null &&
-        (!recipeImportImageMimeTypes.contains(declaredMimeType) ||
-            declaredMimeType != detectedMimeType)) {
+        (!recipeImportImageMimeTypes.contains(declaredMimeType) || declaredMimeType != detectedMimeType)) {
       throw const RecipeImagePickerException(
         RecipeImagePickerFailure.mimeExtensionMismatch,
       );
@@ -145,10 +143,7 @@ String? _extensionOf(String name) {
 }
 
 String? _detectImageMimeType(Uint8List bytes) {
-  if (bytes.length >= 3 &&
-      bytes[0] == 0xff &&
-      bytes[1] == 0xd8 &&
-      bytes[2] == 0xff) {
+  if (bytes.length >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff) {
     return 'image/jpeg';
   }
   if (bytes.length >= 8 &&

@@ -23,6 +23,7 @@ jobs:
     uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@bca17593224500d894e3fc7df09937ec603e35cd # v1.21.0
     with:
       flutter_version: 3.47.x
+      format_line_length: 120
       run_bloc_lint: true
       setup: |
         npm run test:api

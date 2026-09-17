@@ -543,9 +543,7 @@ void main() {
     // — `result_json` is an opaque payload column — so this decode is the
     // only thing standing between an older stored run and a screen that
     // cannot open it.
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients())) as Map<String, Object?>;
     expect(
       (encoded..remove('ingredientSnapshot')).containsKey('ingredientSnapshot'),
       isFalse,
@@ -569,9 +567,7 @@ void main() {
     // an older run has no key at all, which the test above covers. Reading
     // null as an empty snapshot would open the run with every ingredient
     // name and unit choice discarded and nothing said about it.
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients())) as Map<String, Object?>;
     encoded['ingredientSnapshot'] = null;
     // The key is present and holds null, which is the case under test and
     // not the absent one the test above builds. Asserted on the map rather
@@ -596,9 +592,7 @@ void main() {
     // Tolerating an absent key is not tolerating a damaged one. A present
     // value of the wrong shape is corruption, and it has to be named as
     // such rather than read as "this run had no ingredients".
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients())) as Map<String, Object?>;
     encoded['ingredientSnapshot'] = 'not a map';
 
     expect(
@@ -614,9 +608,7 @@ void main() {
   });
 
   test("an ingredient's stored unit is checked, and names the row", () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients())) as Map<String, Object?>;
     final snapshot = encoded['ingredientSnapshot']! as Map<String, Object?>;
     (snapshot['gelatin']! as Map<String, Object?>)['defaultUnit'] = 'nonsense';
 
@@ -699,9 +691,7 @@ void main() {
   });
 
   test('an unparseable payload value names the row in its own message', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunScaledByOneThird()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunScaledByOneThird())) as Map<String, Object?>;
     (encoded['recipe']! as Map<String, Object?>)['modifiedAt'] = 'yesterday';
 
     expect(
@@ -720,9 +710,7 @@ void main() {
   // by a helper that names only its position inside the payload, comes back
   // carrying the row.
   test('a payload-internal failure is labelled with the row', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunScaledByOneThird()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunScaledByOneThird())) as Map<String, Object?>;
     final recipe = encoded['recipe']! as Map<String, Object?>;
     (recipe['baseYield']! as Map<String, Object?>)['u'] = 'parsec';
 
@@ -739,9 +727,7 @@ void main() {
   });
 
   test('an unrecognized warning kind is a corrupt database naming the row', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
     final warnings = result['warnings']! as List<Object?>;
     (warnings.first! as Map<String, Object?>)['kind'] = 'invented';
@@ -765,9 +751,7 @@ void main() {
   // rather than only used at the top level.
   test("an unrecognized warning kind inside a sub-recipe's result names the "
       'row too', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
     final components = result['components']! as List<Object?>;
     final syrup = components.last! as Map<String, Object?>;
@@ -792,14 +776,10 @@ void main() {
   });
 
   test('an unrecognized component target kind is a corrupt database', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunScaledByOneThird()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunScaledByOneThird())) as Map<String, Object?>;
     final recipe = encoded['recipe']! as Map<String, Object?>;
     final components = recipe['components']! as List<Object?>;
-    final target =
-        (components.first! as Map<String, Object?>)['target']!
-            as Map<String, Object?>;
+    final target = (components.first! as Map<String, Object?>)['target']! as Map<String, Object?>;
     target['kind'] = 'invented';
 
     expect(
@@ -809,9 +789,7 @@ void main() {
   });
 
   test('an unrecognized component behavior is a corrupt database', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunScaledByOneThird()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunScaledByOneThird())) as Map<String, Object?>;
     final recipe = encoded['recipe']! as Map<String, Object?>;
     final components = recipe['components']! as List<Object?>;
     (components.first! as Map<String, Object?>)['behavior'] = 'invented';
@@ -823,9 +801,7 @@ void main() {
   });
 
   test('an inconsistent scaled quantity is a corrupt database', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunScaledByOneThird()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunScaledByOneThird())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
     final components = result['components']! as List<Object?>;
     // Index 1 is 'salt', the rounded component: exact != displayed.
@@ -842,9 +818,7 @@ void main() {
   });
 
   test('an inconsistent batch plan is a corrupt database', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
     final batchPlan = result['batchPlan']! as Map<String, Object?>;
     // A remainder equal to a full batch is not a valid remainder — it
@@ -859,9 +833,7 @@ void main() {
 
   test('a batch count that disagrees with a component perBatch length '
       'is a corrupt database', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
     final batchPlan = result['batchPlan']! as Map<String, Object?>;
     // fullBatchCount changes, but remainderYield is left alone, so
@@ -877,9 +849,7 @@ void main() {
 
   test("a full-batch yield that disagrees with a proportional component's "
       'per-batch ratio is a corrupt database', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
     final batchPlan = result['batchPlan']! as Map<String, Object?>;
     final fullBatchYield = batchPlan['fullBatchYield']! as Map<String, Object?>;
@@ -903,12 +873,9 @@ void main() {
   // own stored fields and would otherwise hand back as a valid production
   // quantity. Each leaves the witness the codec checks it against intact.
   test('a total that disagrees with its per-batch sum is corrupt', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
-    final butter =
-        (result['components']! as List<Object?>).first! as Map<String, Object?>;
+    final butter = (result['components']! as List<Object?>).first! as Map<String, Object?>;
     // 'butter' is 200g over three batches of 80g, 80g and 40g. Replacing
     // the total with the first batch leaves every per-batch quantity
     // untouched, so the sum still remembers the real total.
@@ -927,12 +894,9 @@ void main() {
   });
 
   test('a numeric component missing one per-batch quantity is corrupt', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
-    final butter =
-        (result['components']! as List<Object?>).first! as Map<String, Object?>;
+    final butter = (result['components']! as List<Object?>).first! as Map<String, Object?>;
     // Only a manual component may carry an absent batch, and this one is
     // proportional, so the total it still stores has nothing left to
     // witness it.
@@ -951,9 +915,7 @@ void main() {
   });
 
   test('a manual component carrying a per-batch quantity is corrupt', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
     final components = result['components']! as List<Object?>;
     final eggs = components.first! as Map<String, Object?>;
@@ -976,12 +938,9 @@ void main() {
   });
 
   test('a displayed total altered on its own is corrupt', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithAllWarningKinds())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
-    final sugar =
-        (result['components']! as List<Object?>).last! as Map<String, Object?>;
+    final sugar = (result['components']! as List<Object?>).last! as Map<String, Object?>;
     final total = sugar['total']! as Map<String, Object?>;
     // 'sugar' rounds 333g up to 350g, so exact and displayed differ.
     // Flattening displayed onto exact leaves the exact half of the
@@ -1002,9 +961,7 @@ void main() {
   });
 
   test("a scale ratio that disagrees with a component's total is corrupt", () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches()))
-            as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches())) as Map<String, Object?>;
     final result = encoded['result']! as Map<String, Object?>;
     final scaleRatio = result['scaleRatio']! as Map<String, Object?>;
     // The run scales 1:1. Doubling the ratio alone still decodes to a

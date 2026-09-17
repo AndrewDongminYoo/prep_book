@@ -18,8 +18,7 @@ class ChampionshipReviewPanel extends StatefulWidget {
   const ChampionshipReviewPanel({super.key});
 
   @override
-  State<ChampionshipReviewPanel> createState() =>
-      _ChampionshipReviewPanelState();
+  State<ChampionshipReviewPanel> createState() => _ChampionshipReviewPanelState();
 }
 
 class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
@@ -32,11 +31,9 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
 
   String _fieldStateKey(String path) => '$_componentListRevision:$path';
 
-  FocusNode _focusNode(String path) =>
-      _focusNodes.putIfAbsent(_fieldStateKey(path), FocusNode.new);
+  FocusNode _focusNode(String path) => _focusNodes.putIfAbsent(_fieldStateKey(path), FocusNode.new);
 
-  GlobalKey _anchor(String path) =>
-      _anchors.putIfAbsent(_fieldStateKey(path), GlobalKey.new);
+  GlobalKey _anchor(String path) => _anchors.putIfAbsent(_fieldStateKey(path), GlobalKey.new);
 
   void _syncComponentCount(int count) {
     if (_componentCount != null && _componentCount != count) {
@@ -59,12 +56,8 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
       if (!mounted || generation != _recoveryGeneration) return;
       final path = issue.path;
       final fieldStateKey = path == null ? null : _fieldStateKey(path);
-      final focusNode = fieldStateKey == null
-          ? null
-          : _focusNodes[fieldStateKey];
-      final targetContext = path == null
-          ? null
-          : _anchors[fieldStateKey]?.currentContext;
+      final focusNode = fieldStateKey == null ? null : _focusNodes[fieldStateKey];
+      final targetContext = path == null ? null : _anchors[fieldStateKey]?.currentContext;
       if (focusNode == null || targetContext == null) {
         final summaryContext = _summaryKey.currentContext;
         if (summaryContext != null) {
@@ -95,8 +88,7 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
     final strings = ChampionshipStrings.of(context);
     _syncComponentCount(draft.components.length);
     return BlocListener<ChampionshipDemoCubit, ChampionshipDemoState>(
-      listenWhen: (previous, current) =>
-          !identical(previous.reviewIssues, current.reviewIssues),
+      listenWhen: (previous, current) => !identical(previous.reviewIssues, current.reviewIssues),
       listener: (context, state) {
         if (state.reviewIssues.isEmpty) {
           _recoveryGeneration += 1;
@@ -134,8 +126,7 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
                 onEdit: (value) => cubit.updateReview(
                   (review) => review.editRecipeName(value),
                 ),
-                onConfirm: () =>
-                    cubit.updateReview((review) => review.confirmRecipeName()),
+                onConfirm: () => cubit.updateReview((review) => review.confirmRecipeName()),
               ),
               _StringReviewField(
                 path: 'recipe.baseYield.amount',
@@ -159,9 +150,7 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
                 focusNode: _focusNode('recipe.baseYield.unit'),
                 label: strings.baseYieldUnit,
                 field: draft.recipe.baseYield.unit,
-                resolvedValue: draft.units
-                    .resolve(draft.recipe.baseYield.unit.value)
-                    ?.symbol,
+                resolvedValue: draft.units.resolve(draft.recipe.baseYield.unit.value)?.symbol,
                 onEdit: (value) => cubit.updateReview(
                   (review) => review.editBaseYieldUnit(value),
                 ),
@@ -192,9 +181,7 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
                   focusNode: _focusNode('recipe.maxBatchYield.unit'),
                   label: strings.maxBatchUnit,
                   field: maximum.unit,
-                  resolvedValue: draft.units
-                      .resolve(maximum.unit.value)
-                      ?.symbol,
+                  resolvedValue: draft.units.resolve(maximum.unit.value)?.symbol,
                   onEdit: (value) => cubit.updateReview(
                     (review) => review.editMaxBatchYieldUnit(value),
                   ),
@@ -218,11 +205,7 @@ class _ChampionshipReviewPanelState extends State<ChampionshipReviewPanel> {
                     (review) => review.confirmMaxBatchYieldAbsent(),
                   ),
                 ),
-              for (
-                var index = 0;
-                index < draft.recipe.preparationNotes.length;
-                index += 1
-              )
+              for (var index = 0; index < draft.recipe.preparationNotes.length; index += 1)
                 _StringReviewField(
                   path: 'recipe.preparationNotes[$index]',
                   anchorKey: _anchor('recipe.preparationNotes[$index]'),
@@ -301,12 +284,8 @@ class _ComponentReview extends StatelessWidget {
     final path = 'components[$index]';
     final isManual = component.behavior.value == DraftScalingBehavior.manual;
     final name = component.name.value?.trim();
-    final visibleName = name == null || name.isEmpty
-        ? strings.component(index)
-        : name;
-    final removeComponent = draft.components.length > 1
-        ? () => _confirmRemoval(context, cubit, strings)
-        : null;
+    final visibleName = name == null || name.isEmpty ? strings.component(index) : name;
+    final removeComponent = draft.components.length > 1 ? () => _confirmRemoval(context, cubit, strings) : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -416,9 +395,7 @@ class _ComponentReview extends StatelessWidget {
     ChampionshipStrings strings,
   ) async {
     final name = component.name.value?.trim();
-    final visibleName = name == null || name.isEmpty
-        ? strings.component(index)
-        : name;
+    final visibleName = name == null || name.isEmpty ? strings.component(index) : name;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -531,8 +508,7 @@ class _UnitReviewField extends StatelessWidget {
             ),
           ),
       ],
-      onChanged: (value) =>
-          onEdit(value == null || value.isEmpty ? null : value),
+      onChanged: (value) => onEdit(value == null || value.isEmpty ? null : value),
     ),
     confirmKey: ValueKey('$path.confirm'),
     onConfirm: field.canConfirm && !field.isConfirmed ? onConfirm : null,
@@ -615,10 +591,7 @@ class _ReviewFieldCard<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = ChampionshipStrings.of(context);
     final colors = Theme.of(context).colorScheme;
-    final proposal =
-        valueLabel?.call(field.sourceValue) ??
-        field.sourceValue?.toString() ??
-        '—';
+    final proposal = valueLabel?.call(field.sourceValue) ?? field.sourceValue?.toString() ?? '—';
     final details = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -638,9 +611,7 @@ class _ReviewFieldCard<T> extends StatelessWidget {
                 field.isConfirmed ? Icons.check_circle : Icons.pending_outlined,
                 size: 18,
               ),
-              label: field.isConfirmed
-                  ? strings.confirmed
-                  : strings.needsConfirmation,
+              label: field.isConfirmed ? strings.confirmed : strings.needsConfirmation,
             ),
             if (field.isEdited)
               _StatusChip(
@@ -658,8 +629,7 @@ class _ReviewFieldCard<T> extends StatelessWidget {
           Text(strings.issues, style: TextStyle(color: colors.error)),
           for (final issue in [
             ...field.activeSourceIssues,
-            for (final issue in field.activeLocalIssues)
-              strings.reviewIssue(issue),
+            for (final issue in field.activeLocalIssues) strings.reviewIssue(issue),
           ])
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -679,9 +649,7 @@ class _ReviewFieldCard<T> extends StatelessWidget {
           excludeSemantics: true,
           button: true,
           enabled: onConfirm != null,
-          label: field.isConfirmed
-              ? strings.confirmedField(label)
-              : strings.confirmField(label),
+          label: field.isConfirmed ? strings.confirmedField(label) : strings.confirmField(label),
           onTap: onConfirm,
           child: OutlinedButton.icon(
             key: confirmKey,
@@ -720,9 +688,7 @@ class _ReviewFieldCard<T> extends StatelessWidget {
                 const SizedBox(height: 12),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final sideBySide =
-                        constraints.maxWidth >= 600 &&
-                        MediaQuery.textScalerOf(context).scale(16) <= 24;
+                    final sideBySide = constraints.maxWidth >= 600 && MediaQuery.textScalerOf(context).scale(16) <= 24;
                     if (!sideBySide) {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -848,8 +814,7 @@ class _SectionHeading extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) =>
-      Text(text, style: Theme.of(context).textTheme.titleLarge);
+  Widget build(BuildContext context) => Text(text, style: Theme.of(context).textTheme.titleLarge);
 }
 
 class _IssueSummary extends StatelessWidget {
@@ -872,8 +837,7 @@ class _IssueSummary extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(strings.issues, style: TextStyle(color: error)),
-            for (final issue in issues)
-              Text('• ${strings.verificationIssue(issue)}'),
+            for (final issue in issues) Text('• ${strings.verificationIssue(issue)}'),
           ],
         ),
       ),

@@ -352,9 +352,7 @@ void main() {
       // via ManualComponentWarning's own equality) so this test still
       // fails correctly if that equality itself is ever the thing that
       // regresses.
-      final manualWarnings = result.warnings
-          .whereType<ManualComponentWarning>()
-          .toList();
+      final manualWarnings = result.warnings.whereType<ManualComponentWarning>().toList();
       expect(manualWarnings, hasLength(2));
       expect(
         manualWarnings.map((w) => w.recipeId),
@@ -370,9 +368,7 @@ void main() {
         recipeIndex: {'dough': dough()},
       );
 
-      final manualWarnings = result.warnings
-          .whereType<ManualComponentWarning>()
-          .toList();
+      final manualWarnings = result.warnings.whereType<ManualComponentWarning>().toList();
       expect(manualWarnings, hasLength(2));
       expect(
         manualWarnings.map((w) => w.recipeId),
@@ -415,9 +411,7 @@ void main() {
         },
       );
 
-      final archivedWarnings = result.warnings
-          .whereType<ArchivedDependencyWarning>()
-          .toList();
+      final archivedWarnings = result.warnings.whereType<ArchivedDependencyWarning>().toList();
       expect(archivedWarnings, hasLength(2));
       expect(
         archivedWarnings.map((w) => w.recipeId),

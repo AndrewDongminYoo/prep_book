@@ -6,19 +6,14 @@ import 'package:prep_book/championship/championship.dart';
 
 const _fixturePath = 'assets/championship/sample_croissant_draft.json';
 
-Map<String, Object?> _fixtureJson() =>
-    jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
+Map<String, Object?> _fixtureJson() => jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
 
-ReviewRecipeDraft _review([Map<String, Object?>? json]) =>
-    ReviewRecipeDraft.fromExtracted(
-      ExtractedRecipeDraft.fromJson(json ?? _fixtureJson()),
-    );
+ReviewRecipeDraft _review([Map<String, Object?>? json]) => ReviewRecipeDraft.fromExtracted(
+  ExtractedRecipeDraft.fromJson(json ?? _fixtureJson()),
+);
 
-ReviewRecipeDraft _completedReview() => _review()
-    .confirmAllUnambiguous()
-    .editComponentUnit(2, 'g')
-    .confirmComponentUnit(2)
-    .confirmComponentBehavior(3);
+ReviewRecipeDraft _completedReview() =>
+    _review().confirmAllUnambiguous().editComponentUnit(2, 'g').confirmComponentUnit(2).confirmComponentBehavior(3);
 
 void main() {
   const verifier = RecipeDraftVerifier();
@@ -303,8 +298,7 @@ void main() {
     );
     expect(
       issues.where(
-        (issue) =>
-            issue.kind == RecipeDraftVerificationIssueKind.manualHasQuantity,
+        (issue) => issue.kind == RecipeDraftVerificationIssueKind.manualHasQuantity,
       ),
       isEmpty,
     );

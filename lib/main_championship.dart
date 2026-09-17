@@ -41,9 +41,7 @@ class _ChampionshipRootState extends State<ChampionshipRoot> {
       defaultValue: '/api/extract-recipe',
     );
     final parsedEndpoint = Uri.parse(endpointValue);
-    final endpoint = parsedEndpoint.hasScheme
-        ? parsedEndpoint
-        : Uri.base.resolveUri(parsedEndpoint);
+    final endpoint = parsedEndpoint.hasScheme ? parsedEndpoint : Uri.base.resolveUri(parsedEndpoint);
     _cubit = ChampionshipDemoCubit(
       importClient: HttpRecipeImportClient(
         client: _httpClient,
@@ -65,8 +63,7 @@ class _ChampionshipRootState extends State<ChampionshipRoot> {
   @override
   Widget build(BuildContext context) => ChampionshipApp(
     cubit: _cubit,
-    openProductionSheet: (context, run) =>
-        _productionSheet.open(context, run: run),
+    openProductionSheet: (context, run) => _productionSheet.open(context, run: run),
     locale: widget.locale,
     onResolvedLocale: updateChampionshipDocumentLanguage,
   );

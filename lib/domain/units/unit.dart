@@ -22,12 +22,10 @@ final class Unit {
   const Unit._(this.symbol, this.dimension, this.factorToCanonical);
 
   /// A named count unit. Count units never convert into one another.
-  factory Unit.count(String symbol) =>
-      Unit._(symbol, UnitDimension.count, Decimal.one);
+  factory Unit.count(String symbol) => Unit._(symbol, UnitDimension.count, Decimal.one);
 
   /// A recipe-defined output unit. These never convert into one another.
-  factory Unit.namedYield(String symbol) =>
-      Unit._(symbol, UnitDimension.yieldOnly, Decimal.one);
+  factory Unit.namedYield(String symbol) => Unit._(symbol, UnitDimension.yieldOnly, Decimal.one);
 
   static final Unit milligram = Unit._(
     'mg',
@@ -77,8 +75,7 @@ final class Unit {
   final Decimal factorToCanonical;
 
   /// Whether the dimension defines conversions between distinct units.
-  bool get hasDefinedConversions =>
-      dimension == UnitDimension.mass || dimension == UnitDimension.volume;
+  bool get hasDefinedConversions => dimension == UnitDimension.mass || dimension == UnitDimension.volume;
 
   /// Whether a conversion from this unit to [other] is defined.
   ///
@@ -89,8 +86,7 @@ final class Unit {
   }
 
   @override
-  bool operator ==(Object other) =>
-      other is Unit && other.symbol == symbol && other.dimension == dimension;
+  bool operator ==(Object other) => other is Unit && other.symbol == symbol && other.dimension == dimension;
 
   @override
   int get hashCode => Object.hash(symbol, dimension);

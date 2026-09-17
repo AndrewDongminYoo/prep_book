@@ -131,8 +131,7 @@ void main() {
   });
 
   test('accepts an image over the upload limit for the reducer', () async {
-    final bytes = Uint8List(recipeImportMaxImageBytes + 1)
-      ..setAll(0, _pngBytes());
+    final bytes = Uint8List(recipeImportMaxImageBytes + 1)..setAll(0, _pngBytes());
     final picker = FilePickerRecipeImagePicker(
       pickFiles: (_) async => [_file(bytes: bytes)],
     );

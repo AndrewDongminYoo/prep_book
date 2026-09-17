@@ -31,8 +31,7 @@ const _allowedUriPrefixes = <String>[
   'package:prep_book/export/',
 ];
 
-const _filePickerAdapterPath =
-    'lib/presentation/library_backup/view/library_backup_platform.dart';
+const _filePickerAdapterPath = 'lib/presentation/library_backup/view/library_backup_platform.dart';
 const _nativeBackupIoPaths = <String>{
   _filePickerAdapterPath,
   'lib/presentation/library_backup/view/android_backup_save.dart',
@@ -102,11 +101,7 @@ List<File> _dartFilesUnder(String path) {
   if (!dir.existsSync()) {
     throw StateError('$path does not exist, so nothing was checked.');
   }
-  return dir
-      .listSync(recursive: true)
-      .whereType<File>()
-      .where((file) => file.path.endsWith('.dart'))
-      .toList();
+  return dir.listSync(recursive: true).whereType<File>().where((file) => file.path.endsWith('.dart')).toList();
 }
 
 void main() {
@@ -118,8 +113,7 @@ void main() {
     expect(
       _isAllowedUri(
         'dart:io',
-        sourcePath:
-            'lib/presentation/library_backup/view/android_backup_save.dart',
+        sourcePath: 'lib/presentation/library_backup/view/android_backup_save.dart',
       ),
       isTrue,
     );

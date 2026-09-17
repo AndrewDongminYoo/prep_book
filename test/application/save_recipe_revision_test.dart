@@ -24,8 +24,7 @@ void main() {
   test(
     'an edit becomes the next revision and leaves the old one readable',
     () async {
-      final recipes = FakeRecipeRepository()
-        ..seed(buildRecipe(id: 'a', name: 'Old'));
+      final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a', name: 'Old'));
 
       final saved = await SaveRecipeRevision(
         recipes,

@@ -6,8 +6,7 @@ import 'package:prep_book/championship/championship.dart';
 
 const _fixturePath = 'assets/championship/sample_croissant_draft.json';
 
-Map<String, Object?> _fixtureJson() =>
-    jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
+Map<String, Object?> _fixtureJson() => jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
 
 void main() {
   group('ExtractedRecipeDraft', () {

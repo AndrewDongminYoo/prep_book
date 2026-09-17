@@ -48,8 +48,7 @@ void main() {
 
   test('restore waits for confirmation and discards on cancel', () async {
     final gateway = _RecordingGateway();
-    final platform = _RecordingPlatform()
-      ..pickedBytes = Uint8List.fromList([3, 4]);
+    final platform = _RecordingPlatform()..pickedBytes = Uint8List.fromList([3, 4]);
     final cubit = _cubit(gateway, platform);
 
     await cubit.start(LibraryBackupAction.restore);
@@ -68,8 +67,7 @@ void main() {
 
   test('confirmed restore emits restoring then success', () async {
     final gateway = _RecordingGateway();
-    final platform = _RecordingPlatform()
-      ..pickedBytes = Uint8List.fromList([5, 6]);
+    final platform = _RecordingPlatform()..pickedBytes = Uint8List.fromList([5, 6]);
     final cubit = _cubit(gateway, platform);
     final statuses = <LibraryBackupStatus>[];
     final subscription = cubit.stream.listen(
@@ -102,8 +100,7 @@ void main() {
   });
 
   test('picker errors use the restore fallback category', () async {
-    final platform = _RecordingPlatform()
-      ..pickError = StateError('pick failed');
+    final platform = _RecordingPlatform()..pickError = StateError('pick failed');
     final cubit = _cubit(_RecordingGateway(), platform);
 
     await cubit.start(LibraryBackupAction.restore);
@@ -120,8 +117,7 @@ void main() {
       stackTrace: StackTrace.current,
     );
     final gateway = _RecordingGateway()..restoreError = failure;
-    final platform = _RecordingPlatform()
-      ..pickedBytes = Uint8List.fromList([7]);
+    final platform = _RecordingPlatform()..pickedBytes = Uint8List.fromList([7]);
     final cubit = _cubit(gateway, platform);
     await cubit.start(LibraryBackupAction.restore);
 

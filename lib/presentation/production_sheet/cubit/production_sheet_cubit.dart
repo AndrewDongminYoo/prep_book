@@ -42,9 +42,7 @@ final class ProductionSheetCubit extends Cubit<ProductionSheetState> {
   Future<void> organizationChanged(
     ProductionSheetOrganization organization,
   ) async {
-    if (isClosed ||
-        organization == state.organization ||
-        state.actionStatus != ProductionSheetActionStatus.idle) {
+    if (isClosed || organization == state.organization || state.actionStatus != ProductionSheetActionStatus.idle) {
       return;
     }
     await _generate(organization);

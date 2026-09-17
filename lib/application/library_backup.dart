@@ -33,8 +33,7 @@ final class LibraryBackupException implements Exception {
 /// A complete portable library backup and its suggested filename.
 final class LibraryBackupFile {
   /// Creates a backup value that cannot be changed through [bytes].
-  LibraryBackupFile({required Uint8List bytes, required this.suggestedName})
-    : _bytes = Uint8List.fromList(bytes);
+  LibraryBackupFile({required Uint8List bytes, required this.suggestedName}) : _bytes = Uint8List.fromList(bytes);
 
   /// Creates a backup value by taking ownership of [bytes].
   /// The caller must not change [bytes] after this call.

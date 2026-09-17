@@ -304,10 +304,7 @@ void main() {
       // the entry point a later screen, or a unit declared during an edit,
       // would come through.
       unawaited(
-        tester
-            .element(find.byType(ProductionSetupView))
-            .read<ProductionSetupCubit>()
-            .targetUnitChanged(_piece),
+        tester.element(find.byType(ProductionSetupView)).read<ProductionSetupCubit>().targetUnitChanged(_piece),
       );
       await tester.pump(_pastTheDebounce);
 
@@ -612,8 +609,7 @@ void main() {
       await tester.pumpApp(_screenOver(storage, recipe: _sheeted()));
       await _enterTarget(tester, '1000');
 
-      final compactScroll = _listScroll(tester, find.byType(ListView))
-        ..jumpTo(40);
+      final compactScroll = _listScroll(tester, find.byType(ListView))..jumpTo(40);
       await tester.pump();
       expect(compactScroll.pixels, 40);
 

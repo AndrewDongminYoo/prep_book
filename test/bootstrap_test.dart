@@ -266,8 +266,7 @@ void main() {
     final mounts = <Widget>[];
     final closeFailingFactory = _RecordingDatabaseFactory(
       databaseFactoryFfi,
-      wrapDatabase: (database) =>
-          _CloseFailingDatabase(database, closeError: closeError),
+      wrapDatabase: (database) => _CloseFailingDatabase(database, closeError: closeError),
     );
 
     await bootstrap(
@@ -319,17 +318,16 @@ void main() {
               restoredFlags.add(restored);
               return SizedBox(key: ValueKey('root-${restoredFlags.length}'));
             },
-        prepare:
-            ({required recipes, required ingredients, required runs}) async {
-              prepareCalls++;
-              await ingredients.upsert(
-                Ingredient(
-                  id: 'previous',
-                  name: 'Previous',
-                  defaultUnit: Unit.gram,
-                ),
-              );
-            },
+        prepare: ({required recipes, required ingredients, required runs}) async {
+          prepareCalls++;
+          await ingredients.upsert(
+            Ingredient(
+              id: 'previous',
+              name: 'Previous',
+              defaultUnit: Unit.gram,
+            ),
+          );
+        },
         resolveDatabasePath: () async => databasePath,
         factory: factory,
         mount: mounts.add,
@@ -344,8 +342,7 @@ void main() {
       for (var index = 0; index < 3; index++) {
         expect(repositorySets[1][index], isNot(same(repositorySets[0][index])));
       }
-      final restoredIngredients =
-          repositorySets.last[1] as IngredientRepository;
+      final restoredIngredients = repositorySets.last[1] as IngredientRepository;
       expect((await restoredIngredients.listAll()).map((value) => value.id), [
         'restored',
       ]);
@@ -548,8 +545,7 @@ final class _MountIdentityProbeState extends State<_MountIdentityProbe> {
   late final String label = widget.label;
 
   @override
-  Widget build(BuildContext context) =>
-      Directionality(textDirection: TextDirection.ltr, child: Text(label));
+  Widget build(BuildContext context) => Directionality(textDirection: TextDirection.ltr, child: Text(label));
 }
 
 Matcher _failureKind(LibraryBackupFailureKind kind) =>
@@ -603,16 +599,13 @@ final class _RecordingDatabaseFactory implements DatabaseFactory {
   Future<String> getDatabasesPath() => _delegate.getDatabasesPath();
 
   @override
-  Future<void> setDatabasesPath(String path) =>
-      _delegate.setDatabasesPath(path);
+  Future<void> setDatabasesPath(String path) => _delegate.setDatabasesPath(path);
 
   @override
-  Future<Uint8List> readDatabaseBytes(String path) =>
-      _delegate.readDatabaseBytes(path);
+  Future<Uint8List> readDatabaseBytes(String path) => _delegate.readDatabaseBytes(path);
 
   @override
-  Future<void> writeDatabaseBytes(String path, Uint8List bytes) =>
-      _delegate.writeDatabaseBytes(path, bytes);
+  Future<void> writeDatabaseBytes(String path, Uint8List bytes) => _delegate.writeDatabaseBytes(path, bytes);
 }
 
 final class _CloseFailingDatabase implements Database {

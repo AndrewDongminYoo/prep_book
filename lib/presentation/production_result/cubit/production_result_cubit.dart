@@ -34,9 +34,7 @@ final class ProductionResultCubit extends Cubit<ProductionResultState> {
   /// sub-recipe brings back exactly the tree the operator had.
   void expansionToggled(String path) => emit(
     state.copyWith(
-      expandedPaths: state.isExpanded(path)
-          ? ({...state.expandedPaths}..remove(path))
-          : {...state.expandedPaths, path},
+      expandedPaths: state.isExpanded(path) ? ({...state.expandedPaths}..remove(path)) : {...state.expandedPaths, path},
     ),
   );
 
@@ -84,8 +82,7 @@ final class ProductionResultCubit extends Cubit<ProductionResultState> {
       _drafted(row, state.draftFor(row).copyWith(amount: amount));
 
   /// Records the unit [row]'s override is measured in.
-  void overrideUnitChanged(ResultRow row, Unit unit) =>
-      _drafted(row, state.draftFor(row).copyWith(unit: unit));
+  void overrideUnitChanged(ResultRow row, Unit unit) => _drafted(row, state.draftFor(row).copyWith(unit: unit));
 
   /// Holds [draft] against [row] and, when it describes a quantity,
   /// records that quantity on the run.

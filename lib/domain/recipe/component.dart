@@ -19,8 +19,7 @@ final class IngredientRef extends ComponentTarget {
   final String ingredientId;
 
   @override
-  bool operator ==(Object other) =>
-      other is IngredientRef && other.ingredientId == ingredientId;
+  bool operator ==(Object other) => other is IngredientRef && other.ingredientId == ingredientId;
 
   @override
   int get hashCode => Object.hash('ingredient', ingredientId);
@@ -35,8 +34,7 @@ final class SubRecipeRef extends ComponentTarget {
   final String recipeId;
 
   @override
-  bool operator ==(Object other) =>
-      other is SubRecipeRef && other.recipeId == recipeId;
+  bool operator ==(Object other) => other is SubRecipeRef && other.recipeId == recipeId;
 
   @override
   int get hashCode => Object.hash('recipe', recipeId);

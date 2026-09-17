@@ -33,9 +33,7 @@ final class ManualComponentWarning extends ProductionWarning {
 
   @override
   bool operator ==(Object other) =>
-      other is ManualComponentWarning &&
-      other.recipeId == recipeId &&
-      other.componentId == componentId;
+      other is ManualComponentWarning && other.recipeId == recipeId && other.componentId == componentId;
 
   @override
   int get hashCode => Object.hash('manual', recipeId, componentId);
@@ -59,9 +57,7 @@ final class RoundingAdjustedWarning extends ProductionWarning {
 
   @override
   bool operator ==(Object other) =>
-      other is RoundingAdjustedWarning &&
-      other.recipeId == recipeId &&
-      other.componentId == componentId;
+      other is RoundingAdjustedWarning && other.recipeId == recipeId && other.componentId == componentId;
 
   @override
   int get hashCode => Object.hash('rounding', recipeId, componentId);
@@ -79,8 +75,7 @@ final class ArchivedDependencyWarning extends ProductionWarning {
   bool get isBlocking => true;
 
   @override
-  bool operator ==(Object other) =>
-      other is ArchivedDependencyWarning && other.recipeId == recipeId;
+  bool operator ==(Object other) => other is ArchivedDependencyWarning && other.recipeId == recipeId;
 
   @override
   int get hashCode => Object.hash('archived', recipeId);

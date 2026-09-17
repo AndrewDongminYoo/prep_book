@@ -53,8 +53,7 @@ final class RandomRunIdSource implements RunIdSource {
 
   @override
   String next() => [
-    for (var draw = 0; draw < _draws; draw++)
-      _random.nextInt(_drawBound).toRadixString(16).padLeft(_drawDigits, '0'),
+    for (var draw = 0; draw < _draws; draw++) _random.nextInt(_drawBound).toRadixString(16).padLeft(_drawDigits, '0'),
   ].join();
 }
 
@@ -176,8 +175,7 @@ final class StartProductionRun {
     final ids = <String>{
       for (final recipe in recipes)
         for (final component in recipe.components)
-          if (component.target case IngredientRef(:final ingredientId))
-            ingredientId,
+          if (component.target case IngredientRef(:final ingredientId)) ingredientId,
     };
 
     final snapshot = <String, Ingredient>{};

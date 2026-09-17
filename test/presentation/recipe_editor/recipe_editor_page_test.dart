@@ -112,13 +112,10 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 /// Not `find.byType(TextField).first`: every field on the form behind the
 /// dialog is a `TextFormField`, which builds a `TextField` of its own, and
 /// the unscoped finder reaches the recipe name.
-Finder _dialogField() => find
-    .descendant(of: find.byType(AlertDialog), matching: find.byType(TextField))
-    .first;
+Finder _dialogField() => find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)).first;
 
 /// Where the card naming [target] sits vertically.
-double _cardTop(WidgetTester tester, String target) =>
-    tester.getTopLeft(find.widgetWithText(Card, target)).dy;
+double _cardTop(WidgetTester tester, String target) => tester.getTopLeft(find.widgetWithText(Card, target)).dy;
 
 ScrollPosition _editorScroll(WidgetTester tester) => tester
     .state<ScrollableState>(
@@ -255,9 +252,7 @@ void main() {
           recipe: buildRecipe(id: 'scaled-recipe'),
           viewport: viewport,
         );
-        final normalLabelHeight = tester
-            .getSize(find.text('Recipe name'))
-            .height;
+        final normalLabelHeight = tester.getSize(find.text('Recipe name')).height;
         tester.platformDispatcher.textScaleFactorTestValue = 3;
         await tester.pumpAndSettle();
 
@@ -1229,18 +1224,12 @@ void main() {
 
       final up = tester.widgetList<IconButton>(
         find.byWidgetPredicate(
-          (widget) =>
-              widget is IconButton &&
-              widget.icon is Icon &&
-              (widget.icon as Icon).icon == Icons.arrow_upward,
+          (widget) => widget is IconButton && widget.icon is Icon && (widget.icon as Icon).icon == Icons.arrow_upward,
         ),
       );
       final down = tester.widgetList<IconButton>(
         find.byWidgetPredicate(
-          (widget) =>
-              widget is IconButton &&
-              widget.icon is Icon &&
-              (widget.icon as Icon).icon == Icons.arrow_downward,
+          (widget) => widget is IconButton && widget.icon is Icon && (widget.icon as Icon).icon == Icons.arrow_downward,
         ),
       );
 
@@ -1300,9 +1289,7 @@ void main() {
       await _tap(tester, find.widgetWithText(TextButton, 'Add a custom unit'));
 
       expect(
-        tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Add'))
-            .onPressed,
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Add')).onPressed,
         isNull,
       );
 
@@ -1317,8 +1304,7 @@ void main() {
     ) async {
       await _openEditor(tester, recipes: recipes, ingredients: ingredients);
       await _tap(tester, find.widgetWithText(TextButton, 'Add a custom unit'));
-      FilledButton add() =>
-          tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Add'));
+      FilledButton add() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Add'));
 
       await tester.enterText(_dialogField(), 'portion');
       await tester.pumpAndSettle();
@@ -1397,9 +1383,7 @@ void main() {
 
       // A second press would write a second revision of the same edit.
       expect(
-        tester
-            .widget<TextButton>(find.widgetWithText(TextButton, 'Save'))
-            .onPressed,
+        tester.widget<TextButton>(find.widgetWithText(TextButton, 'Save')).onPressed,
         isNull,
       );
 
@@ -1522,9 +1506,7 @@ void main() {
       // would store the recipe without the line that write is adding, and
       // the screen would pop over it.
       expect(
-        tester
-            .widget<TextButton>(find.widgetWithText(TextButton, 'Save'))
-            .onPressed,
+        tester.widget<TextButton>(find.widgetWithText(TextButton, 'Save')).onPressed,
         isNull,
       );
 
@@ -1533,9 +1515,7 @@ void main() {
 
       expect(find.widgetWithText(Card, 'Poolish'), findsOneWidget);
       expect(
-        tester
-            .widget<TextButton>(find.widgetWithText(TextButton, 'Save'))
-            .onPressed,
+        tester.widget<TextButton>(find.widgetWithText(TextButton, 'Save')).onPressed,
         isNotNull,
       );
     });

@@ -45,13 +45,10 @@ final class RoundingRule {
 @immutable
 final class ScaledQuantity {
   /// A value that carries no rounding rule.
-  const ScaledQuantity.unrounded(Quantity value)
-    : exact = value,
-      displayed = value;
+  const ScaledQuantity.unrounded(Quantity value) : exact = value, displayed = value;
 
   /// A value rounded for display by [rule].
-  ScaledQuantity.rounded({required this.exact, required RoundingRule rule})
-    : displayed = rule.apply(exact);
+  ScaledQuantity.rounded({required this.exact, required RoundingRule rule}) : displayed = rule.apply(exact);
 
   const ScaledQuantity._({required this.exact, required this.displayed});
 

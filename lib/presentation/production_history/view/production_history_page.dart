@@ -188,9 +188,7 @@ class _HistoryRow extends StatelessWidget {
             )
           : Chip(
               label: Text(
-                summary.isDraft
-                    ? l10n.productionHistoryDraft
-                    : l10n.productionHistoryReady,
+                summary.isDraft ? l10n.productionHistoryDraft : l10n.productionHistoryReady,
               ),
             ),
       onTap: opening ? null : onOpen,

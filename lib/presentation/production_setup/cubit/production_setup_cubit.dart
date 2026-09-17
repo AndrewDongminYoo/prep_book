@@ -48,8 +48,7 @@ final class ProductionSetupCubit extends Cubit<ProductionSetupState> {
   int _intents = 0;
 
   /// Records the typed target amount and calculates what it becomes.
-  Future<void> targetAmountChanged(String value) =>
-      _retarget(_blank(targetAmount: value));
+  Future<void> targetAmountChanged(String value) => _retarget(_blank(targetAmount: value));
 
   /// Records the chosen target unit and calculates what it becomes.
   ///
@@ -58,8 +57,7 @@ final class ProductionSetupCubit extends Cubit<ProductionSetupState> {
   /// point, and [ProductionSetupState.targetUnitIsIncompatible] is what
   /// reports an incompatible unit rather than letting it reach a
   /// calculation that would throw on it.
-  Future<void> targetUnitChanged(Unit unit) =>
-      _retarget(_blank(targetUnit: unit));
+  Future<void> targetUnitChanged(Unit unit) => _retarget(_blank(targetUnit: unit));
 
   /// [state] with the named field replaced and the last calculation
   /// dropped.
@@ -70,13 +68,12 @@ final class ProductionSetupCubit extends Cubit<ProductionSetupState> {
   /// on this screen a kitchen could act on and be wrong about. The library
   /// screen keeps its rows on screen through a search for the opposite
   /// reason — a stale list is still a list of real recipes.
-  ProductionSetupState _blank({String? targetAmount, Unit? targetUnit}) =>
-      state.copyWith(
-        targetAmount: targetAmount,
-        targetUnit: targetUnit,
-        status: ProductionSetupStatus.idle,
-        clearOutcome: true,
-      );
+  ProductionSetupState _blank({String? targetAmount, Unit? targetUnit}) => state.copyWith(
+    targetAmount: targetAmount,
+    targetUnit: targetUnit,
+    status: ProductionSetupStatus.idle,
+    clearOutcome: true,
+  );
 
   /// Emits [next], then calculates the run it describes once the target has
   /// stayed still for the debounce window.

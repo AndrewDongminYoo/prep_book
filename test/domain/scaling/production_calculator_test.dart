@@ -57,12 +57,8 @@ void expectBatchesSumToTotal(ProductionResult result) {
       expect(component.perBatch, everyElement(isNull));
       continue;
     }
-    final exactSum = component.perBatch
-        .map((batch) => batch!.exact)
-        .reduce((a, b) => a + b);
-    final displayedSum = component.perBatch
-        .map((batch) => batch!.displayed)
-        .reduce((a, b) => a + b);
+    final exactSum = component.perBatch.map((batch) => batch!.exact).reduce((a, b) => a + b);
+    final displayedSum = component.perBatch.map((batch) => batch!.displayed).reduce((a, b) => a + b);
     expect(exactSum, total.exact);
     expect(displayedSum, total.displayed);
   }

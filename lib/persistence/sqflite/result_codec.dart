@@ -56,12 +56,10 @@ final class RunPayload {
 String encodeRunPayload(ProductionRun run) => jsonEncode(<String, Object?>{
   'recipe': _recipeToJson(run.recipe),
   'dependencySnapshot': <String, Object?>{
-    for (final entry in run.dependencySnapshot.entries)
-      entry.key: _recipeToJson(entry.value),
+    for (final entry in run.dependencySnapshot.entries) entry.key: _recipeToJson(entry.value),
   },
   'ingredientSnapshot': <String, Object?>{
-    for (final entry in run.ingredientSnapshot.entries)
-      entry.key: _ingredientToJson(entry.value),
+    for (final entry in run.ingredientSnapshot.entries) entry.key: _ingredientToJson(entry.value),
   },
   'result': _resultToJson(run.result),
 });
@@ -127,8 +125,7 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
     return RunPayload(
       recipe: _recipeFromJson(map['recipe']! as Map<String, Object?>),
       dependencySnapshot: <String, Recipe>{
-        for (final entry in snapshotJson.entries)
-          entry.key: _recipeFromJson(entry.value! as Map<String, Object?>),
+        for (final entry in snapshotJson.entries) entry.key: _recipeFromJson(entry.value! as Map<String, Object?>),
       },
       ingredientSnapshot: <String, Ingredient>{
         for (final entry in ingredientsJson.entries)
@@ -232,11 +229,10 @@ Rational _rationalFromJson(Map<String, Object?> json) => parseStoredRational(
 // --- ScaledQuantity ------------------------------------------------------
 
 /// Encodes [quantity] as `{"exact": ..., "displayed": ...}`.
-Map<String, Object?> _scaledQuantityToJson(ScaledQuantity quantity) =>
-    <String, Object?>{
-      'exact': _quantityToJson(quantity.exact),
-      'displayed': _quantityToJson(quantity.displayed),
-    };
+Map<String, Object?> _scaledQuantityToJson(ScaledQuantity quantity) => <String, Object?>{
+  'exact': _quantityToJson(quantity.exact),
+  'displayed': _quantityToJson(quantity.displayed),
+};
 
 /// Rebuilds a [ScaledQuantity] from its exact and displayed quantities.
 ///
@@ -278,9 +274,7 @@ ScaledQuantity _scaledQuantityFromJson(Map<String, Object?> json) {
 Map<String, Object?> _batchPlanToJson(BatchPlan plan) => <String, Object?>{
   'fullBatchCount': plan.fullBatchCount,
   'fullBatchYield': _quantityToJson(plan.fullBatchYield),
-  'remainderYield': plan.remainderYield == null
-      ? null
-      : _quantityToJson(plan.remainderYield!),
+  'remainderYield': plan.remainderYield == null ? null : _quantityToJson(plan.remainderYield!),
 };
 
 /// Rebuilds a [BatchPlan] from its own stored fields.
@@ -304,16 +298,10 @@ BatchPlan _batchPlanFromJson(Map<String, Object?> json) {
     json['fullBatchYield']! as Map<String, Object?>,
   );
   final remainderJson = json['remainderYield'];
-  final remainderYield = remainderJson == null
-      ? null
-      : _quantityFromJson(remainderJson as Map<String, Object?>);
+  final remainderYield = remainderJson == null ? null : _quantityFromJson(remainderJson as Map<String, Object?>);
 
-  final remainderOrZero =
-      remainderYield ??
-      Quantity.fromRational(Rational.zero, fullBatchYield.unit);
-  final target =
-      fullBatchYield.scaleBy(Rational.fromInt(fullBatchCount)) +
-      remainderOrZero;
+  final remainderOrZero = remainderYield ?? Quantity.fromRational(Rational.zero, fullBatchYield.unit);
+  final target = fullBatchYield.scaleBy(Rational.fromInt(fullBatchCount)) + remainderOrZero;
   final plan = BatchPlan.decompose(
     target: target,
     maxBatchYield: fullBatchYield,
@@ -336,17 +324,16 @@ BatchPlan _batchPlanFromJson(Map<String, Object?> json) {
 /// `SqfliteRecipeRepository._componentToRow` writes into `target_kind`,
 /// which that method's comment explains and which the two must keep
 /// identical.
-Map<String, Object?> _componentTargetToJson(ComponentTarget target) =>
-    switch (target) {
-      IngredientRef(:final ingredientId) => <String, Object?>{
-        'kind': 'ingredient',
-        'id': ingredientId,
-      },
-      SubRecipeRef(:final recipeId) => <String, Object?>{
-        'kind': 'sub_recipe',
-        'id': recipeId,
-      },
-    };
+Map<String, Object?> _componentTargetToJson(ComponentTarget target) => switch (target) {
+  IngredientRef(:final ingredientId) => <String, Object?>{
+    'kind': 'ingredient',
+    'id': ingredientId,
+  },
+  SubRecipeRef(:final recipeId) => <String, Object?>{
+    'kind': 'sub_recipe',
+    'id': recipeId,
+  },
+};
 
 ComponentTarget _componentTargetFromJson(Map<String, Object?> json) {
   final kind = json['kind'];
@@ -369,18 +356,15 @@ ComponentTarget _componentTargetFromJson(Map<String, Object?> json) {
 /// must not be able to reach a payload already stored. This comment is the
 /// mitigation for the duplication until a shared encoder earns its own
 /// change.
-Map<String, Object?> _recipeComponentToJson(RecipeComponent component) =>
-    <String, Object?>{
-      'id': component.id,
-      'target': _componentTargetToJson(component.target),
-      'baseQuantity': component.baseQuantity == null
-          ? null
-          : _quantityToJson(component.baseQuantity!),
-      'behavior': component.behavior.name,
-      'displayOrder': component.displayOrder,
-      'roundingIncrement': component.rounding?.increment.toString(),
-      'note': component.note,
-    };
+Map<String, Object?> _recipeComponentToJson(RecipeComponent component) => <String, Object?>{
+  'id': component.id,
+  'target': _componentTargetToJson(component.target),
+  'baseQuantity': component.baseQuantity == null ? null : _quantityToJson(component.baseQuantity!),
+  'behavior': component.behavior.name,
+  'displayOrder': component.displayOrder,
+  'roundingIncrement': component.rounding?.increment.toString(),
+  'note': component.note,
+};
 
 RecipeComponent _recipeComponentFromJson(Map<String, Object?> json) {
   final behaviorName = json['behavior'];
@@ -393,9 +377,7 @@ RecipeComponent _recipeComponentFromJson(Map<String, Object?> json) {
   return RecipeComponent(
     id: json['id']! as String,
     target: _componentTargetFromJson(json['target']! as Map<String, Object?>),
-    baseQuantity: baseQuantityJson == null
-        ? null
-        : _quantityFromJson(baseQuantityJson as Map<String, Object?>),
+    baseQuantity: baseQuantityJson == null ? null : _quantityFromJson(baseQuantityJson as Map<String, Object?>),
     behavior: behavior,
     displayOrder: json['displayOrder']! as int,
     rounding: roundingIncrement == null
@@ -432,9 +414,7 @@ Map<String, Object?> _recipeToJson(Recipe recipe) => <String, Object?>{
   'name': recipe.name,
   'category': recipe.category,
   'baseYield': _quantityToJson(recipe.baseYield),
-  'maxBatchYield': recipe.maxBatchYield == null
-      ? null
-      : _quantityToJson(recipe.maxBatchYield!),
+  'maxBatchYield': recipe.maxBatchYield == null ? null : _quantityToJson(recipe.maxBatchYield!),
   'components': [for (final c in recipe.components) _recipeComponentToJson(c)],
   'preparationNotes': recipe.preparationNotes,
   'modifiedAt': timestampToStorage(recipe.modifiedAt),
@@ -449,16 +429,12 @@ Recipe _recipeFromJson(Map<String, Object?> json) {
     name: json['name']! as String,
     category: json['category'] as String?,
     baseYield: _quantityFromJson(json['baseYield']! as Map<String, Object?>),
-    maxBatchYield: maxBatchYieldJson == null
-        ? null
-        : _quantityFromJson(maxBatchYieldJson as Map<String, Object?>),
+    maxBatchYield: maxBatchYieldJson == null ? null : _quantityFromJson(maxBatchYieldJson as Map<String, Object?>),
     components: [
-      for (final c in json['components']! as List<Object?>)
-        _recipeComponentFromJson(c! as Map<String, Object?>),
+      for (final c in json['components']! as List<Object?>) _recipeComponentFromJson(c! as Map<String, Object?>),
     ],
     preparationNotes: [
-      for (final note in json['preparationNotes']! as List<Object?>)
-        note! as String,
+      for (final note in json['preparationNotes']! as List<Object?>) note! as String,
     ],
     modifiedAt: DateTime.parse(json['modifiedAt']! as String),
     isArchived: json['isArchived']! as bool,
@@ -480,13 +456,12 @@ Recipe _recipeFromJson(Map<String, Object?> json) {
 /// The unit goes through [unitToStorage] rather than `Unit.symbol`, so an
 /// ingredient counted in sheets round-trips its kind along with its symbol
 /// — the same reason [_quantityToJson] gives.
-Map<String, Object?> _ingredientToJson(Ingredient ingredient) =>
-    <String, Object?>{
-      'id': ingredient.id,
-      'name': ingredient.name,
-      'defaultUnit': unitToStorage(ingredient.defaultUnit),
-      'category': ingredient.category,
-    };
+Map<String, Object?> _ingredientToJson(Ingredient ingredient) => <String, Object?>{
+  'id': ingredient.id,
+  'name': ingredient.name,
+  'defaultUnit': unitToStorage(ingredient.defaultUnit),
+  'category': ingredient.category,
+};
 
 Ingredient _ingredientFromJson(Map<String, Object?> json) => Ingredient(
   id: json['id']! as String,
@@ -503,20 +478,15 @@ Ingredient _ingredientFromJson(Map<String, Object?> json) => Ingredient(
 
 // --- ScaledComponent and ProductionResult ---------------------------------
 
-Map<String, Object?> _scaledComponentToJson(ScaledComponent component) =>
-    <String, Object?>{
-      'source': _recipeComponentToJson(component.source),
-      'total': component.total == null
-          ? null
-          : _scaledQuantityToJson(component.total!),
-      'perBatch': [
-        for (final quantity in component.perBatch)
-          if (quantity == null) null else _scaledQuantityToJson(quantity),
-      ],
-      'subRecipe': component.subRecipe == null
-          ? null
-          : _resultToJson(component.subRecipe!),
-    };
+Map<String, Object?> _scaledComponentToJson(ScaledComponent component) => <String, Object?>{
+  'source': _recipeComponentToJson(component.source),
+  'total': component.total == null ? null : _scaledQuantityToJson(component.total!),
+  'perBatch': [
+    for (final quantity in component.perBatch)
+      if (quantity == null) null else _scaledQuantityToJson(quantity),
+  ],
+  'subRecipe': component.subRecipe == null ? null : _resultToJson(component.subRecipe!),
+};
 
 /// Rebuilds a [ScaledComponent], including the nested result of an expanded
 /// sub-recipe when the component has one.
@@ -531,15 +501,10 @@ ScaledComponent _scaledComponentFromJson(
   final subRecipeJson = json['subRecipe'];
   return ScaledComponent(
     source: _recipeComponentFromJson(json['source']! as Map<String, Object?>),
-    total: totalJson == null
-        ? null
-        : _scaledQuantityFromJson(totalJson as Map<String, Object?>),
+    total: totalJson == null ? null : _scaledQuantityFromJson(totalJson as Map<String, Object?>),
     perBatch: [
       for (final quantity in json['perBatch']! as List<Object?>)
-        if (quantity == null)
-          null
-        else
-          _scaledQuantityFromJson(quantity as Map<String, Object?>),
+        if (quantity == null) null else _scaledQuantityFromJson(quantity as Map<String, Object?>),
     ],
     subRecipe: subRecipeJson == null
         ? null
@@ -781,25 +746,22 @@ void _checkScaleRatioWitness(
 /// Encodes [warning] with an explicit `kind` discriminator. `sealed` makes
 /// this switch exhaustive: adding a fourth [ProductionWarning] subtype
 /// fails `flutter analyze` here until this switch names it.
-Map<String, Object?> _warningToJson(ProductionWarning warning) =>
-    switch (warning) {
-      ManualComponentWarning(:final recipeId, :final componentId) =>
-        <String, Object?>{
-          'kind': 'manual_component',
-          'recipeId': recipeId,
-          'componentId': componentId,
-        },
-      RoundingAdjustedWarning(:final recipeId, :final componentId) =>
-        <String, Object?>{
-          'kind': 'rounding_adjusted',
-          'recipeId': recipeId,
-          'componentId': componentId,
-        },
-      ArchivedDependencyWarning(:final recipeId) => <String, Object?>{
-        'kind': 'archived_dependency',
-        'recipeId': recipeId,
-      },
-    };
+Map<String, Object?> _warningToJson(ProductionWarning warning) => switch (warning) {
+  ManualComponentWarning(:final recipeId, :final componentId) => <String, Object?>{
+    'kind': 'manual_component',
+    'recipeId': recipeId,
+    'componentId': componentId,
+  },
+  RoundingAdjustedWarning(:final recipeId, :final componentId) => <String, Object?>{
+    'kind': 'rounding_adjusted',
+    'recipeId': recipeId,
+    'componentId': componentId,
+  },
+  ArchivedDependencyWarning(:final recipeId) => <String, Object?>{
+    'kind': 'archived_dependency',
+    'recipeId': recipeId,
+  },
+};
 
 /// Decodes a warning by its `kind`. An unrecognized kind throws rather than
 /// being dropped: a silently dropped blocking warning would make a run

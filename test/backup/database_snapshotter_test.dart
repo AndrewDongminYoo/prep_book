@@ -147,12 +147,11 @@ void main() {
         databasePath: databasePath,
         factory: databaseFactoryFfi,
         files: const IoBackupFiles(),
-        validateCandidate:
-            ({required candidatePath, required manifestSchemaVersion}) async {
-              expect(File(candidatePath).existsSync(), isTrue);
-              expect(manifestSchemaVersion, currentSchemaVersion);
-              throw failure;
-            },
+        validateCandidate: ({required candidatePath, required manifestSchemaVersion}) async {
+          expect(File(candidatePath).existsSync(), isTrue);
+          expect(manifestSchemaVersion, currentSchemaVersion);
+          throw failure;
+        },
         createCandidatePath: () => candidatePath,
       );
 
@@ -176,8 +175,7 @@ void main() {
       databasePath: databasePath,
       factory: factory,
       files: const _LengthReportingBackupFiles(maxLibraryBackupBytes + 1),
-      validateCandidate:
-          ({required candidatePath, required manifestSchemaVersion}) async {},
+      validateCandidate: ({required candidatePath, required manifestSchemaVersion}) async {},
       createCandidatePath: () => candidatePath,
     );
 
@@ -225,15 +223,13 @@ final class _LengthReportingBackupFiles implements BackupFiles {
       _delegate.copy(source, destination, flush: flush);
 
   @override
-  Future<void> renameReplacing(String source, String destination) =>
-      _delegate.renameReplacing(source, destination);
+  Future<void> renameReplacing(String source, String destination) => _delegate.renameReplacing(source, destination);
 
   @override
   Future<void> deleteIfExists(String path) => _delegate.deleteIfExists(path);
 
   @override
-  Future<void> deleteDatabaseSidecars(String databasePath) =>
-      _delegate.deleteDatabaseSidecars(databasePath);
+  Future<void> deleteDatabaseSidecars(String databasePath) => _delegate.deleteDatabaseSidecars(databasePath);
 }
 
 final class _ReadHookDatabaseFactory implements DatabaseFactory {
@@ -249,8 +245,7 @@ final class _ReadHookDatabaseFactory implements DatabaseFactory {
   }
 
   @override
-  Future<void> writeDatabaseBytes(String path, Uint8List bytes) =>
-      _delegate.writeDatabaseBytes(path, bytes);
+  Future<void> writeDatabaseBytes(String path, Uint8List bytes) => _delegate.writeDatabaseBytes(path, bytes);
 
   @override
   Future<Database> openDatabase(String path, {OpenDatabaseOptions? options}) =>
@@ -266,8 +261,7 @@ final class _ReadHookDatabaseFactory implements DatabaseFactory {
   Future<String> getDatabasesPath() => _delegate.getDatabasesPath();
 
   @override
-  Future<void> setDatabasesPath(String path) =>
-      _delegate.setDatabasesPath(path);
+  Future<void> setDatabasesPath(String path) => _delegate.setDatabasesPath(path);
 }
 
 final class _CheckpointHookDatabase implements Database {
@@ -302,6 +296,5 @@ Future<void> _storeIngredient(Database db, String id) =>
     db.insert('ingredients', {'id': id, 'name': id, 'default_unit': 'g'});
 
 Future<List<String>> _ingredientIds(Database db) async => [
-  for (final row in await db.query('ingredients', orderBy: 'id'))
-    row['id']! as String,
+  for (final row in await db.query('ingredients', orderBy: 'id')) row['id']! as String,
 ];

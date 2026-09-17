@@ -35,17 +35,15 @@ RecipeEditorCubit _editor({
 }
 
 /// The least a form needs before [RecipeEditorCubit.save] will write.
-void _fillRequiredFields(RecipeEditorCubit cubit, {String name = 'Ciabatta'}) =>
-    cubit
-      ..nameChanged(name)
-      ..baseYieldAmountChanged('1000')
-      ..baseYieldUnitChanged(Unit.gram);
+void _fillRequiredFields(RecipeEditorCubit cubit, {String name = 'Ciabatta'}) => cubit
+  ..nameChanged(name)
+  ..baseYieldAmountChanged('1000')
+  ..baseYieldUnitChanged(Unit.gram);
 
 void main() {
   group('loading', () {
     test('reads both libraries into the pickers', () async {
-      final recipes = FakeRecipeRepository()
-        ..seed(buildRecipe(id: 'dough', name: 'Dough'));
+      final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'dough', name: 'Dough'));
       final ingredients = FakeIngredientRepository();
       await ingredients.upsert(buildIngredient(id: 'flour'));
 
@@ -243,8 +241,7 @@ void main() {
     });
 
     test('a component needs an amount unless it is manual', () {
-      final cubit = _editor()
-        ..addIngredientComponent(buildIngredient(id: 'flour'));
+      final cubit = _editor()..addIngredientComponent(buildIngredient(id: 'flour'));
       _fillRequiredFields(cubit);
       final draft = cubit.state.components.single;
 
@@ -260,8 +257,7 @@ void main() {
     });
 
     test('a declared rounding increment must be positive', () {
-      final cubit = _editor()
-        ..addIngredientComponent(buildIngredient(id: 'flour'));
+      final cubit = _editor()..addIngredientComponent(buildIngredient(id: 'flour'));
       _fillRequiredFields(cubit);
       final id = cubit.state.components.single.id;
       cubit.componentAmountChanged(id, '500');
@@ -391,8 +387,7 @@ void main() {
     );
 
     test('narrows to the dimension, not to the one unit', () async {
-      final recipes = FakeRecipeRepository()
-        ..seed(buildRecipe(id: 'dough', name: 'Dough'));
+      final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'dough', name: 'Dough'));
       final cubit = _editor(recipes: recipes);
       await cubit.load();
       cubit.addSubRecipeComponent(cubit.state.libraryRecipes.single);
@@ -484,8 +479,7 @@ void main() {
     });
 
     test('an ingredient line is not narrowed at all', () {
-      final cubit = _editor()
-        ..addIngredientComponent(buildIngredient(id: 'flour'));
+      final cubit = _editor()..addIngredientComponent(buildIngredient(id: 'flour'));
       final draft = cubit.state.components.single;
 
       expect(cubit.state.unitChoicesFor(draft), cubit.state.unitChoices);
@@ -633,9 +627,7 @@ void main() {
             id: 'sub-cream',
             target: SubRecipeRef(consumes),
             baseQuantity: consumed,
-            behavior: consumed == null
-                ? ScalingBehavior.manual
-                : ScalingBehavior.proportional,
+            behavior: consumed == null ? ScalingBehavior.manual : ScalingBehavior.proportional,
             displayOrder: 0,
           ),
         ],
@@ -751,8 +743,7 @@ void main() {
     });
 
     test('records every per-component field', () {
-      final cubit = _editor()
-        ..addIngredientComponent(buildIngredient(id: 'flour'));
+      final cubit = _editor()..addIngredientComponent(buildIngredient(id: 'flour'));
       final id = cubit.state.components.single.id;
 
       cubit

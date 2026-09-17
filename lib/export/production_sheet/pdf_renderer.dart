@@ -94,8 +94,7 @@ class ProductionSheetPdfRenderer {
                   ),
                   topSpacing: 10,
                 ),
-              for (final section in sheet.sections)
-                ..._sectionBlocks(context, sheet.labels, section),
+              for (final section in sheet.sections) ..._sectionBlocks(context, sheet.labels, section),
             ],
           ),
         );
@@ -164,8 +163,7 @@ class ProductionSheetPdfRenderer {
           children: [_cell(heading, bold: true)],
         ),
         for (final warning in warnings)
-          for (final chunk in _textChunks(['• ${warning.message}']))
-            pw.TableRow(children: [_cell(chunk)]),
+          for (final chunk in _textChunks(['• ${warning.message}'])) pw.TableRow(children: [_cell(chunk)]),
       ],
     );
   }
@@ -224,8 +222,7 @@ class ProductionSheetPdfRenderer {
           left: section.recipeName,
           right: [
             '${labels.sectionTarget}: ${section.targetYield}',
-            if (section.baseYield case final baseYield?)
-              '${labels.sectionBaseYield}: $baseYield',
+            if (section.baseYield case final baseYield?) '${labels.sectionBaseYield}: $baseYield',
             '${labels.sectionBatchCount}: ${section.batchCount}',
           ].join('\n'),
           repeatFirst: true,
@@ -255,9 +252,7 @@ class ProductionSheetPdfRenderer {
         for (final table in tables ?? section.tables) ...[
           ..._pairedTableRows(
             left: table.heading,
-            right: table.batchYield == null
-                ? ''
-                : '${labels.batchYield}: ${table.batchYield}',
+            right: table.batchYield == null ? '' : '${labels.batchYield}: ${table.batchYield}',
             repeatFirst: repeatBatchHeading,
             decoration: const pw.BoxDecoration(color: PdfColors.blue50),
             leftBold: true,
@@ -326,9 +321,7 @@ class ProductionSheetPdfRenderer {
       codePointLimit: codePointLimit,
       lineLimit: lineLimit,
     ).toList();
-    final chunkCount = leftChunks.length > rightChunks.length
-        ? leftChunks.length
-        : rightChunks.length;
+    final chunkCount = leftChunks.length > rightChunks.length ? leftChunks.length : rightChunks.length;
     for (var index = 0; index < chunkCount; index++) {
       yield (
         index < leftChunks.length ? leftChunks[index] : '',
@@ -383,9 +376,7 @@ class ProductionSheetPdfRenderer {
     yield labels.rootBatchCount;
     yield '${sheet.rootBatchCount}';
     yield labels.organization;
-    yield sheet.organization == ProductionSheetOrganization.batch
-        ? labels.batchOrganization
-        : labels.totalOrganization;
+    yield sheet.organization == ProductionSheetOrganization.batch ? labels.batchOrganization : labels.totalOrganization;
     yield labels.outstandingWarnings;
     for (final warning in sheet.outstandingWarnings) {
       yield warning.message;
@@ -431,8 +422,7 @@ class ProductionSheetPdfRenderer {
       '${labels.calculatedAmount}: ${row.calculated}',
       if (row.exact case final exact?) '${labels.exactAmount}: $exact',
       if (row.base case final base?) '${labels.baseAmount}: $base',
-      if (row.actualWholeRun case final actual?)
-        '${labels.wholeRunActual}: $actual',
+      if (row.actualWholeRun case final actual?) '${labels.wholeRunActual}: $actual',
     ].join('\n');
   }
 
@@ -502,8 +492,7 @@ class ProductionSheetPdfRenderer {
       pw.BoxConstraints(maxWidth: PdfPageFormat.a4.width - 72),
     );
     if (child.box!.height <= _maxSinglePageHeight) {
-      if (topSpacing == 0 ||
-          child.box!.height + topSpacing > _maxSinglePageHeight) {
+      if (topSpacing == 0 || child.box!.height + topSpacing > _maxSinglePageHeight) {
         return pw.Inseparable(child: child);
       }
       return pw.Inseparable(
@@ -519,5 +508,4 @@ class ProductionSheetPdfRenderer {
   }
 }
 
-final double _maxSinglePageHeight =
-    PdfPageFormat.a4.height - 36 - 42 - _footerHeight;
+final double _maxSinglePageHeight = PdfPageFormat.a4.height - 36 - 42 - _footerHeight;

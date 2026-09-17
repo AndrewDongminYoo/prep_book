@@ -10,10 +10,9 @@ final class ProductionSheetLauncher {
 
   final ProductionSheetPlatform platform;
 
-  Future<void> open(BuildContext context, {required ProductionRun run}) =>
-      Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => ProductionSheetPage(run: run, platform: platform),
-        ),
-      );
+  Future<void> open(BuildContext context, {required ProductionRun run}) => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => ProductionSheetPage(run: run, platform: platform),
+    ),
+  );
 }

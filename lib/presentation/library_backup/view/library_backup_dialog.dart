@@ -31,15 +31,12 @@ class _LibraryBackupDialogState extends State<LibraryBackupDialog> {
   Widget build(BuildContext context) {
     return BlocConsumer<LibraryBackupCubit, LibraryBackupState>(
       listener: (context, state) {
-        if (state.status == LibraryBackupStatus.idle ||
-            state.status == LibraryBackupStatus.succeeded) {
+        if (state.status == LibraryBackupStatus.idle || state.status == LibraryBackupStatus.succeeded) {
           Navigator.of(context).pop(state.action);
         }
       },
       builder: (context, state) => PopScope(
-        canPop:
-            state.status != LibraryBackupStatus.creating &&
-            state.status != LibraryBackupStatus.restoring,
+        canPop: state.status != LibraryBackupStatus.creating && state.status != LibraryBackupStatus.restoring,
         child: _dialogFor(context, state),
       ),
     );
@@ -61,8 +58,7 @@ class _LibraryBackupDialogState extends State<LibraryBackupDialog> {
               backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
-            onPressed: () =>
-                unawaited(context.read<LibraryBackupCubit>().confirmRestore()),
+            onPressed: () => unawaited(context.read<LibraryBackupCubit>().confirmRestore()),
             child: Text(l10n.libraryBackupConfirm),
           ),
         ],
@@ -84,9 +80,7 @@ class _LibraryBackupDialogState extends State<LibraryBackupDialog> {
         message: l10n.libraryBackupRestoring,
       ),
       LibraryBackupStatus.idle => _ProgressDialog(
-        message: widget.action == LibraryBackupAction.restore
-            ? l10n.libraryBackupPicking
-            : l10n.libraryBackupCreating,
+        message: widget.action == LibraryBackupAction.restore ? l10n.libraryBackupPicking : l10n.libraryBackupCreating,
       ),
       LibraryBackupStatus.succeeded => const SizedBox.shrink(),
     };
@@ -117,15 +111,11 @@ String libraryBackupFailureMessage(
   LibraryBackupFailureKind failure,
 ) => switch (failure) {
   LibraryBackupFailureKind.cancelled => l10n.libraryBackupFailureCancelled,
-  LibraryBackupFailureKind.unsupportedFormat =>
-    l10n.libraryBackupFailureUnsupportedFormat,
-  LibraryBackupFailureKind.invalidArchive =>
-    l10n.libraryBackupFailureInvalidArchive,
+  LibraryBackupFailureKind.unsupportedFormat => l10n.libraryBackupFailureUnsupportedFormat,
+  LibraryBackupFailureKind.invalidArchive => l10n.libraryBackupFailureInvalidArchive,
   LibraryBackupFailureKind.backupTooLarge => l10n.libraryBackupFailureTooLarge,
-  LibraryBackupFailureKind.invalidDatabase =>
-    l10n.libraryBackupFailureInvalidDatabase,
-  LibraryBackupFailureKind.incompatibleSchema =>
-    l10n.libraryBackupFailureIncompatibleSchema,
+  LibraryBackupFailureKind.invalidDatabase => l10n.libraryBackupFailureInvalidDatabase,
+  LibraryBackupFailureKind.incompatibleSchema => l10n.libraryBackupFailureIncompatibleSchema,
   LibraryBackupFailureKind.saveFailed => l10n.libraryBackupFailureSave,
   LibraryBackupFailureKind.restoreFailed => l10n.libraryBackupFailureRestore,
   LibraryBackupFailureKind.recoveryFailed => l10n.libraryBackupFailureRecovery,

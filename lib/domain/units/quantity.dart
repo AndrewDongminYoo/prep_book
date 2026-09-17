@@ -18,12 +18,10 @@ final class Quantity implements Comparable<Quantity> {
   }
 
   /// Creates a quantity from a decimal amount.
-  factory Quantity.fromDecimal(Decimal amount, Unit unit) =>
-      Quantity.fromRational(amount.toRational(), unit);
+  factory Quantity.fromDecimal(Decimal amount, Unit unit) => Quantity.fromRational(amount.toRational(), unit);
 
   /// Creates a quantity by parsing a decimal literal such as `'250.5'`.
-  factory Quantity.parse(String amount, Unit unit) =>
-      Quantity.fromDecimal(Decimal.parse(amount), unit);
+  factory Quantity.parse(String amount, Unit unit) => Quantity.fromDecimal(Decimal.parse(amount), unit);
 
   const Quantity._(this.amount, this.unit);
 
@@ -45,8 +43,7 @@ final class Quantity implements Comparable<Quantity> {
       amount.toDecimal(scaleOnInfinitePrecision: scaleOnInfinitePrecision);
 
   /// This quantity multiplied by [ratio], exactly.
-  Quantity scaleBy(Rational ratio) =>
-      Quantity.fromRational(amount * ratio, unit);
+  Quantity scaleBy(Rational ratio) => Quantity.fromRational(amount * ratio, unit);
 
   /// This quantity expressed in [target].
   ///
@@ -65,8 +62,7 @@ final class Quantity implements Comparable<Quantity> {
   }
 
   /// The sum of this quantity and [other], expressed in this unit.
-  Quantity operator +(Quantity other) =>
-      Quantity.fromRational(amount + other.convertTo(unit).amount, unit);
+  Quantity operator +(Quantity other) => Quantity.fromRational(amount + other.convertTo(unit).amount, unit);
 
   /// Orders by [amount] after converting [other] into this quantity's
   /// [unit], so `1 kg` compares greater than `999 g`.
@@ -84,8 +80,7 @@ final class Quantity implements Comparable<Quantity> {
   /// accepts; identity checks, `Set` membership, and `Map` keys are not
   /// safe even then — convert to a common unit first for those.
   @override
-  int compareTo(Quantity other) =>
-      amount.compareTo(other.convertTo(unit).amount);
+  int compareTo(Quantity other) => amount.compareTo(other.convertTo(unit).amount);
 
   /// Equality is structural, not dimensional: this quantity equals
   /// [other] only when both [amount] and [unit] match exactly, with no
@@ -97,8 +92,7 @@ final class Quantity implements Comparable<Quantity> {
   /// call [convertTo] on a common unit first — this operator will not
   /// do it.
   @override
-  bool operator ==(Object other) =>
-      other is Quantity && other.amount == amount && other.unit == unit;
+  bool operator ==(Object other) => other is Quantity && other.amount == amount && other.unit == unit;
 
   @override
   int get hashCode => Object.hash(amount, unit);

@@ -16,13 +16,10 @@ final class ChampionshipStrings {
 
   final bool isKorean;
 
-  String get title =>
-      isKorean ? 'PrepBook AI 레시피 가져오기' : 'PrepBook AI Recipe Import';
+  String get title => isKorean ? 'PrepBook AI 레시피 가져오기' : 'PrepBook AI Recipe Import';
 
   String get brandTitle => 'PrepBook AI';
-  String get brandSubtitle => isKorean
-      ? '텍스트·사진 레시피를 생산 계획으로'
-      : 'Turn recipe text and photos into a production plan';
+  String get brandSubtitle => isKorean ? '텍스트·사진 레시피를 생산 계획으로' : 'Turn recipe text and photos into a production plan';
 
   String get boundary => isKorean
       ? 'AI는 원본을 해석합니다. PrepBook은 생산 계획을 계산합니다.'
@@ -42,9 +39,8 @@ final class ChampionshipStrings {
     ChampionshipPhase.result => result,
   };
 
-  String currentStep({required String label, required int index}) => isKorean
-      ? '현재 단계 ${index + 1}/4: $label'
-      : 'Current step ${index + 1} of 4: $label';
+  String currentStep({required String label, required int index}) =>
+      isKorean ? '현재 단계 ${index + 1}/4: $label' : 'Current step ${index + 1} of 4: $label';
 
   String phaseStep({
     required String label,
@@ -56,8 +52,7 @@ final class ChampionshipStrings {
     return isKorean ? '$position: $label, 현재 단계' : '$position: $label, current';
   }
 
-  String get sourceHeading =>
-      isKorean ? '레시피 원본을 선택하세요' : 'Choose a recipe source';
+  String get sourceHeading => isKorean ? '레시피 원본을 선택하세요' : 'Choose a recipe source';
 
   String get sourceIntro => isKorean
       ? '검토할 수 있는 초안만 만듭니다. 수량 계산은 사용자가 확인한 뒤에만 '
@@ -67,16 +62,14 @@ final class ChampionshipStrings {
 
   String get textMode => isKorean ? '텍스트' : 'Text';
   String get imageMode => isKorean ? '이미지' : 'Image';
-  String get sampleDescription => isKorean
-      ? '네트워크와 동의 절차 없이 전체 흐름을 실행합니다.'
-      : 'Complete the full workflow without network access or consent.';
+  String get sampleDescription =>
+      isKorean ? '네트워크와 동의 절차 없이 전체 흐름을 실행합니다.' : 'Complete the full workflow without network access or consent.';
 
   String get useSample => isKorean ? '샘플로 시작' : 'Use sample';
   String get recipeText => isKorean ? '레시피 텍스트' : 'Recipe text';
 
-  String get recipeTextHint => isKorean
-      ? '레시피 이름, 기준 생산량, 재료와 수량을 붙여 넣으세요.'
-      : 'Paste the recipe name, base yield, ingredients, and quantities.';
+  String get recipeTextHint =>
+      isKorean ? '레시피 이름, 기준 생산량, 재료와 수량을 붙여 넣으세요.' : 'Paste the recipe name, base yield, ingredients, and quantities.';
 
   String get selectImage => isKorean ? '이미지 선택' : 'Select image';
   String imageMetadata({
@@ -85,16 +78,12 @@ final class ChampionshipStrings {
     required int width,
     required int height,
   }) => '$mimeType · $byteCount B · $width×$height px';
-  String imageReduced(int originalByteCount) => isKorean
-      ? '원본 $originalByteCount B에서 축소되었습니다.'
-      : 'Reduced from $originalByteCount B.';
-  String get importText =>
-      isKorean ? '텍스트 검토 초안 만들기' : 'Create text review draft';
-  String get importImage =>
-      isKorean ? '이미지 검토 초안 만들기' : 'Create image review draft';
-  String get liveConsent => isKorean
-      ? '아래 개인정보 경계를 확인하고 동의합니다.'
-      : 'I understand and accept the privacy boundary below.';
+  String imageReduced(int originalByteCount) =>
+      isKorean ? '원본 $originalByteCount B에서 축소되었습니다.' : 'Reduced from $originalByteCount B.';
+  String get importText => isKorean ? '텍스트 검토 초안 만들기' : 'Create text review draft';
+  String get importImage => isKorean ? '이미지 검토 초안 만들기' : 'Create image review draft';
+  String get liveConsent =>
+      isKorean ? '아래 개인정보 경계를 확인하고 동의합니다.' : 'I understand and accept the privacy boundary below.';
 
   String get privacy => isKorean
       ? 'PrepBook은 입력한 원본을 저장하지 않습니다. 라이브 입력은 설정된 AI 제공자에게 '
@@ -104,46 +93,32 @@ final class ChampionshipStrings {
             'configured AI provider under its retention and abuse-monitoring '
             'controls. Use the sample for confidential or personal content.';
 
-  String get loading =>
-      isKorean ? '검토 초안을 만드는 중입니다…' : 'Creating the review draft…';
+  String get loading => isKorean ? '검토 초안을 만드는 중입니다…' : 'Creating the review draft…';
   String get retry => isKorean ? '다시 시도' : 'Retry';
 
   String sourceFailure(ChampionshipSourceFailure failure) => switch (failure) {
     ChampionshipSourceFailure.liveConsentRequired =>
-      isKorean
-          ? '라이브 입력을 전송하려면 개인정보 경계에 동의해야 합니다.'
-          : 'Accept the privacy boundary before sending live input.',
+      isKorean ? '라이브 입력을 전송하려면 개인정보 경계에 동의해야 합니다.' : 'Accept the privacy boundary before sending live input.',
     ChampionshipSourceFailure.invalidSource =>
-      isKorean
-          ? '지원되는 텍스트 또는 이미지 원본을 확인하세요.'
-          : 'Check the supported text or image source.',
+      isKorean ? '지원되는 텍스트 또는 이미지 원본을 확인하세요.' : 'Check the supported text or image source.',
     ChampionshipSourceFailure.imageSelection =>
       isKorean
           ? 'JPEG, PNG 또는 WebP 이미지 한 개를 32 MiB 이하로 선택하세요.'
           : 'Select one JPEG, PNG, or WebP image no larger than 32 MiB.',
-    ChampionshipSourceFailure.sampleUnavailable =>
-      isKorean ? '샘플을 불러오지 못했습니다.' : 'The sample could not be loaded.',
+    ChampionshipSourceFailure.sampleUnavailable => isKorean ? '샘플을 불러오지 못했습니다.' : 'The sample could not be loaded.',
   };
 
   String importFailure(RecipeImportFailureCode failure) => switch (failure) {
     RecipeImportFailureCode.serviceBusy =>
-      isKorean
-          ? '추출 서비스가 사용 중입니다. 다시 시도하세요.'
-          : 'The extraction service is busy. Try again.',
+      isKorean ? '추출 서비스가 사용 중입니다. 다시 시도하세요.' : 'The extraction service is busy. Try again.',
     RecipeImportFailureCode.serviceTimeout =>
-      isKorean
-          ? '추출 요청 시간이 초과되었습니다. 다시 시도하세요.'
-          : 'The extraction request timed out. Try again.',
+      isKorean ? '추출 요청 시간이 초과되었습니다. 다시 시도하세요.' : 'The extraction request timed out. Try again.',
     RecipeImportFailureCode.serviceUnconfigured =>
-      isKorean
-          ? '라이브 추출을 사용할 수 없습니다. 오프라인 샘플을 사용하세요.'
-          : 'Live extraction is unavailable. Use the offline sample.',
+      isKorean ? '라이브 추출을 사용할 수 없습니다. 오프라인 샘플을 사용하세요.' : 'Live extraction is unavailable. Use the offline sample.',
     RecipeImportFailureCode.invalidRequest ||
     RecipeImportFailureCode.unsupportedSource ||
     RecipeImportFailureCode.sourceTooLarge =>
-      isKorean
-          ? '지원되는 텍스트 또는 이미지 원본을 확인하세요.'
-          : 'Check the supported text or image source.',
+      isKorean ? '지원되는 텍스트 또는 이미지 원본을 확인하세요.' : 'Check the supported text or image source.',
     RecipeImportFailureCode.methodNotAllowed ||
     RecipeImportFailureCode.invalidContentType ||
     RecipeImportFailureCode.invalidModelOutput ||
@@ -162,43 +137,27 @@ final class ChampionshipStrings {
       : 'Inspect the source evidence and confidence for every value, then '
             'confirm it. Missing or ambiguous values must be corrected.';
 
-  String get confirmAll =>
-      isKorean ? '문제없는 값 모두 확인' : 'Confirm all unambiguous';
+  String get confirmAll => isKorean ? '문제없는 값 모두 확인' : 'Confirm all unambiguous';
   String get aiProposal => isKorean ? 'AI 제안' : 'AI proposal';
   String get evidence => isKorean ? '원문 근거' : 'Evidence';
   String get currentValue => isKorean ? '현재 값' : 'Current value';
-  String currentValueFor(String label) =>
-      isKorean ? '$label 현재 값' : 'Current value for $label';
+  String currentValueFor(String label) => isKorean ? '$label 현재 값' : 'Current value for $label';
   String get issues => isKorean ? '확인할 문제' : 'Issues';
 
   String reviewIssue(ReviewIssue issue) => switch (issue) {
-    ReviewIssue.valueRequired =>
-      isKorean ? '값을 입력하세요.' : 'A value is required.',
-    ReviewIssue.quantityRequired =>
-      isKorean ? '수량을 입력하세요.' : 'A quantity is required.',
-    ReviewIssue.quantityNotPositive =>
-      isKorean ? '수량은 0보다 커야 합니다.' : 'The quantity must be greater than zero.',
+    ReviewIssue.valueRequired => isKorean ? '값을 입력하세요.' : 'A value is required.',
+    ReviewIssue.quantityRequired => isKorean ? '수량을 입력하세요.' : 'A quantity is required.',
+    ReviewIssue.quantityNotPositive => isKorean ? '수량은 0보다 커야 합니다.' : 'The quantity must be greater than zero.',
     ReviewIssue.quantityNotDecimal =>
-      isKorean
-          ? '수량은 양의 십진수여야 합니다.'
-          : 'The quantity must be a positive decimal string.',
+      isKorean ? '수량은 양의 십진수여야 합니다.' : 'The quantity must be a positive decimal string.',
     ReviewIssue.unitRequired => isKorean ? '단위를 선택하세요.' : 'A unit is required.',
-    ReviewIssue.unitUnsupported =>
-      isKorean ? '지원되지 않는 단위입니다.' : 'The unit is unsupported.',
+    ReviewIssue.unitUnsupported => isKorean ? '지원되지 않는 단위입니다.' : 'The unit is unsupported.',
     ReviewIssue.maxUnitIncompatible =>
-      isKorean
-          ? '최대 배치 수율 단위가 기준 단위와 호환되지 않습니다.'
-          : 'The maximum yield unit is incompatible.',
+      isKorean ? '최대 배치 수율 단위가 기준 단위와 호환되지 않습니다.' : 'The maximum yield unit is incompatible.',
     ReviewIssue.manualHasQuantity =>
-      isKorean
-          ? '수동 구성 요소에는 수량을 넣을 수 없습니다.'
-          : 'A manual component cannot contain a quantity.',
-    ReviewIssue.manualHasUnit =>
-      isKorean
-          ? '수동 구성 요소에는 단위를 넣을 수 없습니다.'
-          : 'A manual component cannot contain a unit.',
-    ReviewIssue.behaviorRequired =>
-      isKorean ? '계산 방식을 선택하세요.' : 'A scaling behavior is required.',
+      isKorean ? '수동 구성 요소에는 수량을 넣을 수 없습니다.' : 'A manual component cannot contain a quantity.',
+    ReviewIssue.manualHasUnit => isKorean ? '수동 구성 요소에는 단위를 넣을 수 없습니다.' : 'A manual component cannot contain a unit.',
+    ReviewIssue.behaviorRequired => isKorean ? '계산 방식을 선택하세요.' : 'A scaling behavior is required.',
   };
 
   String verificationIssue(RecipeDraftVerificationIssue issue) {
@@ -206,55 +165,33 @@ final class ChampionshipStrings {
     return switch (issue.kind) {
       RecipeDraftVerificationIssueKind.confirmationRequired =>
         isKorean ? '$label: 이 값을 확인하세요.' : '$label: Confirm this value.',
-      RecipeDraftVerificationIssueKind.valueRequired =>
-        isKorean ? '$label: 값을 입력하세요.' : '$label: Enter a value.',
+      RecipeDraftVerificationIssueKind.valueRequired => isKorean ? '$label: 값을 입력하세요.' : '$label: Enter a value.',
       RecipeDraftVerificationIssueKind.quantityRequired =>
         isKorean ? '$label: 수량을 입력하세요.' : '$label: Enter a quantity.',
       RecipeDraftVerificationIssueKind.quantityNotPositive =>
-        isKorean
-            ? '$label: 0보다 큰 수량을 입력하세요.'
-            : '$label: Enter a quantity greater than zero.',
+        isKorean ? '$label: 0보다 큰 수량을 입력하세요.' : '$label: Enter a quantity greater than zero.',
       RecipeDraftVerificationIssueKind.quantityNotDecimal =>
-        isKorean
-            ? '$label: 올바른 십진수 수량을 입력하세요.'
-            : '$label: Enter a valid decimal quantity.',
-      RecipeDraftVerificationIssueKind.unitRequired =>
-        isKorean ? '$label: 단위를 선택하세요.' : '$label: Select a unit.',
+        isKorean ? '$label: 올바른 십진수 수량을 입력하세요.' : '$label: Enter a valid decimal quantity.',
+      RecipeDraftVerificationIssueKind.unitRequired => isKorean ? '$label: 단위를 선택하세요.' : '$label: Select a unit.',
       RecipeDraftVerificationIssueKind.unitUnsupported =>
-        isKorean
-            ? '$label: 지원되는 단위를 선택하세요.'
-            : '$label: Select a supported unit.',
+        isKorean ? '$label: 지원되는 단위를 선택하세요.' : '$label: Select a supported unit.',
       RecipeDraftVerificationIssueKind.maxUnitIncompatible =>
-        isKorean
-            ? '$label: 기준 단위와 호환되는 단위를 선택하세요.'
-            : '$label: Select a unit compatible with the base yield.',
+        isKorean ? '$label: 기준 단위와 호환되는 단위를 선택하세요.' : '$label: Select a unit compatible with the base yield.',
       RecipeDraftVerificationIssueKind.behaviorRequired =>
-        isKorean
-            ? '$label: 계산 방식을 선택하세요.'
-            : '$label: Select a scaling behavior.',
+        isKorean ? '$label: 계산 방식을 선택하세요.' : '$label: Select a scaling behavior.',
       RecipeDraftVerificationIssueKind.manualHasQuantity =>
-        isKorean
-            ? '$label: 수동 재료의 수량을 비우세요.'
-            : '$label: Clear the quantity for a manual component.',
+        isKorean ? '$label: 수동 재료의 수량을 비우세요.' : '$label: Clear the quantity for a manual component.',
       RecipeDraftVerificationIssueKind.manualHasUnit =>
-        isKorean
-            ? '$label: 수동 재료의 단위를 비우세요.'
-            : '$label: Clear the unit for a manual component.',
+        isKorean ? '$label: 수동 재료의 단위를 비우세요.' : '$label: Clear the unit for a manual component.',
       RecipeDraftVerificationIssueKind.maximumAbsenceConfirmationRequired =>
-        isKorean
-            ? '$label: 최대 배치 제한이 없음을 확인하세요.'
-            : '$label: Confirm that no maximum batch applies.',
+        isKorean ? '$label: 최대 배치 제한이 없음을 확인하세요.' : '$label: Confirm that no maximum batch applies.',
       RecipeDraftVerificationIssueKind.atLeastOneComponent =>
-        isKorean
-            ? '레시피에는 재료가 하나 이상 필요합니다.'
-            : 'The recipe needs at least one component.',
+        isKorean ? '레시피에는 재료가 하나 이상 필요합니다.' : 'The recipe needs at least one component.',
     };
   }
 
   String _verificationFieldLabel(String? path) {
-    final componentMatch = path == null
-        ? null
-        : RegExp(r'^components\[(\d+)\](?:\.(\w+))?$').firstMatch(path);
+    final componentMatch = path == null ? null : RegExp(r'^components\[(\d+)\](?:\.(\w+))?$').firstMatch(path);
     if (componentMatch != null) {
       final index = int.parse(componentMatch.group(1)!);
       final componentLabel = component(index);
@@ -262,17 +199,12 @@ final class ChampionshipStrings {
         'name' => isKorean ? '$componentLabel 이름' : '$componentLabel name',
         'amount' => isKorean ? '$componentLabel 수량' : '$componentLabel amount',
         'unit' => isKorean ? '$componentLabel 단위' : '$componentLabel unit',
-        'behavior' =>
-          isKorean
-              ? '$componentLabel 계산 방식'
-              : '$componentLabel scaling behavior',
+        'behavior' => isKorean ? '$componentLabel 계산 방식' : '$componentLabel scaling behavior',
         'note' => isKorean ? '$componentLabel 메모' : '$componentLabel note',
         _ => componentLabel,
       };
     }
-    final noteMatch = path == null
-        ? null
-        : RegExp(r'^recipe\.preparationNotes\[(\d+)\]$').firstMatch(path);
+    final noteMatch = path == null ? null : RegExp(r'^recipe\.preparationNotes\[(\d+)\]$').firstMatch(path);
     if (noteMatch != null) {
       return preparationNote(int.parse(noteMatch.group(1)!));
     }
@@ -288,10 +220,8 @@ final class ChampionshipStrings {
   }
 
   String get confirm => isKorean ? '이 값 확인' : 'Confirm value';
-  String confirmField(String label) =>
-      isKorean ? '$label 확인' : 'Confirm $label';
-  String confirmedField(String label) =>
-      isKorean ? '$label 확인 완료' : '$label confirmed';
+  String confirmField(String label) => isKorean ? '$label 확인' : 'Confirm $label';
+  String confirmedField(String label) => isKorean ? '$label 확인 완료' : '$label confirmed';
   String get confirmed => isKorean ? '사용자 확인 완료' : 'Operator confirmed';
   String get edited => isKorean ? '사용자 수정됨' : 'Edited by operator';
   String get needsConfirmation => isKorean ? '확인 필요' : 'Needs confirmation';
@@ -302,24 +232,16 @@ final class ChampionshipStrings {
   String get baseYieldUnit => isKorean ? '기준 단위' : 'Base yield unit';
   String get maxBatchAmount => isKorean ? '최대 배치 생산량' : 'Maximum batch amount';
   String get maxBatchUnit => isKorean ? '최대 배치 단위' : 'Maximum batch unit';
-  String get removeMaximumBatch =>
-      isKorean ? '제안된 최대 배치 제거' : 'Remove proposed maximum';
-  String get confirmNoMaximumBatch =>
-      isKorean ? '최대 배치 제한 없음 확인' : 'Confirm no maximum batch';
-  String preparationNote(int index) =>
-      isKorean ? '준비 메모 ${index + 1}' : 'Preparation note ${index + 1}';
-  String component(int index) =>
-      isKorean ? '재료 ${index + 1}' : 'Component ${index + 1}';
+  String get removeMaximumBatch => isKorean ? '제안된 최대 배치 제거' : 'Remove proposed maximum';
+  String get confirmNoMaximumBatch => isKorean ? '최대 배치 제한 없음 확인' : 'Confirm no maximum batch';
+  String preparationNote(int index) => isKorean ? '준비 메모 ${index + 1}' : 'Preparation note ${index + 1}';
+  String component(int index) => isKorean ? '재료 ${index + 1}' : 'Component ${index + 1}';
   String get removeComponent => isKorean ? '재료 삭제' : 'Remove component';
   String removeComponentAction({required int index, required String name}) =>
-      isKorean
-      ? '${component(index)} $name 삭제'
-      : 'Remove ${component(index)}: $name';
-  String removeComponentTitle(String name) =>
-      isKorean ? '$name 재료를 삭제할까요?' : 'Remove $name?';
-  String removeComponentMessage(String name) => isKorean
-      ? '$name 재료와 검토 내용을 삭제합니다.'
-      : 'This removes $name and its review details.';
+      isKorean ? '${component(index)} $name 삭제' : 'Remove ${component(index)}: $name';
+  String removeComponentTitle(String name) => isKorean ? '$name 재료를 삭제할까요?' : 'Remove $name?';
+  String removeComponentMessage(String name) =>
+      isKorean ? '$name 재료와 검토 내용을 삭제합니다.' : 'This removes $name and its review details.';
   String get cancel => isKorean ? '취소' : 'Cancel';
   String get remove => isKorean ? '삭제' : 'Remove';
   String get componentName => isKorean ? '재료 이름' : 'Component name';
@@ -327,19 +249,13 @@ final class ChampionshipStrings {
   String get unit => isKorean ? '단위' : 'Unit';
   String get behavior => isKorean ? '계산 방식' : 'Scaling behavior';
   String get note => isKorean ? '메모' : 'Note';
-  String componentNameFor(int index) =>
-      isKorean ? '${component(index)} 이름' : '${component(index)} name';
-  String componentAmountFor(int index) =>
-      isKorean ? '${component(index)} 수량' : '${component(index)} amount';
-  String componentUnitFor(int index) =>
-      isKorean ? '${component(index)} 단위' : '${component(index)} unit';
-  String componentBehaviorFor(int index) => isKorean
-      ? '${component(index)} 계산 방식'
-      : '${component(index)} scaling behavior';
-  String componentNoteFor(int index) =>
-      isKorean ? '${component(index)} 메모' : '${component(index)} note';
-  String get continueToTarget =>
-      isKorean ? '검토 완료하고 목표 설정' : 'Finish review and set target';
+  String componentNameFor(int index) => isKorean ? '${component(index)} 이름' : '${component(index)} name';
+  String componentAmountFor(int index) => isKorean ? '${component(index)} 수량' : '${component(index)} amount';
+  String componentUnitFor(int index) => isKorean ? '${component(index)} 단위' : '${component(index)} unit';
+  String componentBehaviorFor(int index) =>
+      isKorean ? '${component(index)} 계산 방식' : '${component(index)} scaling behavior';
+  String componentNoteFor(int index) => isKorean ? '${component(index)} 메모' : '${component(index)} note';
+  String get continueToTarget => isKorean ? '검토 완료하고 목표 설정' : 'Finish review and set target';
 
   String confidence(ExtractionConfidence confidence) => switch (confidence) {
     ExtractionConfidence.high => isKorean ? '높은 확신도' : 'High confidence',
@@ -354,35 +270,26 @@ final class ChampionshipStrings {
     DraftScalingBehavior.manual => isKorean ? '수동' : 'Manual',
   };
 
-  String get targetHeading =>
-      isKorean ? '생산 목표를 입력하세요' : 'Set the production target';
+  String get targetHeading => isKorean ? '생산 목표를 입력하세요' : 'Set the production target';
   String get verifiedRecipe => isKorean ? '확인된 레시피' : 'Verified recipe';
   String get targetAmount => isKorean ? '목표 수량' : 'Target amount';
   String get targetUnit => isKorean ? '목표 단위' : 'Target unit';
-  String get calculate =>
-      isKorean ? '정확한 생산 계획 계산' : 'Calculate exact production plan';
-  String get invalidTarget => isKorean
-      ? '0보다 큰 올바른 목표 수량과 호환 단위를 입력하세요.'
-      : 'Enter a valid target above zero with a compatible unit.';
-  String get batchLimit => isKorean
-      ? '계획이 최대 1,000배치를 초과합니다.'
-      : 'The plan exceeds the 1,000-batch limit.';
+  String get calculate => isKorean ? '정확한 생산 계획 계산' : 'Calculate exact production plan';
+  String get invalidTarget =>
+      isKorean ? '0보다 큰 올바른 목표 수량과 호환 단위를 입력하세요.' : 'Enter a valid target above zero with a compatible unit.';
+  String get batchLimit => isKorean ? '계획이 최대 1,000배치를 초과합니다.' : 'The plan exceeds the 1,000-batch limit.';
 
   String get resultHeading => isKorean ? '생산 계획' : 'Production plan';
-  String get exactCalculation =>
-      isKorean ? 'PrepBook 정확 계산' : 'Exact PrepBook calculation';
+  String get exactCalculation => isKorean ? 'PrepBook 정확 계산' : 'Exact PrepBook calculation';
   String get exactBoundary => isKorean
       ? '아래 수량은 AI가 아닌 기존 ProductionCalculator가 계산했습니다.'
       : 'The existing ProductionCalculator, not AI, calculated every '
             'quantity below.';
   String batches(int count) => isKorean ? '$count개 배치' : '$count batches';
-  String fullBatches(int count, Object yield) => isKorean
-      ? '전체 배치 $count개 · 각 $yield'
-      : '$count full batches · $yield each';
-  String remainderBatch(Object yield) =>
-      isKorean ? '나머지 배치 · $yield' : 'Remainder batch · $yield';
-  String batch(int index) =>
-      isKorean ? '배치 ${index + 1}' : 'Batch ${index + 1}';
+  String fullBatches(int count, Object yield) =>
+      isKorean ? '전체 배치 $count개 · 각 $yield' : '$count full batches · $yield each';
+  String remainderBatch(Object yield) => isKorean ? '나머지 배치 · $yield' : 'Remainder batch · $yield';
+  String batch(int index) => isKorean ? '배치 ${index + 1}' : 'Batch ${index + 1}';
   String batchQuantity({
     required int first,
     required int last,
@@ -393,18 +300,12 @@ final class ChampionshipStrings {
     if (isKorean) {
       return manual ? '배치 $first–$last: $amount' : '배치 $first–$last: 각 $amount';
     }
-    return manual
-        ? 'Batches $first–$last: $amount'
-        : 'Batches $first–$last: $amount each';
+    return manual ? 'Batches $first–$last: $amount' : 'Batches $first–$last: $amount each';
   }
 
   String get manualAsNeeded => isKorean ? '수동 / 필요량' : 'Manual / as needed';
   String get warnings => isKorean ? '계산 경고' : 'Domain warnings';
-  String get noWarnings =>
-      isKorean ? '계산 경고가 없습니다.' : 'No calculation warnings.';
-  String get productionSheet =>
-      isKorean ? '생산 작업표 열기' : 'Open production sheet';
-  String get productionSheetFailure => isKorean
-      ? '생산 작업표를 열지 못했습니다.'
-      : 'The production sheet could not be opened.';
+  String get noWarnings => isKorean ? '계산 경고가 없습니다.' : 'No calculation warnings.';
+  String get productionSheet => isKorean ? '생산 작업표 열기' : 'Open production sheet';
+  String get productionSheetFailure => isKorean ? '생산 작업표를 열지 못했습니다.' : 'The production sheet could not be opened.';
 }

@@ -4,8 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
 typedef _LoadAsset = Future<ByteData> Function(String key);
-typedef _SharePdf =
-    Future<bool> Function({required Uint8List bytes, required String filename});
+typedef _SharePdf = Future<bool> Function({required Uint8List bytes, required String filename});
 typedef _LayoutPdf =
     Future<bool> Function({
       required LayoutCallback onLayout,
@@ -33,8 +32,7 @@ abstract interface class ProductionSheetPlatform {
 final class PrintingProductionSheetPlatform implements ProductionSheetPlatform {
   const PrintingProductionSheetPlatform({
     Future<ByteData> Function(String key)? loadAsset,
-    Future<bool> Function({required Uint8List bytes, required String filename})?
-    sharePdf,
+    Future<bool> Function({required Uint8List bytes, required String filename})? sharePdf,
     Future<bool> Function({
       required LayoutCallback onLayout,
       required String name,
@@ -48,8 +46,7 @@ final class PrintingProductionSheetPlatform implements ProductionSheetPlatform {
          layoutPdf: layoutPdf,
        );
 
-  final ({_LoadAsset? loadAsset, _SharePdf? sharePdf, _LayoutPdf? layoutPdf})
-  _injections;
+  final ({_LoadAsset? loadAsset, _SharePdf? sharePdf, _LayoutPdf? layoutPdf}) _injections;
 
   @override
   Future<Uint8List> loadFontBytes() async {

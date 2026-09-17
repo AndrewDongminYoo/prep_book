@@ -49,8 +49,7 @@ final class BackupDatabaseValidator {
 
   Future<void> _validateOpenedDatabase(Database db) async {
     final integrityRows = await db.rawQuery('PRAGMA integrity_check');
-    if (integrityRows.length != 1 ||
-        integrityRows.single.values.single != 'ok') {
+    if (integrityRows.length != 1 || integrityRows.single.values.single != 'ok') {
       throw const FormatException('SQLite integrity check failed.');
     }
     final foreignKeyRows = await db.rawQuery('PRAGMA foreign_key_check');

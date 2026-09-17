@@ -37,16 +37,15 @@ final class RecipeEditorLauncher {
   ///
   /// `null` means the operator left without saving, which is what tells a
   /// caller whether anything needs reading again.
-  Future<Recipe?> open(BuildContext context, {Recipe? recipe}) =>
-      Navigator.of(context).push<Recipe>(
-        MaterialPageRoute(
-          builder: (_) => RecipeEditorPage(
-            listLibrary: listLibrary,
-            listIngredients: listIngredients,
-            saveRecipeRevision: saveRecipeRevision,
-            saveIngredient: saveIngredient,
-            recipe: recipe,
-          ),
-        ),
-      );
+  Future<Recipe?> open(BuildContext context, {Recipe? recipe}) => Navigator.of(context).push<Recipe>(
+    MaterialPageRoute(
+      builder: (_) => RecipeEditorPage(
+        listLibrary: listLibrary,
+        listIngredients: listIngredients,
+        saveRecipeRevision: saveRecipeRevision,
+        saveIngredient: saveIngredient,
+        recipe: recipe,
+      ),
+    ),
+  );
 }

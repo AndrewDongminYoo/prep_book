@@ -6,8 +6,7 @@ import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/units/readable_quantity.dart';
 
 /// Adapts generated application copy to the presentation-independent export.
-final class AppProductionSheetLocalizations
-    implements ProductionSheetLocalizations {
+final class AppProductionSheetLocalizations implements ProductionSheetLocalizations {
   const AppProductionSheetLocalizations({
     required this.localizations,
     required this.locale,
@@ -48,8 +47,7 @@ final class AppProductionSheetLocalizations
   String batch(int number) => localizations.productionSheetBatch(number);
 
   @override
-  String batchRange(int first, int last) =>
-      localizations.productionSheetBatchRange(first, last);
+  String batchRange(int first, int last) => localizations.productionSheetBatchRange(first, last);
 
   @override
   String formatCreatedAt(DateTime createdAtUtc) {
@@ -68,17 +66,14 @@ final class AppProductionSheetLocalizations
     required String recipeName,
     String? componentName,
   }) => switch (warning) {
-    ManualComponentWarning(:final componentId) =>
-      localizations.productionResultManualWarning(
-        componentName ?? componentId,
-        recipeName,
-      ),
-    RoundingAdjustedWarning(:final componentId) =>
-      localizations.productionResultRoundingWarning(
-        componentName ?? componentId,
-        recipeName,
-      ),
-    ArchivedDependencyWarning() =>
-      localizations.productionResultArchivedWarning(recipeName),
+    ManualComponentWarning(:final componentId) => localizations.productionResultManualWarning(
+      componentName ?? componentId,
+      recipeName,
+    ),
+    RoundingAdjustedWarning(:final componentId) => localizations.productionResultRoundingWarning(
+      componentName ?? componentId,
+      recipeName,
+    ),
+    ArchivedDependencyWarning() => localizations.productionResultArchivedWarning(recipeName),
   };
 }

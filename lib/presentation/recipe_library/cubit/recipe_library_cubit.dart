@@ -94,15 +94,12 @@ final class RecipeLibraryCubit extends Cubit<RecipeLibraryState> {
   }
 
   /// Shows or hides archived recipes. Re-filters what is already loaded.
-  void showArchived({required bool show}) =>
-      emit(state.copyWith(showArchived: show));
+  void showArchived({required bool show}) => emit(state.copyWith(showArchived: show));
 
   /// Narrows the rows to [category], or to every category when it is
   /// `null`. Re-filters what is already loaded, the same as [showArchived].
   void selectCategory(String? category) => emit(
-    category == null
-        ? state.copyWith(clearSelectedCategory: true)
-        : state.copyWith(selectedCategory: category),
+    category == null ? state.copyWith(clearSelectedCategory: true) : state.copyWith(selectedCategory: category),
   );
 
   /// Sets [recipe]'s archived flag to [isArchived], then reads again
@@ -118,9 +115,7 @@ final class RecipeLibraryCubit extends Cubit<RecipeLibraryState> {
   /// the operator asked for it, and the screen that would have shown the
   /// outcome is the only thing that is gone.
   Future<void> archive(Recipe recipe, {required bool isArchived}) async {
-    final action = isArchived
-        ? RecipeLibraryAction.archive
-        : RecipeLibraryAction.unarchive;
+    final action = isArchived ? RecipeLibraryAction.archive : RecipeLibraryAction.unarchive;
     try {
       await _archiveRecipe(recipe.id, isArchived: isArchived);
     } on Object catch (error, stackTrace) {
@@ -273,9 +268,9 @@ final class RecipeLibraryCubit extends Cubit<RecipeLibraryState> {
   /// later would not change the screen. Name breaks a tie, because
   /// `List.sort` is not guaranteed stable and two recipes saved in the same
   /// moment must still list in a fixed order.
-  static List<Recipe> _newestFirst(List<Recipe> recipes) =>
-      [...recipes]..sort((a, b) {
-        final byModifiedAt = b.modifiedAt.compareTo(a.modifiedAt);
-        return byModifiedAt != 0 ? byModifiedAt : a.name.compareTo(b.name);
-      });
+  static List<Recipe> _newestFirst(List<Recipe> recipes) => [...recipes]
+    ..sort((a, b) {
+      final byModifiedAt = b.modifiedAt.compareTo(a.modifiedAt);
+      return byModifiedAt != 0 ? byModifiedAt : a.name.compareTo(b.name);
+    });
 }

@@ -39,8 +39,7 @@ void main() {
       'flutter_test_listener.',
     );
     addTearDown(() => directory.delete(recursive: true));
-    final listener = File('${directory.path}/listener.dart')
-      ..writeAsStringSync('');
+    final listener = File('${directory.path}/listener.dart')..writeAsStringSync('');
 
     final result = await _resolve(
       configuration: 'Debug-development',
@@ -54,8 +53,7 @@ void main() {
   test('iOS build replaces a deleted integration test listener', () async {
     final result = await _resolve(
       configuration: 'Debug-staging',
-      target:
-          '${Directory.systemTemp.path}/flutter_test_listener.missing/listener.dart',
+      target: '${Directory.systemTemp.path}/flutter_test_listener.missing/listener.dart',
       flavor: 'development',
     );
     expect(result.exitCode, 0, reason: result.stderr.toString());

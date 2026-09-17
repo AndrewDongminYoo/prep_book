@@ -163,8 +163,7 @@ class _RecipeName extends StatelessWidget {
   final ProductionSetupState state;
 
   @override
-  Widget build(BuildContext context) =>
-      Text(state.recipe.name, style: Theme.of(context).textTheme.titleLarge);
+  Widget build(BuildContext context) => Text(state.recipe.name, style: Theme.of(context).textTheme.titleLarge);
 }
 
 /// The action that carries the calculated run through to the production
@@ -182,9 +181,7 @@ class _Continue extends StatelessWidget {
     // launcher without a null assertion.
     final run = state.preview;
     return FilledButton(
-      onPressed: run != null && state.canContinue
-          ? () => unawaited(_continue(context, run))
-          : null,
+      onPressed: run != null && state.canContinue ? () => unawaited(_continue(context, run)) : null,
       child: Text(context.l10n.productionSetupContinue),
     );
   }
@@ -254,9 +251,7 @@ class _TargetRow extends StatelessWidget {
             decoration: InputDecoration(
               labelText: l10n.productionSetupTargetLabel,
               border: const OutlineInputBorder(),
-              errorText: state.amountIsInvalid
-                  ? l10n.productionSetupAmountInvalid
-                  : null,
+              errorText: state.amountIsInvalid ? l10n.productionSetupAmountInvalid : null,
             ),
             onChanged: cubit.targetAmountChanged,
           ),
@@ -280,8 +275,7 @@ class _TargetRow extends StatelessWidget {
                   : null,
             ),
             items: [
-              for (final choice in state.unitChoices)
-                DropdownMenuItem(value: choice, child: Text(choice.symbol)),
+              for (final choice in state.unitChoices) DropdownMenuItem(value: choice, child: Text(choice.symbol)),
             ],
             // A dropdown reports `null` only when its value is cleared,
             // which this one never does; the editor's pickers ignore it on
@@ -357,8 +351,7 @@ class _Calculated extends StatelessWidget {
       children: [
         // First, and above the numbers: the numbers are right, and the run
         // still may not be started.
-        for (final name in state.archivedDependencies)
-          _ErrorText(message: l10n.productionSetupArchived(name)),
+        for (final name in state.archivedDependencies) _ErrorText(message: l10n.productionSetupArchived(name)),
         if (state.archivedDependencies.isNotEmpty) const SizedBox(height: 12),
         _Fact(label: l10n.productionSetupBatches, value: '${plan.batchCount}'),
         // Guarded the way the remainder below it is, and for the same
@@ -480,22 +473,21 @@ String _errorMessage(AppLocalizations l10n, Object? error) => switch (error) {
   // The domain writes "recipe X is not in the index" when the run's own
   // root is absent rather than a reference dangling, and the two are
   // different things to the operator: one is the recipe they chose.
-  MissingDependencyError(:final recipeId, :final missingId)
-      when recipeId == missingId =>
+  MissingDependencyError(:final recipeId, :final missingId) when recipeId == missingId =>
     l10n.productionSetupMissingRecipe,
-  MissingDependencyError(:final missingId) =>
-    l10n.productionSetupMissingDependency(missingId),
+  MissingDependencyError(:final missingId) => l10n.productionSetupMissingDependency(missingId),
   RecipeCycleError(:final path) => l10n.productionSetupCycleError(
     path.join(' → '),
   ),
-  IncompatibleYieldUnitError(:final expected, :final actual) =>
-    l10n.productionSetupIncompatibleStoredYield(expected.symbol, actual.symbol),
+  IncompatibleYieldUnitError(:final expected, :final actual) => l10n.productionSetupIncompatibleStoredYield(
+    expected.symbol,
+    actual.symbol,
+  ),
   // The same sentence `_Outcome` writes for a root over the limit, and
   // deliberately so: which recipe in the run planned too many batches is a
   // fact about the calculation, and what the operator does about it —
   // enter a smaller amount — is the same either way. The recipe id the
   // error carries would name a sub-recipe the screen never showed them.
-  BatchLimitExceededError(:final maxPlannedBatches) =>
-    l10n.productionSetupTargetTooLarge('$maxPlannedBatches'),
+  BatchLimitExceededError(:final maxPlannedBatches) => l10n.productionSetupTargetTooLarge('$maxPlannedBatches'),
   _ => l10n.productionSetupFailed,
 };

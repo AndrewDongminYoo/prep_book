@@ -169,8 +169,7 @@ void main() {
     );
     await expectLater(
       FilePickerLibraryBackupPlatform(
-        savePicker: ({required suggestedName, required bytes}) async =>
-            throw saveError,
+        savePicker: ({required suggestedName, required bytes}) async => throw saveError,
       ).saveBackup(
         LibraryBackupFile(
           bytes: Uint8List.fromList([1]),
@@ -187,11 +186,10 @@ void main() {
 Matcher _failureKind(LibraryBackupFailureKind kind) =>
     isA<LibraryBackupException>().having((error) => error.kind, 'kind', kind);
 
-Matcher _failureWithCause(LibraryBackupFailureKind kind, Object cause) =>
-    isA<LibraryBackupException>()
-        .having((error) => error.kind, 'kind', kind)
-        .having((error) => error.cause, 'cause', same(cause))
-        .having((error) => error.stackTrace, 'stackTrace', isNotNull);
+Matcher _failureWithCause(LibraryBackupFailureKind kind, Object cause) => isA<LibraryBackupException>()
+    .having((error) => error.kind, 'kind', kind)
+    .having((error) => error.cause, 'cause', same(cause))
+    .having((error) => error.stackTrace, 'stackTrace', isNotNull);
 
 final class _TestPlatformFile extends PlatformFile {
   _TestPlatformFile(this._bytes);

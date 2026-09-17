@@ -35,12 +35,10 @@ final class DeferredRecipeRepository implements RecipeRepository {
   int get readCount => pending.length;
 
   /// Answers the read at [index] with [recipes].
-  void complete(int index, List<Recipe> recipes) =>
-      pending[index].complete(recipes);
+  void complete(int index, List<Recipe> recipes) => pending[index].complete(recipes);
 
   /// Fails the read at [index].
-  void fail(int index, [Object error = 'the database is unreadable']) =>
-      pending[index].completeError(error);
+  void fail(int index, [Object error = 'the database is unreadable']) => pending[index].completeError(error);
 
   @override
   Future<List<Recipe>> listLatestRevisions() {
@@ -54,12 +52,10 @@ final class DeferredRecipeRepository implements RecipeRepository {
       throw UnsupportedError('the library screen never reads one revision');
 
   @override
-  Future<Recipe?> findLatest(String id) =>
-      throw UnsupportedError('this fake defers list reads only');
+  Future<Recipe?> findLatest(String id) => throw UnsupportedError('this fake defers list reads only');
 
   @override
-  Future<void> saveRevision(Recipe recipe) =>
-      throw UnsupportedError('this fake defers list reads only');
+  Future<void> saveRevision(Recipe recipe) => throw UnsupportedError('this fake defers list reads only');
 
   @override
   Future<void> setArchived(String id, {required bool isArchived}) =>
@@ -98,15 +94,13 @@ final class FailingLifecycleRecipeRepository implements RecipeRepository {
   }
 
   @override
-  Future<Recipe?> findRevision(String id, int revision) =>
-      reads.findRevision(id, revision);
+  Future<Recipe?> findRevision(String id, int revision) => reads.findRevision(id, revision);
 
   @override
   Future<Recipe?> findLatest(String id) => reads.findLatest(id);
 
   @override
-  Future<void> saveRevision(Recipe recipe) async =>
-      throw StateError('the database is unwritable');
+  Future<void> saveRevision(Recipe recipe) async => throw StateError('the database is unwritable');
 
   @override
   Future<void> setArchived(String id, {required bool isArchived}) async =>
@@ -150,12 +144,10 @@ final class DeferredIngredientRepository implements IngredientRepository {
   bool deferWrites = false;
 
   /// Answers the read at [index] with [ingredients].
-  void complete(int index, List<Ingredient> ingredients) =>
-      pending[index].complete(ingredients);
+  void complete(int index, List<Ingredient> ingredients) => pending[index].complete(ingredients);
 
   /// Fails the read at [index].
-  void fail(int index, [Object error = 'the database is unreadable']) =>
-      pending[index].completeError(error);
+  void fail(int index, [Object error = 'the database is unreadable']) => pending[index].completeError(error);
 
   /// Answers the deferred write at [index].
   void completeWrite(int index) => pendingWrites[index].complete();
@@ -178,12 +170,10 @@ final class DeferredIngredientRepository implements IngredientRepository {
   }
 
   @override
-  Future<Ingredient?> findById(String id) =>
-      throw UnsupportedError('the editor never reads one ingredient');
+  Future<Ingredient?> findById(String id) => throw UnsupportedError('the editor never reads one ingredient');
 
   @override
-  Future<void> delete(String id) =>
-      throw UnsupportedError('the editor never deletes an ingredient');
+  Future<void> delete(String id) => throw UnsupportedError('the editor never deletes an ingredient');
 }
 
 /// A recipe repository that reads through [FakeRecipeRepository] and holds
@@ -215,8 +205,7 @@ final class DeferredWriteRecipeRepository implements RecipeRepository {
   void completeWrite(int index) => pendingWrites[index].complete();
 
   /// Fails the write at [index].
-  void failWrite(int index, [Object error = 'the database is unwritable']) =>
-      pendingWrites[index].completeError(error);
+  void failWrite(int index, [Object error = 'the database is unwritable']) => pendingWrites[index].completeError(error);
 
   @override
   Future<void> saveRevision(Recipe recipe) {
@@ -230,8 +219,7 @@ final class DeferredWriteRecipeRepository implements RecipeRepository {
   Future<List<Recipe>> listLatestRevisions() => reads.listLatestRevisions();
 
   @override
-  Future<Recipe?> findRevision(String id, int revision) =>
-      reads.findRevision(id, revision);
+  Future<Recipe?> findRevision(String id, int revision) => reads.findRevision(id, revision);
 
   @override
   Future<Recipe?> findLatest(String id) => reads.findLatest(id);
@@ -298,12 +286,10 @@ final class DeferredLookupRecipeRepository implements RecipeRepository {
   final List<String> lookups = [];
 
   /// Answers the lookup at [index] out of [reads].
-  Future<void> complete(int index) async =>
-      pending[index].complete(await reads.findLatest(lookups[index]));
+  Future<void> complete(int index) async => pending[index].complete(await reads.findLatest(lookups[index]));
 
   /// Fails the lookup at [index].
-  void fail(int index, [Object error = 'the database is unreadable']) =>
-      pending[index].completeError(error);
+  void fail(int index, [Object error = 'the database is unreadable']) => pending[index].completeError(error);
 
   @override
   Future<Recipe?> findLatest(String id) {
@@ -321,8 +307,7 @@ final class DeferredLookupRecipeRepository implements RecipeRepository {
       throw UnsupportedError('production setup never reads one revision');
 
   @override
-  Future<void> saveRevision(Recipe recipe) =>
-      throw UnsupportedError('production setup never writes');
+  Future<void> saveRevision(Recipe recipe) => throw UnsupportedError('production setup never writes');
 
   @override
   Future<void> setArchived(String id, {required bool isArchived}) =>
@@ -378,15 +363,14 @@ ProductionSetupLauncher buildProductionLauncher(
 
 /// A production result launcher over in-memory storage, wired the way the
 /// entrypoints wire the real one.
-ProductionResultLauncher buildResultLauncher(ProductionRunRepository runs) =>
-    ProductionResultLauncher(
-      acknowledgeWarning: const AcknowledgeWarning(),
-      applyOverride: const ApplyOverride(),
-      saveProductionRun: SaveProductionRun(runs),
-      productionSheet: const ProductionSheetLauncher(
-        platform: PrintingProductionSheetPlatform(),
-      ),
-    );
+ProductionResultLauncher buildResultLauncher(ProductionRunRepository runs) => ProductionResultLauncher(
+  acknowledgeWarning: const AcknowledgeWarning(),
+  applyOverride: const ApplyOverride(),
+  saveProductionRun: SaveProductionRun(runs),
+  productionSheet: const ProductionSheetLauncher(
+    platform: PrintingProductionSheetPlatform(),
+  ),
+);
 
 /// A sub-recipe produced one gram at a time.
 ///
@@ -422,16 +406,13 @@ Recipe buildGrainSubRecipe() => Recipe(
 /// which is a different story and one the screen already prevents.
 final class UnwritableRunRepository implements ProductionRunRepository {
   @override
-  Future<void> save(ProductionRun run) async =>
-      throw StateError('the database is unwritable');
+  Future<void> save(ProductionRun run) async => throw StateError('the database is unwritable');
 
   @override
-  Future<List<ProductionRunSummary>> listSummaries() =>
-      throw UnsupportedError('the result screen never lists runs');
+  Future<List<ProductionRunSummary>> listSummaries() => throw UnsupportedError('the result screen never lists runs');
 
   @override
-  Future<ProductionRun?> findById(String id) =>
-      throw UnsupportedError('the result screen never reopens a run');
+  Future<ProductionRun?> findById(String id) => throw UnsupportedError('the result screen never reopens a run');
 
   @override
   Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
@@ -466,12 +447,10 @@ final class PendingRunRepository implements ProductionRunRepository {
   }
 
   @override
-  Future<List<ProductionRunSummary>> listSummaries() =>
-      throw UnsupportedError('the result screen never lists runs');
+  Future<List<ProductionRunSummary>> listSummaries() => throw UnsupportedError('the result screen never lists runs');
 
   @override
-  Future<ProductionRun?> findById(String id) =>
-      throw UnsupportedError('the result screen never reopens a run');
+  Future<ProductionRun?> findById(String id) => throw UnsupportedError('the result screen never reopens a run');
 
   @override
   Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
@@ -536,28 +515,27 @@ Future<ProductionRun> buildReviewableRun({
 /// storage, so a run can reference an ingredient the library does not hold,
 /// and that line is what keeps the identifier fallback exercised by the
 /// same fixture that exercises the names.
-FakeIngredientRepository buildReviewableIngredients() =>
-    FakeIngredientRepository()
-      ..stored['flour'] = Ingredient(
-        id: 'flour',
-        name: 'Bread flour',
-        defaultUnit: Unit.gram,
-      )
-      ..stored['salt'] = Ingredient(
-        id: 'salt',
-        name: 'Fine sea salt',
-        defaultUnit: Unit.gram,
-      )
-      ..stored['water'] = Ingredient(
-        id: 'water',
-        name: 'Filtered water',
-        defaultUnit: Unit.gram,
-      )
-      ..stored['liner'] = Ingredient(
-        id: 'liner',
-        name: 'Baking liner',
-        defaultUnit: sheetUnit,
-      );
+FakeIngredientRepository buildReviewableIngredients() => FakeIngredientRepository()
+  ..stored['flour'] = Ingredient(
+    id: 'flour',
+    name: 'Bread flour',
+    defaultUnit: Unit.gram,
+  )
+  ..stored['salt'] = Ingredient(
+    id: 'salt',
+    name: 'Fine sea salt',
+    defaultUnit: Unit.gram,
+  )
+  ..stored['water'] = Ingredient(
+    id: 'water',
+    name: 'Filtered water',
+    defaultUnit: Unit.gram,
+  )
+  ..stored['liner'] = Ingredient(
+    id: 'liner',
+    name: 'Baking liner',
+    defaultUnit: sheetUnit,
+  );
 
 /// A run over an archived recipe, which raises the one warning
 /// [buildReviewableRun] does not.

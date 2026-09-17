@@ -62,10 +62,8 @@ List<String> _allCopy(ChampionshipStrings strings) => [
   strings.privacy,
   strings.loading,
   strings.retry,
-  for (final failure in ChampionshipSourceFailure.values)
-    strings.sourceFailure(failure),
-  for (final failure in RecipeImportFailureCode.values)
-    strings.importFailure(failure),
+  for (final failure in ChampionshipSourceFailure.values) strings.sourceFailure(failure),
+  for (final failure in RecipeImportFailureCode.values) strings.importFailure(failure),
   strings.reviewHeading,
   strings.reviewIntro,
   strings.confirmAll,
@@ -108,18 +106,14 @@ List<String> _allCopy(ChampionshipStrings strings) => [
   strings.componentBehaviorFor(0),
   strings.componentNoteFor(0),
   strings.continueToTarget,
-  for (final confidence in ExtractionConfidence.values)
-    strings.confidence(confidence),
-  for (final behavior in DraftScalingBehavior.values)
-    strings.behaviorName(behavior),
+  for (final confidence in ExtractionConfidence.values) strings.confidence(confidence),
+  for (final behavior in DraftScalingBehavior.values) strings.behaviorName(behavior),
   for (final issue in ReviewIssue.values) strings.reviewIssue(issue),
   for (final issue in RecipeDraftVerificationIssueKind.values)
     strings.verificationIssue(
       RecipeDraftVerificationIssue(
         kind: issue,
-        path: issue == RecipeDraftVerificationIssueKind.atLeastOneComponent
-            ? null
-            : 'components[0].name',
+        path: issue == RecipeDraftVerificationIssueKind.atLeastOneComponent ? null : 'components[0].name',
       ),
     ),
   strings.targetHeading,

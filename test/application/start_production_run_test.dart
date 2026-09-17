@@ -40,8 +40,7 @@ final class _ScriptedRandom implements Random {
   bool nextBool() => throw UnsupportedError('a run id is drawn as integers');
 
   @override
-  double nextDouble() =>
-      throw UnsupportedError('a run id is drawn as integers');
+  double nextDouble() => throw UnsupportedError('a run id is drawn as integers');
 }
 
 final class _FixedClock implements Clock {
@@ -61,16 +60,13 @@ final class _CorruptIngredientRepository implements IngredientRepository {
       throw CorruptDatabaseError('unknown unit symbol in ingredient $id: qq');
 
   @override
-  Future<List<Ingredient>> listAll() =>
-      throw UnsupportedError('a run reads one ingredient at a time');
+  Future<List<Ingredient>> listAll() => throw UnsupportedError('a run reads one ingredient at a time');
 
   @override
-  Future<void> upsert(Ingredient ingredient) =>
-      throw UnsupportedError('a run never writes to the library');
+  Future<void> upsert(Ingredient ingredient) => throw UnsupportedError('a run never writes to the library');
 
   @override
-  Future<void> delete(String id) =>
-      throw UnsupportedError('a run never writes to the library');
+  Future<void> delete(String id) => throw UnsupportedError('a run never writes to the library');
 }
 
 StartProductionRun _useCase(

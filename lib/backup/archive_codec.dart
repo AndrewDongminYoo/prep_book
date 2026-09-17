@@ -164,9 +164,7 @@ Uint8List _readAndVerify(ArchiveFile entry, {required int maxBytes}) {
       stackTrace,
     );
   }
-  if (bytes.length != entry.size ||
-      entry.crc32 == null ||
-      getCrc32(bytes) != entry.crc32) {
+  if (bytes.length != entry.size || entry.crc32 == null || getCrc32(bytes) != entry.crc32) {
     _throwInvalidArchive('The archive entry checksum or size is invalid.');
   }
   return bytes;

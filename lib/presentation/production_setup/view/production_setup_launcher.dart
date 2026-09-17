@@ -34,14 +34,13 @@ final class ProductionSetupLauncher {
   ///
   /// Returns nothing, unlike the editor's launcher: this screen stores
   /// nothing, so a caller has nothing to read again when it comes back.
-  Future<void> open(BuildContext context, {required Recipe recipe}) =>
-      Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => ProductionSetupPage(
-            startProductionRun: startProductionRun,
-            recipe: recipe,
-            result: result,
-          ),
-        ),
-      );
+  Future<void> open(BuildContext context, {required Recipe recipe}) => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => ProductionSetupPage(
+        startProductionRun: startProductionRun,
+        recipe: recipe,
+        result: result,
+      ),
+    ),
+  );
 }

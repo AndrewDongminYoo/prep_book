@@ -107,8 +107,7 @@ final class ProductionCalculator {
       _addUnique(warnings, ArchivedDependencyWarning(recipe.id));
     }
     final components = [
-      for (final component in recipe.components)
-        _scale(component, ratio, plan, recipeIndex, recipe.id, warnings),
+      for (final component in recipe.components) _scale(component, ratio, plan, recipeIndex, recipe.id, warnings),
     ];
 
     return ProductionResult(
@@ -154,13 +153,11 @@ final class ProductionCalculator {
     } else if (component.behavior == ScalingBehavior.fixedOnce) {
       perBatchExact = [
         base,
-        for (var i = 1; i < plan.batchCount; i++)
-          Quantity.fromRational(Rational.zero, base.unit),
+        for (var i = 1; i < plan.batchCount; i++) Quantity.fromRational(Rational.zero, base.unit),
       ];
     } else {
       perBatchExact = [
-        for (final batchRatio in _batchRatios(plan))
-          base.scaleBy(ratio * batchRatio),
+        for (final batchRatio in _batchRatios(plan)) base.scaleBy(ratio * batchRatio),
       ];
     }
 

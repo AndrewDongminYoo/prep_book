@@ -29,8 +29,7 @@ final class DatabaseSnapshotter {
          factory,
          files,
          validateCandidate,
-         createCandidatePath ??
-             (() => '$databasePath.backup-candidate-${_randomToken()}'),
+         createCandidatePath ?? (() => '$databasePath.backup-candidate-${_randomToken()}'),
        );
 
   DatabaseSnapshotter._(

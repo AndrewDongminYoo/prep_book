@@ -82,9 +82,7 @@ ORDER BY runs.created_at DESC, runs.id ASC
           rowLabel: 'production_runs row ${row['id']}',
         ),
         createdAt: DateTime.parse(row['created_at']! as String),
-        isDraft:
-            (row['blocking_warning_count']! as int) >
-            (row['acknowledged_blocking_warning_count']! as int),
+        isDraft: (row['blocking_warning_count']! as int) > (row['acknowledged_blocking_warning_count']! as int),
       );
       // A wrong-typed column is a corrupt row, not a programmer bug, so its
       // `TypeError` is caught rather than left to escape.
@@ -161,10 +159,7 @@ ORDER BY runs.created_at DESC, runs.id ASC
     if (recipeId != payload.recipe.id ||
         recipeRevision != payload.recipe.revision ||
         row['recipe_name'] != payload.recipe.name ||
-        row['blocking_warning_count'] !=
-            payload.result.warnings
-                .where((warning) => warning.isBlocking)
-                .length) {
+        row['blocking_warning_count'] != payload.result.warnings.where((warning) => warning.isBlocking).length) {
       throw CorruptDatabaseError(
         'production_runs row $id names recipe $recipeId revision '
         '$recipeRevision, but its result_json holds recipe '
@@ -207,9 +202,7 @@ ORDER BY runs.created_at DESC, runs.id ASC
         'recipe_id': run.recipe.id,
         'recipe_revision': run.recipe.revision,
         'recipe_name': run.recipe.name,
-        'blocking_warning_count': run.result.warnings
-            .where((warning) => warning.isBlocking)
-            .length,
+        'blocking_warning_count': run.result.warnings.where((warning) => warning.isBlocking).length,
         ...quantityToColumns(run.targetYield, 'target'),
         // Normalized before serializing, because [listSummaries] orders on
         // this column as text: [timestampToStorage] moves the value to UTC
@@ -240,51 +233,49 @@ ORDER BY runs.created_at DESC, runs.id ASC
   }
 
   @override
-  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
-      _db.transaction((txn) async {
-        final rows = await txn.query(
-          'production_runs',
-          columns: ['result_json'],
-          where: 'id = ?',
-          whereArgs: [runId],
-          limit: 1,
-        );
-        if (rows.isEmpty) {
-          throw ArgumentError.value(
-            runId,
-            'runId',
-            'No stored production run has this id',
-          );
-        }
-        final resultJson = rows.single['result_json'];
-        if (resultJson is! String) {
-          throw CorruptDatabaseError(
-            'production_runs row $runId holds result_json of the wrong type',
-          );
-        }
-        final payload = decodeRunPayload(
-          resultJson,
-          rowLabel: 'production_runs row $runId',
-        );
-        _requireStoredWarning(
-          runId: runId,
-          warning: warning,
-          storedWarnings: payload.result.warnings,
-        );
-        await txn.insert(
-          'run_acknowledgements',
-          _acknowledgementRow(runId, warning),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      });
+  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) => _db.transaction((txn) async {
+    final rows = await txn.query(
+      'production_runs',
+      columns: ['result_json'],
+      where: 'id = ?',
+      whereArgs: [runId],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      throw ArgumentError.value(
+        runId,
+        'runId',
+        'No stored production run has this id',
+      );
+    }
+    final resultJson = rows.single['result_json'];
+    if (resultJson is! String) {
+      throw CorruptDatabaseError(
+        'production_runs row $runId holds result_json of the wrong type',
+      );
+    }
+    final payload = decodeRunPayload(
+      resultJson,
+      rowLabel: 'production_runs row $runId',
+    );
+    _requireStoredWarning(
+      runId: runId,
+      warning: warning,
+      storedWarnings: payload.result.warnings,
+    );
+    await txn.insert(
+      'run_acknowledgements',
+      _acknowledgementRow(runId, warning),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  });
 
   @override
-  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) =>
-      _db.insert(
-        'run_overrides',
-        _overrideRow(runId, key, value),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) => _db.insert(
+    'run_overrides',
+    _overrideRow(runId, key, value),
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
 
   Future<Set<ProductionWarning>> _acknowledgementsFor(String runId) async {
     final rows = await _db.query(
@@ -363,20 +354,18 @@ ORDER BY runs.created_at DESC, runs.id ASC
     String runId,
     ProductionWarning warning,
   ) => switch (warning) {
-    ManualComponentWarning(:final recipeId, :final componentId) =>
-      <String, Object?>{
-        'run_id': runId,
-        'warning_kind': 'manual_component',
-        'recipe_id': recipeId,
-        'component_id': componentId,
-      },
-    RoundingAdjustedWarning(:final recipeId, :final componentId) =>
-      <String, Object?>{
-        'run_id': runId,
-        'warning_kind': 'rounding_adjusted',
-        'recipe_id': recipeId,
-        'component_id': componentId,
-      },
+    ManualComponentWarning(:final recipeId, :final componentId) => <String, Object?>{
+      'run_id': runId,
+      'warning_kind': 'manual_component',
+      'recipe_id': recipeId,
+      'component_id': componentId,
+    },
+    RoundingAdjustedWarning(:final recipeId, :final componentId) => <String, Object?>{
+      'run_id': runId,
+      'warning_kind': 'rounding_adjusted',
+      'recipe_id': recipeId,
+      'component_id': componentId,
+    },
     ArchivedDependencyWarning(:final recipeId) => <String, Object?>{
       'run_id': runId,
       'warning_kind': 'archived_dependency',
@@ -416,10 +405,8 @@ ORDER BY runs.created_at DESC, runs.id ASC
           recipeId,
           componentId,
         ),
-        'rounding_adjusted' when componentId is String =>
-          RoundingAdjustedWarning(recipeId, componentId),
-        'archived_dependency' when componentId == null =>
-          ArchivedDependencyWarning(recipeId),
+        'rounding_adjusted' when componentId is String => RoundingAdjustedWarning(recipeId, componentId),
+        'archived_dependency' when componentId == null => ArchivedDependencyWarning(recipeId),
         _ => throw CorruptDatabaseError(
           'unrecognised acknowledgement in $rowLabel: warning_kind=$kind, '
           'component_id=$componentId',
@@ -442,8 +429,7 @@ ORDER BY runs.created_at DESC, runs.id ASC
   /// named the same way as a wrong-typed column. The run id is what makes
   /// either message actionable: `warning_kind` and `component_id` repeat
   /// across every run in the table, so they identify no row on their own.
-  String _acknowledgementLabel(Map<String, Object?> row) =>
-      'run_acknowledgements row for run ${row['run_id']}';
+  String _acknowledgementLabel(Map<String, Object?> row) => 'run_acknowledgements row for run ${row['run_id']}';
 
   /// Encodes an operator override [value] for [key] on [runId] as a
   /// `run_overrides` row.

@@ -39,11 +39,7 @@ List<File> _dartFilesUnder(String directoryPath) {
   if (!directory.existsSync()) {
     throw StateError('$directoryPath does not exist. No files were checked.');
   }
-  return directory
-      .listSync(recursive: true)
-      .whereType<File>()
-      .where((file) => file.path.endsWith('.dart'))
-      .toList();
+  return directory.listSync(recursive: true).whereType<File>().where((file) => file.path.endsWith('.dart')).toList();
 }
 
 Iterable<String> _directiveUris(String source) sync* {
@@ -57,8 +53,7 @@ Iterable<String> _directiveUris(String source) sync* {
 void main() {
   test('the shipping product does not import the championship variant', () {
     final productFiles = [
-      for (final directory in _productDirectories)
-        ..._dartFilesUnder(directory),
+      for (final directory in _productDirectories) ..._dartFilesUnder(directory),
       for (final path in _productEntrypoints) File(path),
     ];
     final offenders = <String>[];

@@ -37,16 +37,15 @@ final class ProductionResultLauncher {
   /// Returns nothing. The screen stores the run under an identifier the
   /// caller already holds, and reopening a stored run is the history
   /// screen's job, so there is nothing here for a caller to read back.
-  Future<void> open(BuildContext context, {required ProductionRun run}) =>
-      Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => ProductionResultPage(
-            acknowledgeWarning: acknowledgeWarning,
-            applyOverride: applyOverride,
-            saveProductionRun: saveProductionRun,
-            productionSheet: productionSheet,
-            run: run,
-          ),
-        ),
-      );
+  Future<void> open(BuildContext context, {required ProductionRun run}) => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => ProductionResultPage(
+        acknowledgeWarning: acknowledgeWarning,
+        applyOverride: applyOverride,
+        saveProductionRun: saveProductionRun,
+        productionSheet: productionSheet,
+        run: run,
+      ),
+    ),
+  );
 }

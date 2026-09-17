@@ -66,9 +66,7 @@ class ProductionSheetBuilder {
         depth: depth,
         recipeName: recipe?.name ?? fallbackRecipeId,
         targetYield: localizations.formatQuantity(target),
-        baseYield: recipe == null
-            ? null
-            : localizations.formatQuantity(recipe.baseYield),
+        baseYield: recipe == null ? null : localizations.formatQuantity(recipe.baseYield),
         batchCount: result.batchPlan.batchCount,
         preparationNotes: recipe?.preparationNotes ?? const [],
         tables: switch (organization) {
@@ -126,8 +124,7 @@ class ProductionSheetBuilder {
     required ProductionSheetLocalizations localizations,
   }) {
     final yields = <Quantity>[
-      for (var index = 0; index < result.batchPlan.fullBatchCount; index++)
-        result.batchPlan.fullBatchYield,
+      for (var index = 0; index < result.batchPlan.fullBatchCount; index++) result.batchPlan.fullBatchYield,
       ?result.batchPlan.remainderYield,
     ];
     final candidates = <_BatchTable>[
@@ -154,16 +151,13 @@ class ProductionSheetBuilder {
     var first = 0;
     while (first < candidates.length) {
       var last = first;
-      while (last + 1 < candidates.length &&
-          candidates[first].hasSameStoredValues(candidates[last + 1])) {
+      while (last + 1 < candidates.length && candidates[first].hasSameStoredValues(candidates[last + 1])) {
         last++;
       }
       final candidate = candidates[first];
       tables.add(
         ProductionSheetTable(
-          heading: first == last
-              ? localizations.batch(first + 1)
-              : localizations.batchRange(first + 1, last + 1),
+          heading: first == last ? localizations.batch(first + 1) : localizations.batchRange(first + 1, last + 1),
           batchYield: localizations.formatQuantity(candidate.yield),
           rows: [for (final sourceRow in candidate.rows) sourceRow.row],
         ),
@@ -187,25 +181,19 @@ class ProductionSheetBuilder {
       calculated: quantity == null
           ? localizations.labels.manualAmount
           : localizations.formatQuantity(quantity.displayed),
-      exact: quantity?.wasRounded ?? false
-          ? localizations.formatQuantity(quantity!.exact)
-          : null,
+      exact: quantity?.wasRounded ?? false ? localizations.formatQuantity(quantity!.exact) : null,
       base: switch (component.source.baseQuantity) {
         null => null,
         final base => localizations.formatQuantity(base),
       },
-      actualWholeRun: override == null
-          ? null
-          : localizations.formatQuantity(override),
+      actualWholeRun: override == null ? null : localizations.formatQuantity(override),
     );
   }
 
   String _componentName(ProductionRun run, RecipeComponent component) {
     return switch (component.target) {
-      IngredientRef(:final ingredientId) =>
-        run.ingredientSnapshot[ingredientId]?.name ?? ingredientId,
-      SubRecipeRef(:final recipeId) =>
-        run.dependencySnapshot[recipeId]?.name ?? recipeId,
+      IngredientRef(:final ingredientId) => run.ingredientSnapshot[ingredientId]?.name ?? ingredientId,
+      SubRecipeRef(:final recipeId) => run.dependencySnapshot[recipeId]?.name ?? recipeId,
     };
   }
 
@@ -217,20 +205,14 @@ class ProductionSheetBuilder {
     final acknowledged = <ProductionSheetWarning>[];
     for (final warning in run.result.warnings) {
       final recipeId = _warningRecipeId(warning);
-      final recipe = recipeId == run.recipe.id
-          ? run.recipe
-          : run.dependencySnapshot[recipeId];
+      final recipe = recipeId == run.recipe.id ? run.recipe : run.dependencySnapshot[recipeId];
       final componentId = _warningComponentId(warning);
-      final component = componentId == null || recipe == null
-          ? null
-          : _findComponent(recipe, componentId);
+      final component = componentId == null || recipe == null ? null : _findComponent(recipe, componentId);
       final resolved = ProductionSheetWarning(
         message: localizations.warningMessage(
           warning: warning,
           recipeName: recipe?.name ?? recipeId,
-          componentName: component == null
-              ? componentId
-              : _componentName(run, component),
+          componentName: component == null ? componentId : _componentName(run, component),
         ),
       );
       if (run.acknowledgedWarnings.contains(warning)) {

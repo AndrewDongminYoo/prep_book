@@ -92,8 +92,7 @@ class _RecipeEditorViewState extends State<RecipeEditorView> {
     return BlocConsumer<RecipeEditorCubit, RecipeEditorState>(
       listenWhen: (previous, current) =>
           current.status == RecipeEditorStatus.saved ||
-          (current.saveError != null &&
-              current.saveError != previous.saveError),
+          (current.saveError != null && current.saveError != previous.saveError),
       listener: (context, state) {
         // A failure is reported where the operator is looking rather than
         // inline: Save sits in the app bar, so the form can be scrolled
@@ -136,9 +135,7 @@ class _RecipeEditorViewState extends State<RecipeEditorView> {
         child: Scaffold(
           appBar: AppBar(
             title: Text(
-              state.isNewRecipe
-                  ? l10n.recipeEditorNewTitle
-                  : l10n.recipeEditorEditTitle,
+              state.isNewRecipe ? l10n.recipeEditorNewTitle : l10n.recipeEditorEditTitle,
             ),
             actions: [
               // Disabled unless the form is up and idle: a second tap while
@@ -146,9 +143,7 @@ class _RecipeEditorViewState extends State<RecipeEditorView> {
               // during the ingredient write would store the recipe without
               // the line that write is adding.
               TextButton(
-                onPressed: state.isEditable
-                    ? context.read<RecipeEditorCubit>().save
-                    : null,
+                onPressed: state.isEditable ? context.read<RecipeEditorCubit>().save : null,
                 child: Text(l10n.recipeEditorSave),
               ),
             ],
@@ -166,9 +161,7 @@ class _RecipeEditorViewState extends State<RecipeEditorView> {
                 return Center(
                   child: SizedBox(
                     key: const ValueKey('recipe-editor-width-boundary'),
-                    width: constraints.maxWidth > 960
-                        ? 960
-                        : constraints.maxWidth,
+                    width: constraints.maxWidth > 960 ? 960 : constraints.maxWidth,
                     height: constraints.maxHeight,
                     child: body,
                   ),
@@ -182,10 +175,9 @@ class _RecipeEditorViewState extends State<RecipeEditorView> {
   }
 
   /// Shows [message] over whatever the operator is currently looking at.
-  static void _report(BuildContext context, String message) =>
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+  static void _report(BuildContext context, String message) => ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(message)));
 }
 
 /// Whichever of the three bodies the current [state] calls for.
@@ -210,9 +202,7 @@ class _EditorBody extends StatelessWidget {
     // unlikely. Pointer events are absorbed, and focus is excluded as well,
     // because a field the operator was already typing into keeps its
     // keyboard connection no matter what sits above it.
-    RecipeEditorStatus.ready ||
-    RecipeEditorStatus.saving ||
-    RecipeEditorStatus.saved => AbsorbPointer(
+    RecipeEditorStatus.ready || RecipeEditorStatus.saving || RecipeEditorStatus.saved => AbsorbPointer(
       absorbing: !state.isEditable,
       child: ExcludeFocus(
         excluding: !state.isEditable,
@@ -290,8 +280,7 @@ class _EditorForm extends StatelessWidget {
       // destination index already adjusted for the row leaving its old
       // place, which is the off-by-one every caller of the older callback
       // had to correct itself.
-      onReorderItem: (oldIndex, newIndex) =>
-          cubit.reorderComponent(oldIndex: oldIndex, newIndex: newIndex),
+      onReorderItem: (oldIndex, newIndex) => cubit.reorderComponent(oldIndex: oldIndex, newIndex: newIndex),
       children: [
         for (final (index, draft) in state.components.indexed)
           _ComponentCard(
@@ -333,9 +322,7 @@ class _MetadataSection extends StatelessWidget {
             // Errors stay off until a save has been attempted; a form that
             // reports what is missing before anything is typed reports
             // everything at once.
-            errorText: state.submitted && state.nameIsMissing
-                ? l10n.recipeEditorNameRequired
-                : null,
+            errorText: state.submitted && state.nameIsMissing ? l10n.recipeEditorNameRequired : null,
           ),
           onChanged: cubit.nameChanged,
         ),
@@ -360,9 +347,7 @@ class _MetadataSection extends StatelessWidget {
           unit: state.baseYieldUnitChosen ? state.baseYieldUnit : null,
           choices: state.unitChoices,
           errorText: _baseYieldError(l10n, state),
-          unitErrorText: state.submitted && !state.baseYieldUnitChosen
-              ? l10n.recipeEditorUnitRequired
-              : null,
+          unitErrorText: state.submitted && !state.baseYieldUnitChosen ? l10n.recipeEditorUnitRequired : null,
           onAmountChanged: cubit.baseYieldAmountChanged,
           onUnitChanged: cubit.baseYieldUnitChanged,
         ),
@@ -435,9 +420,7 @@ class _MetadataSection extends StatelessWidget {
   ) {
     if (!state.submitted) return null;
     if (state.maxBatchIsInvalid) return l10n.recipeEditorAmountRequired;
-    return state.maxBatchUnitIsIncompatible
-        ? l10n.recipeEditorUnitIncompatible
-        : null;
+    return state.maxBatchUnitIsIncompatible ? l10n.recipeEditorUnitIncompatible : null;
   }
 }
 
@@ -505,8 +488,7 @@ class _AmountRow extends StatelessWidget {
               errorText: unitErrorText,
             ),
             items: [
-              for (final choice in choices)
-                DropdownMenuItem(value: choice, child: Text(choice.symbol)),
+              for (final choice in choices) DropdownMenuItem(value: choice, child: Text(choice.symbol)),
             ],
             // A dropdown reports `null` only when its value is cleared,
             // which none of these ever do; ignoring it beats inventing a
@@ -650,10 +632,8 @@ class _ComponentCard extends StatelessWidget {
                 // target yield the referenced recipe is run against.
                 choices: state.unitChoicesFor(draft),
                 errorText: _componentAmountError(l10n, state, draft),
-                onAmountChanged: (value) =>
-                    cubit.componentAmountChanged(draft.id, value),
-                onUnitChanged: (unit) =>
-                    cubit.componentUnitChanged(draft.id, unit),
+                onAmountChanged: (value) => cubit.componentAmountChanged(draft.id, value),
+                onUnitChanged: (unit) => cubit.componentUnitChanged(draft.id, unit),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -665,12 +645,9 @@ class _ComponentCard extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: l10n.recipeEditorRoundingLabel,
                   border: const OutlineInputBorder(),
-                  errorText: state.submitted && state.roundingIsInvalid(draft)
-                      ? l10n.recipeEditorAmountRequired
-                      : null,
+                  errorText: state.submitted && state.roundingIsInvalid(draft) ? l10n.recipeEditorAmountRequired : null,
                 ),
-                onChanged: (value) =>
-                    cubit.componentRoundingChanged(draft.id, value),
+                onChanged: (value) => cubit.componentRoundingChanged(draft.id, value),
               ),
             ],
             const SizedBox(height: 12),
@@ -701,9 +678,7 @@ class _ComponentCard extends StatelessWidget {
   ) {
     if (!state.submitted) return null;
     if (state.amountIsInvalid(draft)) return l10n.recipeEditorAmountRequired;
-    return state.subRecipeUnitIsIncompatible(draft)
-        ? l10n.recipeEditorSubRecipeUnitIncompatible
-        : null;
+    return state.subRecipeUnitIsIncompatible(draft) ? l10n.recipeEditorSubRecipeUnitIncompatible : null;
   }
 }
 
@@ -759,9 +734,7 @@ class _ComponentActions extends StatelessWidget {
             // archived, which the choices exclude. That case gets the
             // picker's own wording, which promises nothing.
             child: Text(
-              state.isNewRecipe
-                  ? l10n.recipeEditorSubRecipeUnavailable
-                  : l10n.recipeEditorSubRecipeNone,
+              state.isNewRecipe ? l10n.recipeEditorSubRecipeUnavailable : l10n.recipeEditorSubRecipeNone,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -775,42 +748,37 @@ class _ComponentActions extends StatelessWidget {
 /// An identifier is what the seed's components carry for ingredients that
 /// have no stored record, so this is what the operator sees until one
 /// exists — a readable line rather than a blank one.
-String _targetName(RecipeEditorState state, ComponentTarget target) =>
-    switch (target) {
-      IngredientRef(:final ingredientId) => _firstOr([
-        for (final ingredient in state.ingredients)
-          if (ingredient.id == ingredientId) ingredient.name,
-      ], ingredientId),
-      SubRecipeRef(:final recipeId) => _firstOr([
-        for (final recipe in state.libraryRecipes)
-          if (recipe.id == recipeId) recipe.name,
-      ], recipeId),
-    };
+String _targetName(RecipeEditorState state, ComponentTarget target) => switch (target) {
+  IngredientRef(:final ingredientId) => _firstOr([
+    for (final ingredient in state.ingredients)
+      if (ingredient.id == ingredientId) ingredient.name,
+  ], ingredientId),
+  SubRecipeRef(:final recipeId) => _firstOr([
+    for (final recipe in state.libraryRecipes)
+      if (recipe.id == recipeId) recipe.name,
+  ], recipeId),
+};
 
 /// The first of [names], or [fallback] when there are none.
-String _firstOr(List<String> names, String fallback) =>
-    names.isEmpty ? fallback : names.first;
+String _firstOr(List<String> names, String fallback) => names.isEmpty ? fallback : names.first;
 
 /// What each scaling behavior is called on screen.
-String _behaviorLabel(AppLocalizations l10n, ScalingBehavior behavior) =>
-    switch (behavior) {
-      ScalingBehavior.proportional => l10n.recipeEditorBehaviorProportional,
-      ScalingBehavior.perBatch => l10n.recipeEditorBehaviorPerBatch,
-      ScalingBehavior.fixedOnce => l10n.recipeEditorBehaviorFixedOnce,
-      ScalingBehavior.manual => l10n.recipeEditorBehaviorManual,
-    };
+String _behaviorLabel(AppLocalizations l10n, ScalingBehavior behavior) => switch (behavior) {
+  ScalingBehavior.proportional => l10n.recipeEditorBehaviorProportional,
+  ScalingBehavior.perBatch => l10n.recipeEditorBehaviorPerBatch,
+  ScalingBehavior.fixedOnce => l10n.recipeEditorBehaviorFixedOnce,
+  ScalingBehavior.manual => l10n.recipeEditorBehaviorManual,
+};
 
 /// What a failed save says, carrying what the error itself names.
 ///
 /// A cycle and a missing dependency are the two the operator can act on, so
 /// they are rendered with the path and the identifier the domain found
 /// rather than as a generic failure.
-String _saveErrorMessage(AppLocalizations l10n, Object error) =>
-    switch (error) {
-      RecipeCycleError(:final path) => l10n.recipeEditorCycleError(
-        path.join(' → '),
-      ),
-      MissingDependencyError(:final missingId) =>
-        l10n.recipeEditorMissingDependency(missingId),
-      _ => l10n.recipeEditorSaveFailed,
-    };
+String _saveErrorMessage(AppLocalizations l10n, Object error) => switch (error) {
+  RecipeCycleError(:final path) => l10n.recipeEditorCycleError(
+    path.join(' → '),
+  ),
+  MissingDependencyError(:final missingId) => l10n.recipeEditorMissingDependency(missingId),
+  _ => l10n.recipeEditorSaveFailed,
+};

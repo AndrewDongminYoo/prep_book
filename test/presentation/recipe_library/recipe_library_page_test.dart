@@ -11,11 +11,9 @@ import '../../application/fakes.dart';
 import '../../helpers/helpers.dart';
 import '../fakes.dart';
 
-const _emptyMessage =
-    'No recipes yet. Create your first recipe to get started.';
+const _emptyMessage = 'No recipes yet. Create your first recipe to get started.';
 const _noMatchMessage = 'No recipes match your search or filter.';
-const _onlyArchivedMessage =
-    'Every recipe here is archived. Turn the switch on to see them.';
+const _onlyArchivedMessage = 'Every recipe here is archived. Turn the switch on to see them.';
 const _errorMessage = 'The recipe library could not be loaded.';
 
 /// Longer than the debounce the page's cubit runs with, so a pump of this
@@ -129,8 +127,7 @@ final class _HistorySheetPlatform implements ProductionSheetPlatform {
   }) => const SizedBox.shrink();
 
   @override
-  Future<bool> print({required Uint8List bytes, required String name}) async =>
-      true;
+  Future<bool> print({required Uint8List bytes, required String name}) async => true;
 
   @override
   Future<bool> share({
@@ -172,8 +169,8 @@ final Finder _emptyLibraryCreateButton = find.widgetWithText(
   'New recipe',
 );
 
-ListTile _recipeTile(WidgetTester tester, String name) => tester
-    .widget<ListTile>(_inLibraryList(find.widgetWithText(ListTile, name)));
+ListTile _recipeTile(WidgetTester tester, String name) =>
+    tester.widget<ListTile>(_inLibraryList(find.widgetWithText(ListTile, name)));
 
 ScrollPosition _detailScroll(WidgetTester tester) => tester
     .state<ScrollableState>(
@@ -251,8 +248,7 @@ FakeRecipeRepository _categorisedLibrary() => FakeRecipeRepository()
 /// The chip labelled [label].
 Finder _chip(String label) => find.widgetWithText(ChoiceChip, label);
 
-bool _isSelected(WidgetTester tester, String label) =>
-    tester.widget<ChoiceChip>(_chip(label)).selected;
+bool _isSelected(WidgetTester tester, String label) => tester.widget<ChoiceChip>(_chip(label)).selected;
 
 void main() {
   group('RecipeLibraryPage', () {
@@ -1807,8 +1803,7 @@ void main() {
     testWidgets('no chips are shown when no recipe has a category', (
       tester,
     ) async {
-      final uncategorised = FakeRecipeRepository()
-        ..seed(buildRecipe(id: 'r-a', name: 'Ciabatta'));
+      final uncategorised = FakeRecipeRepository()..seed(buildRecipe(id: 'r-a', name: 'Ciabatta'));
       await tester.pumpApp(_libraryOver(uncategorised));
       await tester.pump();
 

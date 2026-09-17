@@ -131,14 +131,10 @@ ThemeData _championshipTheme() {
         ),
         side: WidgetStatePropertyAll(BorderSide(color: colors.outlineVariant)),
         backgroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? const Color(0xFFF0F3F7)
-              : colors.surface,
+          (states) => states.contains(WidgetState.selected) ? const Color(0xFFF0F3F7) : colors.surface,
         ),
         foregroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? colors.onSurface
-              : colors.onSurfaceVariant,
+          (states) => states.contains(WidgetState.selected) ? colors.onSurface : colors.onSurfaceVariant,
         ),
       ),
     ),
@@ -155,8 +151,7 @@ class _ResolvedLocaleReporter extends StatefulWidget {
   final Widget child;
 
   @override
-  State<_ResolvedLocaleReporter> createState() =>
-      _ResolvedLocaleReporterState();
+  State<_ResolvedLocaleReporter> createState() => _ResolvedLocaleReporterState();
 }
 
 class _ResolvedLocaleReporterState extends State<_ResolvedLocaleReporter> {

@@ -25,11 +25,9 @@ void main() {
       final bundle = _FileAssetBundle();
       final extracted = await ChampionshipSampleLoader(bundle: bundle).load();
 
-      final review = ReviewRecipeDraft.fromExtracted(extracted)
-          .confirmAllUnambiguous()
-          .editComponentUnit(2, 'g')
-          .confirmComponentUnit(2)
-          .confirmComponentBehavior(3);
+      final review = ReviewRecipeDraft.fromExtracted(
+        extracted,
+      ).confirmAllUnambiguous().editComponentUnit(2, 'g').confirmComponentUnit(2).confirmComponentBehavior(3);
       final verification = const RecipeDraftVerifier().verify(review);
       final verified = (verification as RecipeDraftVerified).draft;
       final run = const ChampionshipRunBuilder().build(

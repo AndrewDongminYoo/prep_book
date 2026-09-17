@@ -22,8 +22,7 @@ void main() {
   });
 
   test('restoring clears it again', () async {
-    final recipes = FakeRecipeRepository()
-      ..seed(buildRecipe(id: 'a', isArchived: true));
+    final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a', isArchived: true));
 
     await ArchiveRecipe(recipes).call('a', isArchived: false);
 
@@ -50,8 +49,7 @@ void main() {
   });
 
   test('a duplicate starts at revision 1 under the new id', () async {
-    final recipes = FakeRecipeRepository()
-      ..seed(buildRecipe(id: 'a', revision: 4, name: 'Original'));
+    final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a', revision: 4, name: 'Original'));
 
     final copy = await DuplicateRecipe(
       recipes,
@@ -65,8 +63,7 @@ void main() {
   });
 
   test('a duplicate is never archived, whatever the source was', () async {
-    final recipes = FakeRecipeRepository()
-      ..seed(buildRecipe(id: 'a', isArchived: true));
+    final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a', isArchived: true));
 
     final copy = await DuplicateRecipe(
       recipes,

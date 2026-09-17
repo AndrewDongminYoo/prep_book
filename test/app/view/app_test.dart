@@ -125,8 +125,7 @@ final class _SheetPlatform implements ProductionSheetPlatform {
   }) => const SizedBox.shrink();
 
   @override
-  Future<bool> print({required Uint8List bytes, required String name}) async =>
-      true;
+  Future<bool> print({required Uint8List bytes, required String name}) async => true;
 
   @override
   Future<bool> share({

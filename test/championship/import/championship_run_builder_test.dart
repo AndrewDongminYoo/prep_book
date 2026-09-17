@@ -11,16 +11,13 @@ VerifiedRecipeDraft _verifiedDraft({bool removeMaxBatchYield = false}) {
   final extracted = ExtractedRecipeDraft.fromJson(
     jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>,
   );
-  var review = ReviewRecipeDraft.fromExtracted(extracted)
-      .confirmAllUnambiguous()
-      .editComponentUnit(2, 'g')
-      .confirmComponentUnit(2)
-      .confirmComponentBehavior(3);
+  var review = ReviewRecipeDraft.fromExtracted(
+    extracted,
+  ).confirmAllUnambiguous().editComponentUnit(2, 'g').confirmComponentUnit(2).confirmComponentBehavior(3);
   if (removeMaxBatchYield) {
     review = review.removeMaxBatchYield().confirmMaxBatchYieldAbsent();
   }
-  return (const RecipeDraftVerifier().verify(review) as RecipeDraftVerified)
-      .draft;
+  return (const RecipeDraftVerifier().verify(review) as RecipeDraftVerified).draft;
 }
 
 void main() {

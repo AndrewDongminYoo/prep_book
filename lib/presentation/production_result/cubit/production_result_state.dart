@@ -258,8 +258,7 @@ final class ProductionResultState {
   /// Derived rather than tracked, so collapsing a line hides everything
   /// under it without the collapse having to walk the tree — and so
   /// reopening it brings back exactly what was open before.
-  bool _isVisible(String path) =>
-      ancestorsOf(path).every(expandedPaths.contains);
+  bool _isVisible(String path) => ancestorsOf(path).every(expandedPaths.contains);
 
   /// Every path that has to be open for the line at [path] to be seen,
   /// outermost first.
@@ -336,9 +335,8 @@ final class ProductionResultState {
   };
 
   /// What the recipe [recipeId] is called, taken from the run's snapshot.
-  String recipeNameOf(String recipeId) => recipeId == run.recipe.id
-      ? run.recipe.name
-      : run.dependencySnapshot[recipeId]?.name ?? recipeId;
+  String recipeNameOf(String recipeId) =>
+      recipeId == run.recipe.id ? run.recipe.name : run.dependencySnapshot[recipeId]?.name ?? recipeId;
 
   /// What the ingredient [ingredientId] is called, taken from the run's
   /// snapshot.
@@ -349,8 +347,7 @@ final class ProductionResultState {
   /// library when it was calculated. Rendering the identifier is worse than
   /// rendering a name and better than rendering nothing, and it is what
   /// this screen did for every ingredient before the snapshot existed.
-  String ingredientNameOf(String ingredientId) =>
-      run.ingredientSnapshot[ingredientId]?.name ?? ingredientId;
+  String ingredientNameOf(String ingredientId) => run.ingredientSnapshot[ingredientId]?.name ?? ingredientId;
 
   /// What the component a component-level warning names is called.
   String componentLabelOf(OverrideKey key) => _componentLabels[key] ?? key.$2;
@@ -370,47 +367,42 @@ final class ProductionResultState {
   ///
   /// Built once per immutable state so rendering each visible row is a map
   /// lookup rather than another walk through the run's entire warning list.
-  late final Map<OverrideKey, List<ProductionWarning>> _warningsByComponent =
-      () {
-        final grouped = <OverrideKey, List<ProductionWarning>>{};
-        for (final warning in warnings) {
-          final key = switch (warning) {
-            ManualComponentWarning(:final recipeId, :final componentId) => (
-              recipeId,
-              componentId,
-            ),
-            RoundingAdjustedWarning(:final recipeId, :final componentId) => (
-              recipeId,
-              componentId,
-            ),
-            ArchivedDependencyWarning() => null,
-          };
-          if (key != null) (grouped[key] ??= []).add(warning);
-        }
-        return Map<OverrideKey, List<ProductionWarning>>.unmodifiable({
-          for (final entry in grouped.entries)
-            entry.key: List<ProductionWarning>.unmodifiable(entry.value),
-        });
-      }();
+  late final Map<OverrideKey, List<ProductionWarning>> _warningsByComponent = () {
+    final grouped = <OverrideKey, List<ProductionWarning>>{};
+    for (final warning in warnings) {
+      final key = switch (warning) {
+        ManualComponentWarning(:final recipeId, :final componentId) => (
+          recipeId,
+          componentId,
+        ),
+        RoundingAdjustedWarning(:final recipeId, :final componentId) => (
+          recipeId,
+          componentId,
+        ),
+        ArchivedDependencyWarning() => null,
+      };
+      if (key != null) (grouped[key] ??= []).add(warning);
+    }
+    return Map<OverrideKey, List<ProductionWarning>>.unmodifiable({
+      for (final entry in grouped.entries) entry.key: List<ProductionWarning>.unmodifiable(entry.value),
+    });
+  }();
 
   /// The component-level warnings raised against [row], in calculation order.
   ///
   /// Recipe-level warnings have no component key, so they remain outside the
   /// component list.
-  List<ProductionWarning> warningsFor(ResultRow row) =>
-      _warningsByComponent[row.key] ?? const <ProductionWarning>[];
+  List<ProductionWarning> warningsFor(ResultRow row) => _warningsByComponent[row.key] ?? const <ProductionWarning>[];
 
   /// Whether [warning] has been marked as seen.
-  bool isAcknowledged(ProductionWarning warning) =>
-      run.acknowledgedWarnings.contains(warning);
+  bool isAcknowledged(ProductionWarning warning) => run.acknowledgedWarnings.contains(warning);
 
   /// How many blocking warnings are still unacknowledged.
   ///
   /// What the save notice counts. Whether the run is finalizable at all is
   /// [savesAsDraft]'s question, and that one is the run's own to answer.
-  int get blockingWarningsOutstanding => warnings
-      .where((warning) => warning.isBlocking && !isAcknowledged(warning))
-      .length;
+  int get blockingWarningsOutstanding =>
+      warnings.where((warning) => warning.isBlocking && !isAcknowledged(warning)).length;
 
   /// Whether saving now stores a run that is not yet finalizable.
   ///
@@ -431,9 +423,7 @@ final class ProductionResultState {
   /// stored this screen has no way to amend it — recording state against a
   /// stored run is a different use case, on a screen this slice does not
   /// build — so a change accepted after either point would be a lie.
-  bool get isEditable =>
-      status == ProductionResultStatus.reviewing ||
-      status == ProductionResultStatus.failure;
+  bool get isEditable => status == ProductionResultStatus.reviewing || status == ProductionResultStatus.failure;
 
   /// The lines whose override control holds something that is not an
   /// amount, in the order the operator typed into them.
@@ -452,8 +442,7 @@ final class ProductionResultState {
   /// message while leaving the draft recorded, so a notice that only said
   /// "an amount is wrong" would leave the operator with nothing on screen
   /// to act on.
-  String get invalidOverrideLabels =>
-      _invalidOverrides.map(componentLabelOf).join(', ');
+  String get invalidOverrideLabels => _invalidOverrides.map(componentLabelOf).join(', ');
 
   /// Whether the operator may commit the run as it stands.
   ///
@@ -476,8 +465,7 @@ final class ProductionResultState {
   /// no calculated unit to start from and is the fallback the recipe
   /// editor's drafts already use.
   OverrideDraft draftFor(ResultRow row) =>
-      overrideDrafts[row.key] ??
-      OverrideDraft(unit: row.total?.displayed.unit ?? Unit.gram);
+      overrideDrafts[row.key] ?? OverrideDraft(unit: row.total?.displayed.unit ?? Unit.gram);
 
   /// The value the operator has recorded for [row], or `null` for none.
   Quantity? overrideFor(ResultRow row) => run.overrides[row.key];
@@ -515,8 +503,7 @@ final class ProductionResultState {
   Set<Unit> get _runUnits => {
     run.targetYield.unit,
     for (final recipe in run.dependencySnapshot.values) recipe.baseYield.unit,
-    for (final ingredient in run.ingredientSnapshot.values)
-      ingredient.defaultUnit,
+    for (final ingredient in run.ingredientSnapshot.values) ingredient.defaultUnit,
     for (final row in allRows) ?row.total?.displayed.unit,
   };
 
@@ -549,8 +536,7 @@ final class ProductionResultState {
   /// `portion` beside the built-in yield-only one — render as two
   /// identical rows. That is not new here, and the recipe editor's
   /// custom-unit dialog refuses the second one where it would be declared.
-  List<Unit> unitChoicesFor(ResultRow row) =>
-      <Unit>{...builtInUnits, ..._runUnits, draftFor(row).unit}.toList();
+  List<Unit> unitChoicesFor(ResultRow row) => <Unit>{...builtInUnits, ..._runUnits, draftFor(row).unit}.toList();
 
   /// This state with the named fields replaced.
   ///

@@ -124,15 +124,10 @@ class _NumericVisitor extends RecursiveAstVisitor<void> {
 /// look like "nothing was wrong" — this repository has already met that shape
 /// once, when cspell reported zero issues from zero files checked.
 Future<List<String>> findDivisionViolations(List<String> directories) async {
-  final expected = directories
-      .expand(_dartFilesUnder)
-      .map((file) => file.absolute.path)
-      .toSet();
+  final expected = directories.expand(_dartFilesUnder).map((file) => file.absolute.path).toSet();
 
   final collection = AnalysisContextCollection(
-    includedPaths: directories
-        .map((path) => Directory(path).absolute.path)
-        .toList(),
+    includedPaths: directories.map((path) => Directory(path).absolute.path).toList(),
     sdkPath: _dartSdkPath(),
   );
 
@@ -235,11 +230,7 @@ bool _isAllowedUri(String uri) {
 List<File> _dartFilesUnder(String path) {
   final dir = Directory(path);
   if (!dir.existsSync()) return const [];
-  return dir
-      .listSync(recursive: true)
-      .whereType<File>()
-      .where((file) => file.path.endsWith('.dart'))
-      .toList();
+  return dir.listSync(recursive: true).whereType<File>().where((file) => file.path.endsWith('.dart')).toList();
 }
 
 void main() {

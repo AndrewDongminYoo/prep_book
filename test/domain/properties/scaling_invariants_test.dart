@@ -15,9 +15,7 @@ Recipe proportionalRecipe({
     revision: 1,
     name: 'R',
     baseYield: Quantity.parse(baseYield, Unit.portion),
-    maxBatchYield: maxBatchYield == null
-        ? null
-        : Quantity.parse(maxBatchYield, Unit.portion),
+    maxBatchYield: maxBatchYield == null ? null : Quantity.parse(maxBatchYield, Unit.portion),
     components: [
       RecipeComponent(
         id: 'c',
@@ -128,9 +126,7 @@ void main() {
       ).scaleBy(Rational(BigInt.from(target), BigInt.from(baseYield)));
 
       final component = result.components.single;
-      final summed = component.perBatch
-          .map((value) => value!.exact)
-          .reduce((a, b) => a + b);
+      final summed = component.perBatch.map((value) => value!.exact).reduce((a, b) => a + b);
       expect(summed, expected);
     }
   });

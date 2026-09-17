@@ -154,9 +154,7 @@ class _ProductionResultViewState extends State<ProductionResultView> {
                 constraints.maxWidth,
                 MediaQuery.textScalerOf(context),
               );
-              return usesMultiplePanes
-                  ? _wideBody(context, state)
-                  : _compactBody(context, state);
+              return usesMultiplePanes ? _wideBody(context, state) : _compactBody(context, state);
             },
           ),
         ),
@@ -176,8 +174,7 @@ class _ProductionResultViewState extends State<ProductionResultView> {
         if (state.warnings.isNotEmpty) ...[
           const Divider(height: 32),
           _Heading(text: l10n.productionResultWarnings),
-          for (final warning in state.warnings)
-            _WarningTile(state: state, warning: warning, onReveal: _reveal),
+          for (final warning in state.warnings) _WarningTile(state: state, warning: warning, onReveal: _reveal),
         ],
         const Divider(height: 32),
         _Heading(text: l10n.productionResultComponents),
@@ -280,8 +277,7 @@ class _ProductionResultViewState extends State<ProductionResultView> {
   ///
   /// A finite extent avoids the semantics failure produced by infinity and
   /// keeps roughly one thousand rows reachable during the reveal.
-  ScrollCacheExtent? get _scrollCacheExtent =>
-      _revealing == null ? null : const ScrollCacheExtent.pixels(100000);
+  ScrollCacheExtent? get _scrollCacheExtent => _revealing == null ? null : const ScrollCacheExtent.pixels(100000);
 }
 
 /// The deepest nesting level the indent still steps for.
@@ -348,9 +344,7 @@ class _ComponentRow extends StatelessWidget {
               ),
               IconButton(
                 key: ValueKey('expand-${row.path}'),
-                tooltip: expanded
-                    ? l10n.productionResultCollapse
-                    : l10n.productionResultExpand,
+                tooltip: expanded ? l10n.productionResultCollapse : l10n.productionResultExpand,
                 icon: Icon(expanded ? Icons.expand_less : Icons.expand_more),
                 onPressed: () => cubit.expansionToggled(row.path),
               ),
@@ -363,11 +357,9 @@ class _ComponentRow extends StatelessWidget {
           // one ingredient twice — once scaled, once as an as-needed
           // amount — and both lines then read the same name over the same
           // ingredient identifier.
-          if (row.component.source.note case final note?)
-            Text(note, style: Theme.of(context).textTheme.bodySmall),
+          if (row.component.source.note case final note?) Text(note, style: Theme.of(context).textTheme.bodySmall),
           if (showWarnings)
-            for (final warning in state.warningsFor(row))
-              _WarningTile(state: state, warning: warning, onReveal: null),
+            for (final warning in state.warningsFor(row)) _WarningTile(state: state, warning: warning, onReveal: null),
           // The operator's own value, on the line it replaces rather than
           // over it: the calculated amount above stays exactly as it was
           // calculated, which is what keeps the two comparable.
@@ -411,8 +403,7 @@ class _ComponentRow extends StatelessWidget {
           // open: it is the one line that has no amount at all, and an
           // operator who has to open a row to find that out has been told
           // nothing. Every other line hides the control until asked.
-          if (expanded || row.isManual)
-            _OverrideControl(state: state, row: row),
+          if (expanded || row.isManual) _OverrideControl(state: state, row: row),
         ],
       ),
     );
@@ -564,9 +555,7 @@ class _OverrideAmountFieldState extends State<_OverrideAmountField> {
       decoration: InputDecoration(
         labelText: l10n.productionResultOverrideLabel,
         border: const OutlineInputBorder(),
-        errorText: widget.draft.amountIsInvalid
-            ? l10n.productionResultOverrideInvalid
-            : null,
+        errorText: widget.draft.amountIsInvalid ? l10n.productionResultOverrideInvalid : null,
       ),
       onChanged: widget.onChanged,
     );
@@ -615,9 +604,7 @@ class _WarningTile extends StatelessWidget {
             // been seen. The line stays either way: a warning that
             // vanished on acknowledgement would leave the operator no way
             // to check what they accepted.
-            style: acknowledged
-                ? null
-                : TextStyle(color: Theme.of(context).colorScheme.error),
+            style: acknowledged ? null : TextStyle(color: Theme.of(context).colorScheme.error),
           ),
           // Offered whether or not the warning has been seen, and whether
           // or not the run is still editable: this opens the tree and
@@ -636,9 +623,7 @@ class _WarningTile extends StatelessWidget {
           else
             TextButton(
               key: ValueKey('acknowledge-${warning.hashCode}'),
-              onPressed: state.isEditable
-                  ? () => cubit.warningAcknowledged(warning)
-                  : null,
+              onPressed: state.isEditable ? () => cubit.warningAcknowledged(warning) : null,
               child: Text(l10n.productionResultAcknowledge),
             ),
         ],
@@ -660,17 +645,13 @@ class _SaveSection extends StatelessWidget {
     final cubit = context.read<ProductionResultCubit>();
     // Both notices report something the operator has to act on before the
     // run can be committed, so both read as errors.
-    final alarming =
-        state.status == ProductionResultStatus.failure ||
-        state.hasInvalidOverride;
+    final alarming = state.status == ProductionResultStatus.failure || state.hasInvalidOverride;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           _saveNotice(l10n, state),
-          style: alarming
-              ? TextStyle(color: Theme.of(context).colorScheme.error)
-              : null,
+          style: alarming ? TextStyle(color: Theme.of(context).colorScheme.error) : null,
         ),
         const SizedBox(height: 12),
         // The label is the distinction the brief asks to be visible: the
@@ -681,16 +662,13 @@ class _SaveSection extends StatelessWidget {
         FilledButton(
           onPressed: state.canSave ? () => unawaited(cubit.save()) : null,
           child: Text(
-            state.savesAsDraft
-                ? l10n.productionResultSaveDraft
-                : l10n.productionResultSave,
+            state.savesAsDraft ? l10n.productionResultSaveDraft : l10n.productionResultSave,
           ),
         ),
         if (state.status == ProductionResultStatus.saved) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () =>
-                unawaited(productionSheet.open(context, run: state.run)),
+            onPressed: () => unawaited(productionSheet.open(context, run: state.run)),
             icon: const Icon(Icons.picture_as_pdf_outlined),
             label: Text(l10n.productionSheetTitle),
           ),
@@ -780,18 +758,15 @@ String _warningMessage(
   ProductionResultState state,
   ProductionWarning warning,
 ) => switch (warning) {
-  ManualComponentWarning(:final recipeId, :final componentId) =>
-    l10n.productionResultManualWarning(
-      state.componentLabelOf((recipeId, componentId)),
-      state.recipeNameOf(recipeId),
-    ),
-  RoundingAdjustedWarning(:final recipeId, :final componentId) =>
-    l10n.productionResultRoundingWarning(
-      state.componentLabelOf((recipeId, componentId)),
-      state.recipeNameOf(recipeId),
-    ),
-  ArchivedDependencyWarning(:final recipeId) =>
-    l10n.productionResultArchivedWarning(state.recipeNameOf(recipeId)),
+  ManualComponentWarning(:final recipeId, :final componentId) => l10n.productionResultManualWarning(
+    state.componentLabelOf((recipeId, componentId)),
+    state.recipeNameOf(recipeId),
+  ),
+  RoundingAdjustedWarning(:final recipeId, :final componentId) => l10n.productionResultRoundingWarning(
+    state.componentLabelOf((recipeId, componentId)),
+    state.recipeNameOf(recipeId),
+  ),
+  ArchivedDependencyWarning(:final recipeId) => l10n.productionResultArchivedWarning(state.recipeNameOf(recipeId)),
 };
 
 /// What the screen says about saving, given where it has got to.

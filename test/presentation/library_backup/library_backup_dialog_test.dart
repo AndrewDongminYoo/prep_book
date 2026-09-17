@@ -158,18 +158,12 @@ void main() {
 
   const failureMessages = <LibraryBackupFailureKind, String>{
     LibraryBackupFailureKind.cancelled: 'The file selection was cancelled.',
-    LibraryBackupFailureKind.unsupportedFormat:
-        'Choose a PrepBook backup file.',
-    LibraryBackupFailureKind.invalidArchive:
-        'This backup file is damaged or incomplete. Choose another backup.',
-    LibraryBackupFailureKind.backupTooLarge:
-        'This backup is too large to open on this device.',
-    LibraryBackupFailureKind.invalidDatabase:
-        'This backup contains invalid library data. Choose another backup.',
-    LibraryBackupFailureKind.incompatibleSchema:
-        'Update PrepBook before restoring this newer backup.',
-    LibraryBackupFailureKind.saveFailed:
-        'The backup could not be saved. Choose another location and try again.',
+    LibraryBackupFailureKind.unsupportedFormat: 'Choose a PrepBook backup file.',
+    LibraryBackupFailureKind.invalidArchive: 'This backup file is damaged or incomplete. Choose another backup.',
+    LibraryBackupFailureKind.backupTooLarge: 'This backup is too large to open on this device.',
+    LibraryBackupFailureKind.invalidDatabase: 'This backup contains invalid library data. Choose another backup.',
+    LibraryBackupFailureKind.incompatibleSchema: 'Update PrepBook before restoring this newer backup.',
+    LibraryBackupFailureKind.saveFailed: 'The backup could not be saved. Choose another location and try again.',
     LibraryBackupFailureKind.restoreFailed:
         'The backup could not be restored. '
         'Your current library is unchanged.',
@@ -179,8 +173,7 @@ void main() {
   };
   for (final entry in failureMessages.entries) {
     testWidgets('renders ${entry.key.name} failure copy', (tester) async {
-      final gateway = _Gateway()
-        ..createError = LibraryBackupException(entry.key);
+      final gateway = _Gateway()..createError = LibraryBackupException(entry.key);
       final launcher = _launcher(gateway, _Platform());
       await _pumpLauncher(tester, launcher, LibraryBackupAction.create);
 
@@ -217,12 +210,11 @@ void main() {
   }
 }
 
-LibraryBackupLauncher _launcher(_Gateway gateway, _Platform platform) =>
-    LibraryBackupLauncher(
-      createBackup: CreateLibraryBackup(gateway),
-      restoreBackup: RestoreLibraryBackup(gateway),
-      platform: platform,
-    );
+LibraryBackupLauncher _launcher(_Gateway gateway, _Platform platform) => LibraryBackupLauncher(
+  createBackup: CreateLibraryBackup(gateway),
+  restoreBackup: RestoreLibraryBackup(gateway),
+  platform: platform,
+);
 
 Future<void> _pumpLauncher(
   WidgetTester tester,

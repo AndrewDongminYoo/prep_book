@@ -83,13 +83,11 @@ final class FakeRecipeRepository implements RecipeRepository {
   /// `listLatestRevisionsUsingIngredient` are not logged here.
   final List<String> calls = [];
 
-  void seed(Recipe recipe) =>
-      revisions.putIfAbsent(recipe.id, () => []).add(recipe);
+  void seed(Recipe recipe) => revisions.putIfAbsent(recipe.id, () => []).add(recipe);
 
   @override
   Future<List<Recipe>> listLatestRevisions() async =>
-      [for (final list in revisions.values) _highest(list)]
-        ..sort((a, b) => a.id.compareTo(b.id));
+      [for (final list in revisions.values) _highest(list)]..sort((a, b) => a.id.compareTo(b.id));
 
   @override
   Future<Recipe?> findRevision(String id, int revision) async {
@@ -135,31 +133,27 @@ final class FakeRecipeRepository implements RecipeRepository {
       if (_usesIngredient(_highest(list), ingredientId)) _highest(list),
   ]..sort((a, b) => a.id.compareTo(b.id));
 
-  static bool _usesIngredient(Recipe recipe, String ingredientId) =>
-      recipe.components.any(
-        (component) => switch (component.target) {
-          IngredientRef(ingredientId: final referenced) =>
-            referenced == ingredientId,
-          SubRecipeRef() => false,
-        },
-      );
+  static bool _usesIngredient(Recipe recipe, String ingredientId) => recipe.components.any(
+    (component) => switch (component.target) {
+      IngredientRef(ingredientId: final referenced) => referenced == ingredientId,
+      SubRecipeRef() => false,
+    },
+  );
 
-  static Recipe _highest(List<Recipe> list) =>
-      list.reduce((a, b) => a.revision >= b.revision ? a : b);
+  static Recipe _highest(List<Recipe> list) => list.reduce((a, b) => a.revision >= b.revision ? a : b);
 
-  static Recipe _withArchived(Recipe recipe, {required bool isArchived}) =>
-      Recipe(
-        id: recipe.id,
-        revision: recipe.revision,
-        name: recipe.name,
-        baseYield: recipe.baseYield,
-        components: recipe.components,
-        modifiedAt: recipe.modifiedAt,
-        category: recipe.category,
-        maxBatchYield: recipe.maxBatchYield,
-        preparationNotes: recipe.preparationNotes,
-        isArchived: isArchived,
-      );
+  static Recipe _withArchived(Recipe recipe, {required bool isArchived}) => Recipe(
+    id: recipe.id,
+    revision: recipe.revision,
+    name: recipe.name,
+    baseYield: recipe.baseYield,
+    components: recipe.components,
+    modifiedAt: recipe.modifiedAt,
+    category: recipe.category,
+    maxBatchYield: recipe.maxBatchYield,
+    preparationNotes: recipe.preparationNotes,
+    isArchived: isArchived,
+  );
 }
 
 /// In-memory [IngredientRepository].
@@ -167,15 +161,13 @@ final class FakeIngredientRepository implements IngredientRepository {
   final Map<String, Ingredient> stored = {};
 
   @override
-  Future<List<Ingredient>> listAll() async =>
-      stored.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+  Future<List<Ingredient>> listAll() async => stored.values.toList()..sort((a, b) => a.name.compareTo(b.name));
 
   @override
   Future<Ingredient?> findById(String id) async => stored[id];
 
   @override
-  Future<void> upsert(Ingredient ingredient) async =>
-      stored[ingredient.id] = ingredient;
+  Future<void> upsert(Ingredient ingredient) async => stored[ingredient.id] = ingredient;
 
   @override
   Future<void> delete(String id) async => stored.remove(id);

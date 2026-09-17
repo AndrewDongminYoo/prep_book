@@ -36,19 +36,18 @@ const _fakeUpgradeWithAGap = <int, List<String>>{
 void main() {
   setUpAll(sqfliteFfiInit);
 
-  Future<Database> createVersionOne(String path) =>
-      databaseFactoryFfi.openDatabase(
-        path,
-        options: OpenDatabaseOptions(
-          version: 1,
-          onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
-          onCreate: (db, _) async {
-            for (final statement in schemaV1Statements) {
-              await db.execute(statement);
-            }
-          },
-        ),
-      );
+  Future<Database> createVersionOne(String path) => databaseFactoryFfi.openDatabase(
+    path,
+    options: OpenDatabaseOptions(
+      version: 1,
+      onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
+      onCreate: (db, _) async {
+        for (final statement in schemaV1Statements) {
+          await db.execute(statement);
+        }
+      },
+    ),
+  );
 
   ProductionRun legacyDraft() {
     final recipe = Recipe(
@@ -80,15 +79,14 @@ void main() {
     );
   }
 
-  Future<void> insertVersionOneRun(Database db, ProductionRun run) =>
-      db.insert('production_runs', <String, Object?>{
-        'id': run.id,
-        'recipe_id': run.recipeId,
-        'recipe_revision': run.recipeRevision,
-        ...quantityToColumns(run.targetYield, 'target'),
-        'created_at': timestampToStorage(run.createdAt),
-        'result_json': encodeRunPayload(run),
-      });
+  Future<void> insertVersionOneRun(Database db, ProductionRun run) => db.insert('production_runs', <String, Object?>{
+    'id': run.id,
+    'recipe_id': run.recipeId,
+    'recipe_revision': run.recipeRevision,
+    ...quantityToColumns(run.targetYield, 'target'),
+    'created_at': timestampToStorage(run.createdAt),
+    'result_json': encodeRunPayload(run),
+  });
 
   Future<Database> openAtVersionOne() async {
     final db = await openPrepBookDatabase(
@@ -304,19 +302,18 @@ void main() {
     },
   );
 
-  for (final acknowledgement
-      in <({String kind, String recipeId, String? componentId})>[
-        (
-          kind: 'manual_component',
-          recipeId: 'legacy-recipe',
-          componentId: 'not-a-stored-warning',
-        ),
-        (
-          kind: 'archived_dependency',
-          recipeId: 'not-a-stored-warning',
-          componentId: null,
-        ),
-      ]) {
+  for (final acknowledgement in <({String kind, String recipeId, String? componentId})>[
+    (
+      kind: 'manual_component',
+      recipeId: 'legacy-recipe',
+      componentId: 'not-a-stored-warning',
+    ),
+    (
+      kind: 'archived_dependency',
+      recipeId: 'not-a-stored-warning',
+      componentId: null,
+    ),
+  ]) {
     test('a version 1 ${acknowledgement.kind} acknowledgement absent from its '
         'run aborts the upgrade', () async {
       final directory = await Directory.systemTemp.createTemp(
@@ -445,10 +442,7 @@ END
           columns: ['name', 'sql'],
           where: "name NOT LIKE 'sqlite_%'",
         ))
-          row['name']! as String: (row['sql']! as String)
-              .trim()
-              .replaceAll(RegExp(r'\s+'), ' ')
-              .toLowerCase(),
+          row['name']! as String: (row['sql']! as String).trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase(),
       };
 
       final upgradedCatalog = await catalog(upgraded);

@@ -42,12 +42,10 @@ final class _EnglishSheetLocalizations implements ProductionSheetLocalizations {
   String batchRange(int first, int last) => 'Batches $first–$last';
 
   @override
-  String formatCreatedAt(DateTime createdAtUtc) =>
-      createdAtUtc.toIso8601String();
+  String formatCreatedAt(DateTime createdAtUtc) => createdAtUtc.toIso8601String();
 
   @override
-  String formatQuantity(Quantity quantity) =>
-      '${quantity.toDecimal()} ${quantity.unit.symbol}';
+  String formatQuantity(Quantity quantity) => '${quantity.toDecimal()} ${quantity.unit.symbol}';
 
   @override
   String warningMessage({
@@ -237,8 +235,7 @@ void main() {
         throwsUnsupportedError,
       );
       expect(
-        () =>
-            sheet.sections.first.tables.add(sheet.sections.first.tables.first),
+        () => sheet.sections.first.tables.add(sheet.sections.first.tables.first),
         throwsUnsupportedError,
       );
       expect(

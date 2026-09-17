@@ -60,9 +60,7 @@ void main() {
         rollbackPath: rollbackPath,
         failedPath: failedPath,
       ),
-      validateCandidate:
-          validateCandidate ??
-          BackupDatabaseValidator(factory: databaseFactoryFfi).validate,
+      validateCandidate: validateCandidate ?? BackupDatabaseValidator(factory: databaseFactoryFfi).validate,
       activate:
           onActivate ??
           (connection, {required restored}) async {
@@ -138,11 +136,10 @@ void main() {
       stackTrace: StackTrace.current,
     );
     final session = buildSession(
-      validateCandidate:
-          ({required candidatePath, required manifestSchemaVersion}) async {
-            expect(File(candidatePath).existsSync(), isTrue);
-            throw failure;
-          },
+      validateCandidate: ({required candidatePath, required manifestSchemaVersion}) async {
+        expect(File(candidatePath).existsSync(), isTrue);
+        throw failure;
+      },
     );
 
     await expectLater(
@@ -162,10 +159,9 @@ void main() {
   test('an untyped pre-close failure is mapped without closing live', () async {
     final error = StateError('candidate validation crashed');
     final session = buildSession(
-      validateCandidate:
-          ({required candidatePath, required manifestSchemaVersion}) async {
-            throw error;
-          },
+      validateCandidate: ({required candidatePath, required manifestSchemaVersion}) async {
+        throw error;
+      },
     );
 
     await expectLater(
@@ -219,9 +215,7 @@ void main() {
       final session = buildSession(
         fault: fault,
         onActivate: (connection, {required restored}) async {
-          if ((fault == _FaultPoint.replacementActivation ||
-                  fault == _FaultPoint.replacementClose) &&
-              restored) {
+          if ((fault == _FaultPoint.replacementActivation || fault == _FaultPoint.replacementClose) && restored) {
             throw StateError('replacement activation failed');
           }
           activations.add((restored: restored, ids: await _ids(connection)));
@@ -371,16 +365,14 @@ final class _FaultingBackupFiles implements BackupFiles {
     if (fault == _FaultPoint.candidateRename && source == candidatePath) {
       throw StateError('candidate rename failed');
     }
-    if (fault == _FaultPoint.rollbackInstall &&
-        source == '$rollbackPath.install') {
+    if (fault == _FaultPoint.rollbackInstall && source == '$rollbackPath.install') {
       throw StateError('rollback rename failed');
     }
     return _delegate.renameReplacing(source, destination);
   }
 
   @override
-  Future<void> deleteDatabaseSidecars(String databasePath) =>
-      _delegate.deleteDatabaseSidecars(databasePath);
+  Future<void> deleteDatabaseSidecars(String databasePath) => _delegate.deleteDatabaseSidecars(databasePath);
 
   @override
   Future<void> deleteIfExists(String path) {
@@ -416,8 +408,7 @@ final class _CloseFailingDatabase implements Database {
   bool get isOpen => _delegate.isOpen;
 
   @override
-  Future<void> close() =>
-      Future<void>.error(StateError('replacement close failed'));
+  Future<void> close() => Future<void>.error(StateError('replacement close failed'));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -429,10 +420,9 @@ Future<Database> _open(String path) => openPrepBookDatabase(
   singleInstance: false,
 );
 
-Future<void> _storeIngredient(Database db, String id) =>
-    SqfliteIngredientRepository(
-      db,
-    ).upsert(Ingredient(id: id, name: id, defaultUnit: Unit.gram));
+Future<void> _storeIngredient(Database db, String id) => SqfliteIngredientRepository(
+  db,
+).upsert(Ingredient(id: id, name: id, defaultUnit: Unit.gram));
 
 Future<Uint8List> _databaseBytes(String path, String ingredientId) async {
   final db = await _open(path);
@@ -442,6 +432,5 @@ Future<Uint8List> _databaseBytes(String path, String ingredientId) async {
 }
 
 Future<List<String>> _ids(Database db) async => [
-  for (final row in await db.query('ingredients', orderBy: 'id'))
-    row['id']! as String,
+  for (final row in await db.query('ingredients', orderBy: 'id')) row['id']! as String,
 ];

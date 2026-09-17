@@ -77,13 +77,10 @@ ChampionshipDemoCubit _cubit({
   ChampionshipSampleLoader? sampleLoader,
   ChampionshipRunId? createRunId = _fixedRunId,
 }) => ChampionshipDemoCubit(
-  importClient:
-      client ??
-      _FakeImportClient((_, _) async => _draft(RecipeImportSourceKind.text)),
+  importClient: client ?? _FakeImportClient((_, _) async => _draft(RecipeImportSourceKind.text)),
   imagePicker: picker ?? _FakeImagePicker(() async => null),
   imageReducer: RecipeImageReducer(codec: codec ?? FakeRecipeImageCodec()),
-  sampleLoader:
-      sampleLoader ?? ChampionshipSampleLoader(bundle: _FileAssetBundle()),
+  sampleLoader: sampleLoader ?? ChampionshipSampleLoader(bundle: _FileAssetBundle()),
   now: () => DateTime.utc(2026, 9, 14, 1, 2, 3),
   createRunId: createRunId,
 );
@@ -209,8 +206,7 @@ void main() {
     expect(prepared.image.bytes.length, mib);
     expect(prepared.image.mimeType, 'image/jpeg');
     expect(prepared.image.name, 'IMG_0001.jpg');
-    final dataUrl =
-        client.requests.single.toJson('en')['imageDataUrl']! as String;
+    final dataUrl = client.requests.single.toJson('en')['imageDataUrl']! as String;
     expect(dataUrl, startsWith('data:image/jpeg;base64,'));
     expect(
       dataUrl.length - 'data:image/jpeg;base64,'.length,

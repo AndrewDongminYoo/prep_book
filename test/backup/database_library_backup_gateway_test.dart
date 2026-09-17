@@ -35,8 +35,7 @@ void main() {
             return archiveBytes;
           },
       decodeArchive: (_) => throw UnimplementedError(),
-      restoreDatabase: (_, {required manifestSchemaVersion}) =>
-          throw UnimplementedError(),
+      restoreDatabase: (_, {required manifestSchemaVersion}) => throw UnimplementedError(),
       now: () {
         clockCalls++;
         return instant;
@@ -185,8 +184,7 @@ DatabaseLibraryBackupGateway _gateway({
   RestoreDatabaseSnapshot? restoreDatabase,
 }) => DatabaseLibraryBackupGateway(
   maxArchiveBytes: maxArchiveBytes,
-  createSnapshot:
-      createSnapshot ?? () async => Uint8List.fromList(const [1, 2, 3]),
+  createSnapshot: createSnapshot ?? () async => Uint8List.fromList(const [1, 2, 3]),
   encodeArchive:
       encodeArchive ??
       ({
@@ -201,16 +199,14 @@ DatabaseLibraryBackupGateway _gateway({
         databaseSchemaVersion: 1,
         createdAtUtc: DateTime.utc(2026, 9, 13),
       ),
-  restoreDatabase:
-      restoreDatabase ?? (_, {required manifestSchemaVersion}) async {},
+  restoreDatabase: restoreDatabase ?? (_, {required manifestSchemaVersion}) async {},
   now: () => DateTime(2026, 9, 13),
 );
 
 Matcher _failureKind(LibraryBackupFailureKind kind) =>
     isA<LibraryBackupException>().having((error) => error.kind, 'kind', kind);
 
-Matcher _failureWithCause(LibraryBackupFailureKind kind, Object cause) =>
-    isA<LibraryBackupException>()
-        .having((error) => error.kind, 'kind', kind)
-        .having((error) => error.cause, 'cause', same(cause))
-        .having((error) => error.stackTrace, 'stackTrace', isNotNull);
+Matcher _failureWithCause(LibraryBackupFailureKind kind, Object cause) => isA<LibraryBackupException>()
+    .having((error) => error.kind, 'kind', kind)
+    .having((error) => error.cause, 'cause', same(cause))
+    .having((error) => error.stackTrace, 'stackTrace', isNotNull);

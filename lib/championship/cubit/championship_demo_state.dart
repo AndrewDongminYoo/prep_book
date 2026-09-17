@@ -99,33 +99,19 @@ final class ChampionshipDemoState {
     phase: phase ?? this.phase,
     sourceMode: sourceMode ?? this.sourceMode,
     sourceText: sourceText ?? this.sourceText,
-    preparedImage: preparedImage == _unset
-        ? this.preparedImage
-        : preparedImage as PreparedRecipeImage?,
+    preparedImage: preparedImage == _unset ? this.preparedImage : preparedImage as PreparedRecipeImage?,
     hasLiveConsent: hasLiveConsent ?? this.hasLiveConsent,
     isLoading: isLoading ?? this.isLoading,
-    sourceFailure: sourceFailure == _unset
-        ? this.sourceFailure
-        : sourceFailure as ChampionshipSourceFailure?,
-    importFailure: importFailure == _unset
-        ? this.importFailure
-        : importFailure as RecipeImportFailureCode?,
-    importFailureMessage: importFailureMessage == _unset
-        ? this.importFailureMessage
-        : importFailureMessage as String?,
-    extracted: extracted == _unset
-        ? this.extracted
-        : extracted as ExtractedRecipeDraft?,
+    sourceFailure: sourceFailure == _unset ? this.sourceFailure : sourceFailure as ChampionshipSourceFailure?,
+    importFailure: importFailure == _unset ? this.importFailure : importFailure as RecipeImportFailureCode?,
+    importFailureMessage: importFailureMessage == _unset ? this.importFailureMessage : importFailureMessage as String?,
+    extracted: extracted == _unset ? this.extracted : extracted as ExtractedRecipeDraft?,
     review: review == _unset ? this.review : review as ReviewRecipeDraft?,
     reviewIssues: reviewIssues ?? this.reviewIssues,
-    verified: verified == _unset
-        ? this.verified
-        : verified as VerifiedRecipeDraft?,
+    verified: verified == _unset ? this.verified : verified as VerifiedRecipeDraft?,
     targetAmount: targetAmount ?? this.targetAmount,
     targetUnit: targetUnit ?? this.targetUnit,
-    targetFailure: targetFailure == _unset
-        ? this.targetFailure
-        : targetFailure as ChampionshipTargetFailure?,
+    targetFailure: targetFailure == _unset ? this.targetFailure : targetFailure as ChampionshipTargetFailure?,
     run: run == _unset ? this.run : run as ProductionRun?,
   );
 }

@@ -16,8 +16,7 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
     required LibraryBackupPlatform platform,
   }) : this._(createBackup, restoreBackup, platform);
 
-  LibraryBackupCubit._(this._createBackup, this._restoreBackup, this._platform)
-    : super(const LibraryBackupState());
+  LibraryBackupCubit._(this._createBackup, this._restoreBackup, this._platform) : super(const LibraryBackupState());
 
   final CreateLibraryBackup _createBackup;
   final RestoreLibraryBackup _restoreBackup;
@@ -95,8 +94,7 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
 
   /// Restores the picked backup after explicit confirmation.
   Future<void> confirmRestore() async {
-    if (_operationActive ||
-        state.status != LibraryBackupStatus.awaitingConfirmation) {
+    if (_operationActive || state.status != LibraryBackupStatus.awaitingConfirmation) {
       return;
     }
     final bytes = state.pendingRestoreBytes!;

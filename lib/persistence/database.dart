@@ -99,9 +99,7 @@ Future<void> validatePrepBookSchema(DatabaseExecutor db) async {
       throw const FormatException('The SQLite schema catalog is invalid.');
     }
     if (name == 'android_metadata') {
-      if (type != 'table' ||
-          _normalizeSchemaSql(sql) !=
-              'create table android_metadata (locale text)') {
+      if (type != 'table' || _normalizeSchemaSql(sql) != 'create table android_metadata (locale text)') {
         throw const FormatException(
           'The Android SQLite metadata object is invalid.',
         );
@@ -110,9 +108,7 @@ Future<void> validatePrepBookSchema(DatabaseExecutor db) async {
     }
     applicationObjectCount++;
     final expectedObject = expected[name];
-    if (expectedObject == null ||
-        type != expectedObject.type ||
-        _normalizeSchemaSql(sql) != expectedObject.sql) {
+    if (expectedObject == null || type != expectedObject.type || _normalizeSchemaSql(sql) != expectedObject.sql) {
       throw FormatException('The SQLite schema object $name is invalid.');
     }
   }

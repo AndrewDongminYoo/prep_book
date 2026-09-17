@@ -49,9 +49,7 @@ class ChampionshipTargetPanel extends StatelessWidget {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               key: const ValueKey('target-unit-input'),
-              initialValue: units.contains(state.targetUnit)
-                  ? state.targetUnit
-                  : units.first,
+              initialValue: units.contains(state.targetUnit) ? state.targetUnit : units.first,
               isExpanded: true,
               decoration: InputDecoration(labelText: strings.targetUnit),
               items: [
@@ -68,17 +66,14 @@ class ChampionshipTargetPanel extends StatelessWidget {
             if (state.targetFailure case final failure?) ...[
               const SizedBox(height: 16),
               Text(switch (failure) {
-                ChampionshipTargetFailure.invalidTarget =>
-                  strings.invalidTarget,
+                ChampionshipTargetFailure.invalidTarget => strings.invalidTarget,
                 ChampionshipTargetFailure.batchLimit => strings.batchLimit,
               }, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
             const SizedBox(height: 24),
             FilledButton.icon(
               key: const ValueKey('target-calculate'),
-              onPressed: state.targetAmount.trim().isEmpty
-                  ? null
-                  : cubit.calculate,
+              onPressed: state.targetAmount.trim().isEmpty ? null : cubit.calculate,
               icon: const Icon(Icons.calculate_outlined),
               label: Text(strings.calculate),
             ),

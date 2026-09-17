@@ -202,17 +202,14 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              isArchived
-                  ? l10n.recipeLibraryArchivedNotice
-                  : l10n.recipeLibraryUnarchivedNotice,
+              isArchived ? l10n.recipeLibraryArchivedNotice : l10n.recipeLibraryUnarchivedNotice,
             ),
             // The same use case with the opposite flag, through the same
             // cubit method, so an undo re-reads and reports exactly as the
             // action it reverses did.
             action: SnackBarAction(
               label: l10n.recipeLibraryUndo,
-              onPressed: () =>
-                  unawaited(cubit.archive(recipe, isArchived: !isArchived)),
+              onPressed: () => unawaited(cubit.archive(recipe, isArchived: !isArchived)),
             ),
           ),
         );
@@ -247,10 +244,8 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
           SnackBar(
             content: Text(switch (action) {
               RecipeLibraryAction.archive => l10n.recipeLibraryArchiveFailed,
-              RecipeLibraryAction.unarchive =>
-                l10n.recipeLibraryUnarchiveFailed,
-              RecipeLibraryAction.duplicate =>
-                l10n.recipeLibraryDuplicateFailed,
+              RecipeLibraryAction.unarchive => l10n.recipeLibraryUnarchiveFailed,
+              RecipeLibraryAction.duplicate => l10n.recipeLibraryDuplicateFailed,
             }),
           ),
         );
@@ -263,8 +258,7 @@ class _RecipeLibraryViewState extends State<RecipeLibraryView> {
     return BlocListener<RecipeLibraryCubit, RecipeLibraryState>(
       // Identity, not equality: see `RecipeLibraryNotice`. A notice that a
       // later state merely carries along must not fire again.
-      listenWhen: (previous, current) =>
-          current.notice != null && !identical(current.notice, previous.notice),
+      listenWhen: (previous, current) => current.notice != null && !identical(current.notice, previous.notice),
       listener: (context, state) => _reactTo(context, state.notice!),
       child: Scaffold(
         appBar: AppBar(
@@ -421,8 +415,7 @@ class _LibraryList extends StatelessWidget {
             builder: (context, state) => SwitchListTile(
               value: state.showArchived,
               title: Text(l10n.recipeLibraryShowArchived),
-              onChanged: (show) =>
-                  context.read<RecipeLibraryCubit>().showArchived(show: show),
+              onChanged: (show) => context.read<RecipeLibraryCubit>().showArchived(show: show),
             ),
           ),
         ),
@@ -458,9 +451,7 @@ const double _wideRowMinimumWidth = 420 + kMinInteractiveDimension;
 double _recipeListPaneWidth(double width, TextScaler textScaler) {
   final textScaleFactor = textScaler.scale(16) / 16;
   final scaledMinimumWidth = 150 * textScaleFactor;
-  final maximumWidth = scaledMinimumWidth < _wideRowMinimumWidth
-      ? _wideRowMinimumWidth
-      : scaledMinimumWidth;
+  final maximumWidth = scaledMinimumWidth < _wideRowMinimumWidth ? _wideRowMinimumWidth : scaledMinimumWidth;
   return (width * 0.5).clamp(300, maximumWidth);
 }
 
@@ -696,9 +687,7 @@ class _RecipeRow extends StatelessWidget {
         PopupMenuItem(
           value: _RowMenuAction.toggleArchived,
           child: Text(
-            recipe.isArchived
-                ? l10n.recipeLibraryUnarchive
-                : l10n.recipeLibraryArchive,
+            recipe.isArchived ? l10n.recipeLibraryUnarchive : l10n.recipeLibraryArchive,
           ),
         ),
       ],
@@ -709,9 +698,7 @@ class _RecipeRow extends StatelessWidget {
       leading: editButton,
       title: Text(recipe.name),
       subtitle: Text(
-        recipe.isArchived
-            ? '$baseYield · ${l10n.recipeLibraryArchived}'
-            : baseYield,
+        recipe.isArchived ? '$baseYield · ${l10n.recipeLibraryArchived}' : baseYield,
       ),
       trailing: trailing,
     );
@@ -719,8 +706,7 @@ class _RecipeRow extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final textScaleFactor = MediaQuery.textScalerOf(context).scale(16) / 16;
-        if (constraints.maxWidth >= _wideRowMinimumWidth &&
-            textScaleFactor < 2) {
+        if (constraints.maxWidth >= _wideRowMinimumWidth && textScaleFactor < 2) {
           return tile(
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -853,8 +839,7 @@ class _RecipeDetailPaneState extends State<_RecipeDetailPane> {
               label: Text(l10n.recipeLibraryProductionRun),
             ),
             OutlinedButton.icon(
-              onPressed: () =>
-                  _openEditor(context, widget.editor, recipe: recipe),
+              onPressed: () => _openEditor(context, widget.editor, recipe: recipe),
               icon: const Icon(Icons.edit_outlined),
               label: Text(l10n.recipeLibraryEdit),
             ),
@@ -863,23 +848,17 @@ class _RecipeDetailPaneState extends State<_RecipeDetailPane> {
             // re-read shows the list a spinner and unmounts every row, but
             // this pane renders from rows the loading state carries along.
             OutlinedButton.icon(
-              onPressed: widget.state.isDuplicating
-                  ? null
-                  : () => _duplicate(context, recipe),
+              onPressed: widget.state.isDuplicating ? null : () => _duplicate(context, recipe),
               icon: const Icon(Icons.copy_outlined),
               label: Text(l10n.recipeLibraryDuplicate),
             ),
             OutlinedButton.icon(
               onPressed: () => _toggleArchived(context, recipe),
               icon: Icon(
-                recipe.isArchived
-                    ? Icons.unarchive_outlined
-                    : Icons.archive_outlined,
+                recipe.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
               ),
               label: Text(
-                recipe.isArchived
-                    ? l10n.recipeLibraryUnarchive
-                    : l10n.recipeLibraryArchive,
+                recipe.isArchived ? l10n.recipeLibraryUnarchive : l10n.recipeLibraryArchive,
               ),
             ),
           ],

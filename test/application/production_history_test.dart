@@ -43,24 +43,21 @@ final class _FixedOrderRunRepository implements ProductionRunRepository {
   Future<void> save(ProductionRun run) => throw UnimplementedError();
 
   @override
-  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
-      throw UnimplementedError();
+  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) => throw UnimplementedError();
 
   @override
-  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) =>
-      throw UnimplementedError();
+  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) => throw UnimplementedError();
 }
 
-ProductionRunSummary _summary(String id, DateTime createdAt) =>
-    ProductionRunSummary(
-      id: id,
-      recipeId: 'a',
-      recipeName: 'Recipe A',
-      recipeRevision: 1,
-      targetYield: Quantity.parse('1000', Unit.gram),
-      createdAt: createdAt,
-      isDraft: false,
-    );
+ProductionRunSummary _summary(String id, DateTime createdAt) => ProductionRunSummary(
+  id: id,
+  recipeId: 'a',
+  recipeName: 'Recipe A',
+  recipeRevision: 1,
+  targetYield: Quantity.parse('1000', Unit.gram),
+  createdAt: createdAt,
+  isDraft: false,
+);
 
 void main() {
   test('history comes back newest first', () async {
@@ -193,8 +190,7 @@ void main() {
   // (test/domain/production_run_test.dart) and the persistence layer
   // (test/persistence/production_run_repository_test.dart).
   test('a stored run keeps the revision it was computed from', () async {
-    final recipes = FakeRecipeRepository()
-      ..seed(buildRecipe(id: 'a', name: 'Original'));
+    final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'a', name: 'Original'));
     final runs = FakeProductionRunRepository();
     final run = await StartProductionRun(
       recipes,

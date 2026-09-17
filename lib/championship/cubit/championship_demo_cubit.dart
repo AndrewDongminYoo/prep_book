@@ -140,8 +140,7 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
 
   Future<void> submitText({required String locale}) async {
     if (!_requireLiveConsent()) return;
-    if (state.sourceText.trim().isEmpty ||
-        state.sourceText.runes.length > recipeImportMaxTextScalars) {
+    if (state.sourceText.trim().isEmpty || state.sourceText.runes.length > recipeImportMaxTextScalars) {
       emit(
         state.copyWith(sourceFailure: ChampionshipSourceFailure.invalidSource),
       );
@@ -211,9 +210,7 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
             targetAmount: '',
             // The verifier resolved this unit, so the symbol exists; the
             // picker offers symbols, and the state must name what it shows.
-            targetUnit: review.units
-                .resolve(draft.recipe.baseYield.unit)!
-                .symbol,
+            targetUnit: review.units.resolve(draft.recipe.baseYield.unit)!.symbol,
             targetFailure: null,
             run: null,
           ),
@@ -359,5 +356,4 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
   }
 }
 
-String _defaultRunId() =>
-    'championship-${DateTime.now().microsecondsSinceEpoch}';
+String _defaultRunId() => 'championship-${DateTime.now().microsecondsSinceEpoch}';

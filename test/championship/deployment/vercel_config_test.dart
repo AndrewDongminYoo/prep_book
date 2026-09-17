@@ -5,9 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('builds the championship SPA without rewriting API requests', () {
-    final config =
-        jsonDecode(File('vercel.json').readAsStringSync())
-            as Map<String, Object?>;
+    final config = jsonDecode(File('vercel.json').readAsStringSync()) as Map<String, Object?>;
 
     expect(
       config['buildCommand'],
@@ -57,9 +55,7 @@ void main() {
 
   test('normal CI gates the endpoint and championship release build', () {
     final workflow = File('.github/workflows/main.yaml').readAsStringSync();
-    final config =
-        jsonDecode(File('vercel.json').readAsStringSync())
-            as Map<String, Object?>;
+    final config = jsonDecode(File('vercel.json').readAsStringSync()) as Map<String, Object?>;
     final buildJob = RegExp(
       r'^  build:\n(.*?)(?=^  [\w-]+:\n|\z)',
       multiLine: true,

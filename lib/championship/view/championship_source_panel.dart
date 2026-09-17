@@ -9,8 +9,7 @@ class ChampionshipSourcePanel extends StatefulWidget {
   const ChampionshipSourcePanel({super.key});
 
   @override
-  State<ChampionshipSourcePanel> createState() =>
-      _ChampionshipSourcePanelState();
+  State<ChampionshipSourcePanel> createState() => _ChampionshipSourcePanelState();
 }
 
 class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
@@ -91,9 +90,7 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
                 ),
               ],
               selected: {state.sourceMode},
-              onSelectionChanged: state.isLoading
-                  ? null
-                  : (selection) => cubit.setSourceMode(selection.single),
+              onSelectionChanged: state.isLoading ? null : (selection) => cubit.setSourceMode(selection.single),
             ),
             const SizedBox(height: 20),
             if (state.sourceMode == ChampionshipSourceMode.text) ...[
@@ -132,8 +129,7 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
                     height: prepared.height,
                   ),
                 ),
-                if (prepared.wasReduced)
-                  Text(strings.imageReduced(prepared.originalByteCount)),
+                if (prepared.wasReduced) Text(strings.imageReduced(prepared.originalByteCount)),
               ],
             ],
             const SizedBox(height: 20),
@@ -142,9 +138,7 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
               value: state.hasLiveConsent,
-              onChanged: state.isLoading
-                  ? null
-                  : (value) => cubit.setLiveConsent(value: value ?? false),
+              onChanged: state.isLoading ? null : (value) => cubit.setLiveConsent(value: value ?? false),
               title: ChampionshipWordWrapText(
                 key: const ValueKey('source-live-consent-label'),
                 text: strings.liveConsent,
@@ -155,10 +149,7 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
             if (state.sourceMode == ChampionshipSourceMode.text)
               FilledButton.icon(
                 key: const ValueKey('source-submit-text'),
-                onPressed:
-                    !state.isLoading &&
-                        state.hasLiveConsent &&
-                        state.sourceText.trim().isNotEmpty
+                onPressed: !state.isLoading && state.hasLiveConsent && state.sourceText.trim().isNotEmpty
                     ? () => cubit.submitText(locale: locale)
                     : null,
                 icon: const Icon(Icons.auto_awesome),
@@ -167,10 +158,7 @@ class _ChampionshipSourcePanelState extends State<ChampionshipSourcePanel> {
             else
               FilledButton.icon(
                 key: const ValueKey('source-submit-image'),
-                onPressed:
-                    !state.isLoading &&
-                        state.hasLiveConsent &&
-                        state.preparedImage != null
+                onPressed: !state.isLoading && state.hasLiveConsent && state.preparedImage != null
                     ? () => cubit.submitImage(locale: locale)
                     : null,
                 icon: const Icon(Icons.auto_awesome),

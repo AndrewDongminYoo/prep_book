@@ -42,21 +42,20 @@ Recipe _filled(String dependency) => buildRecipe(
   components: [buildSubRecipeComponent(dependency)],
 );
 
-ProductionSetupCubit _setupOver(RecipeRepository storage, {Recipe? recipe}) =>
-    ProductionSetupCubit(
-      StartProductionRun(
-        storage,
-        FakeIngredientRepository(),
-        const FixedRunIdSource(),
-        const FixedClock(),
-      ),
-      recipe: recipe ?? _dough(),
-      // Collapsed so a calculation resolves within one turn of the event queue,
-      // the way the library screen's cubit tests collapse its search window.
-      // The real length is pinned by the widget suite, which runs on a fake
-      // clock and can advance it for free.
-      previewDebounce: Duration.zero,
-    );
+ProductionSetupCubit _setupOver(RecipeRepository storage, {Recipe? recipe}) => ProductionSetupCubit(
+  StartProductionRun(
+    storage,
+    FakeIngredientRepository(),
+    const FixedRunIdSource(),
+    const FixedClock(),
+  ),
+  recipe: recipe ?? _dough(),
+  // Collapsed so a calculation resolves within one turn of the event queue,
+  // the way the library screen's cubit tests collapse its search window.
+  // The real length is pinned by the widget suite, which runs on a fake
+  // clock and can advance it for free.
+  previewDebounce: Duration.zero,
+);
 
 void main() {
   group('ProductionSetupCubit', () {

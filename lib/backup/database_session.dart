@@ -10,12 +10,10 @@ import 'package:prep_book/persistence/persistence.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// Rebuilds and mounts the application over [connection].
-typedef ActivateDatabase =
-    FutureOr<void> Function(Database connection, {required bool restored});
+typedef ActivateDatabase = FutureOr<void> Function(Database connection, {required bool restored});
 
 /// Records one internal restore error without exposing it to presentation.
-typedef ReportDatabaseSessionError =
-    void Function(Object error, StackTrace stackTrace);
+typedef ReportDatabaseSessionError = void Function(Object error, StackTrace stackTrace);
 
 /// Opens the database at [path] as the session's next owned connection.
 typedef OpenSessionDatabase = Future<Database> Function(String path);
@@ -43,14 +41,10 @@ final class DatabaseSession {
          validateCandidate,
          activate,
          mountRecoveryFailure,
-         createCandidatePath ??
-             (() => '$databasePath.restore-candidate-${_randomToken()}'),
-         createRollbackPath ??
-             (() => '$databasePath.restore-rollback-${_randomToken()}'),
-         createFailedPath ??
-             (() => '$databasePath.restore-failed-${_randomToken()}'),
-         openDatabase ??
-             ((path) => openPrepBookDatabase(path: path, factory: factory)),
+         createCandidatePath ?? (() => '$databasePath.restore-candidate-${_randomToken()}'),
+         createRollbackPath ?? (() => '$databasePath.restore-rollback-${_randomToken()}'),
+         createFailedPath ?? (() => '$databasePath.restore-failed-${_randomToken()}'),
+         openDatabase ?? ((path) => openPrepBookDatabase(path: path, factory: factory)),
          reportError ?? _logDatabaseSessionError,
        );
 

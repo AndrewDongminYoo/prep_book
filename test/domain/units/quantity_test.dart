@@ -36,9 +36,7 @@ void main() {
 
     test('converting to a compatible unit and back is reversible', () {
       final original = Quantity.parse('1.5', Unit.kilogram);
-      final roundTripped = original
-          .convertTo(Unit.gram)
-          .convertTo(Unit.kilogram);
+      final roundTripped = original.convertTo(Unit.gram).convertTo(Unit.kilogram);
       expect(roundTripped, original);
     });
 
@@ -48,9 +46,7 @@ void main() {
         '1',
         Unit.kilogram,
       ).scaleBy(Rational(BigInt.one, BigInt.from(3)));
-      final roundTripped = original
-          .convertTo(Unit.gram)
-          .convertTo(Unit.kilogram);
+      final roundTripped = original.convertTo(Unit.gram).convertTo(Unit.kilogram);
       expect(roundTripped, original);
     });
 

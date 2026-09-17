@@ -98,9 +98,7 @@ Future<void> bootstrap({
 
   final activeFactory = factory ?? databaseFactory;
   final pathResolver =
-      resolveDatabasePath ??
-      () async =>
-          '${await activeFactory.getDatabasesPath()}/$_databaseFileName';
+      resolveDatabasePath ?? () async => '${await activeFactory.getDatabasesPath()}/$_databaseFileName';
   final rootMount = mount ?? runApp;
   late final VoidCallback retry;
   retry = () {
@@ -177,21 +175,16 @@ Future<void> _runStartup({
         restored: restored,
         restoreFailure: restoreFailure,
       );
-      final mountedRoot = hasMountedRoot
-          ? KeyedSubtree(key: UniqueKey(), child: root)
-          : root;
+      final mountedRoot = hasMountedRoot ? KeyedSubtree(key: UniqueKey(), child: root) : root;
       hasMountedRoot = true;
       mount(mountedRoot);
     }
 
-    Future<void> activate(Database connection, {required bool restored}) =>
-        buildAndMount(
-          _repositories(connection),
-          restored: restored,
-          restoreFailure: restored
-              ? null
-              : LibraryBackupFailureKind.restoreFailed,
-        );
+    Future<void> activate(Database connection, {required bool restored}) => buildAndMount(
+      _repositories(connection),
+      restored: restored,
+      restoreFailure: restored ? null : LibraryBackupFailureKind.restoreFailed,
+    );
 
     void mountFailure() {
       mount(StartupFailureApp(onRetry: retry));

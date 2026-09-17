@@ -213,8 +213,7 @@ final class RecipeLibraryState {
   /// Judged on [categoryFiltered], not [recipes]: an archived recipe in a
   /// category other than the selected one is not what the switch is
   /// hiding, and counting it would point at a switch that shows nothing.
-  bool get hasHiddenArchived =>
-      !showArchived && categoryFiltered.any((recipe) => recipe.isArchived);
+  bool get hasHiddenArchived => !showArchived && categoryFiltered.any((recipe) => recipe.isArchived);
 
   /// This state with the named fields replaced.
   ///
@@ -238,9 +237,7 @@ final class RecipeLibraryState {
     query: query ?? this.query,
     resultsQuery: resultsQuery ?? this.resultsQuery,
     showArchived: showArchived ?? this.showArchived,
-    selectedCategory: clearSelectedCategory
-        ? null
-        : selectedCategory ?? this.selectedCategory,
+    selectedCategory: clearSelectedCategory ? null : selectedCategory ?? this.selectedCategory,
     isDuplicating: isDuplicating ?? this.isDuplicating,
     notice: notice ?? this.notice,
   );

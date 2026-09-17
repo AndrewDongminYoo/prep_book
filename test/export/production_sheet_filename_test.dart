@@ -54,9 +54,7 @@ void main() {
     final filename = buildProductionSheetFilename(
       runNamed('${'a' * 79}bc', fixedTime),
     );
-    final segment = filename
-        .replaceFirst('production-sheet-', '')
-        .replaceFirst('-20260911T040506Z.pdf', '');
+    final segment = filename.replaceFirst('production-sheet-', '').replaceFirst('-20260911T040506Z.pdf', '');
 
     expect(segment.runes, hasLength(80));
     expect(segment, '${'a' * 79}b');
@@ -66,9 +64,7 @@ void main() {
     final filename = buildProductionSheetFilename(
       runNamed('가' * 80, fixedTime),
     );
-    final segment = filename
-        .replaceFirst('production-sheet-', '')
-        .replaceFirst('-20260911T040506Z.pdf', '');
+    final segment = filename.replaceFirst('production-sheet-', '').replaceFirst('-20260911T040506Z.pdf', '');
 
     expect(utf8.encode(filename), hasLength(lessThanOrEqualTo(255)));
     expect(segment, '가' * 72);

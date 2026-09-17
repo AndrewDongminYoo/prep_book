@@ -17,8 +17,7 @@ sealed class DomainError implements Exception {
 
 /// Raised when two units have no defined conversion between them.
 final class UndefinedConversionError extends DomainError {
-  UndefinedConversionError(this.from, this.to)
-    : super('no defined conversion from ${from.symbol} to ${to.symbol}');
+  UndefinedConversionError(this.from, this.to) : super('no defined conversion from ${from.symbol} to ${to.symbol}');
 
   final Unit from;
   final Unit to;
@@ -26,16 +25,14 @@ final class UndefinedConversionError extends DomainError {
 
 /// Raised when a quantity would become negative.
 final class NegativeQuantityError extends DomainError {
-  NegativeQuantityError(this.amount)
-    : super('a quantity may not be negative: $amount');
+  NegativeQuantityError(this.amount) : super('a quantity may not be negative: $amount');
 
   final Rational amount;
 }
 
 /// Raised when a rounding increment is not strictly positive.
 final class InvalidRoundingIncrementError extends DomainError {
-  InvalidRoundingIncrementError(this.increment)
-    : super('a rounding increment must be positive: $increment');
+  InvalidRoundingIncrementError(this.increment) : super('a rounding increment must be positive: $increment');
 
   final Decimal increment;
 }
@@ -47,8 +44,7 @@ final class InvalidRoundingIncrementError extends DomainError {
 /// missing one cannot reach it either — a recipe's base yield parameter is
 /// required, not nullable.
 final class InvalidBaseYieldError extends DomainError {
-  InvalidBaseYieldError(this.recipeId)
-    : super('recipe $recipeId has no positive base yield');
+  InvalidBaseYieldError(this.recipeId) : super('recipe $recipeId has no positive base yield');
 
   final String recipeId;
 }
@@ -60,8 +56,7 @@ final class InvalidBaseYieldError extends DomainError {
 /// decomposition and be silently reinterpreted as `null` there, so it is
 /// rejected here instead.
 final class InvalidMaxBatchYieldError extends DomainError {
-  InvalidMaxBatchYieldError(this.recipeId)
-    : super('recipe $recipeId has a zero maximum batch yield');
+  InvalidMaxBatchYieldError(this.recipeId) : super('recipe $recipeId has a zero maximum batch yield');
 
   final String recipeId;
 }
@@ -69,8 +64,7 @@ final class InvalidMaxBatchYieldError extends DomainError {
 /// Raised when a component's fields contradict its scaling behavior, or a
 /// recipe's component list repeats an id.
 final class InvalidComponentError extends DomainError {
-  InvalidComponentError(this.componentId, String reason)
-    : super('component $componentId is invalid: $reason');
+  InvalidComponentError(this.componentId, String reason) : super('component $componentId is invalid: $reason');
 
   final String componentId;
 }
@@ -86,8 +80,7 @@ final class IncompatibleYieldUnitError extends DomainError {
 
 /// Raised when a recipe depends on itself, directly or indirectly.
 final class RecipeCycleError extends DomainError {
-  RecipeCycleError(this.path)
-    : super('recipe dependency cycle: ${path.join(' -> ')}');
+  RecipeCycleError(this.path) : super('recipe dependency cycle: ${path.join(' -> ')}');
 
   /// The dependency path, ending at the identifier that repeats.
   final List<String> path;
@@ -113,8 +106,7 @@ final class MissingDependencyError extends DomainError {
 
 /// Raised when a target yield is zero.
 final class InvalidTargetYieldError extends DomainError {
-  InvalidTargetYieldError()
-    : super('a production run needs a positive target yield');
+  InvalidTargetYieldError() : super('a production run needs a positive target yield');
 }
 
 /// Raised when a target needs more batches than a batch count can hold.
@@ -129,8 +121,7 @@ final class InvalidTargetYieldError extends DomainError {
 /// derived exactly and then kept as an `int`, and past the largest one
 /// there is no truthful answer left to give.
 final class BatchCountOverflowError extends DomainError {
-  BatchCountOverflowError(this.batchCount)
-    : super('a run of $batchCount batches cannot be counted');
+  BatchCountOverflowError(this.batchCount) : super('a run of $batchCount batches cannot be counted');
 
   /// How many batches the target actually needs, exactly, counting a
   /// remainder batch when there is one.

@@ -342,8 +342,7 @@ void main() {
     test('exposes unmodifiable collections', () {
       final run = buildRun();
       expect(
-        () =>
-            run.overrides[('soup', 'stock')] = Quantity.parse('1', Unit.liter),
+        () => run.overrides[('soup', 'stock')] = Quantity.parse('1', Unit.liter),
         throwsUnsupportedError,
       );
       expect(
@@ -471,8 +470,7 @@ void main() {
         throwsUnsupportedError,
       );
       expect(
-        () => run.result.components.first.subRecipe!.components.first.perBatch
-            .clear(),
+        () => run.result.components.first.subRecipe!.components.first.perBatch.clear(),
         throwsUnsupportedError,
       );
     });

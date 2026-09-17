@@ -20,16 +20,14 @@ String readableAmount(Rational amount, {required int scale}) =>
 /// decides whether a line is still showing its stored value by comparing the
 /// field's text against this same function, so the two sides move together
 /// whatever it returns.
-String readableAmountOf(Quantity quantity) =>
-    _approximated(quantity.amount, quantity.toDecimal());
+String readableAmountOf(Quantity quantity) => _approximated(quantity.amount, quantity.toDecimal());
 
 /// [quantity] as the screens write it: an amount and the symbol of the unit
 /// it is measured in.
 ///
 /// Rounded at the domain's own display scale, which `Quantity.toDecimal`
 /// owns, so a quantity reads here the way it reads anywhere else.
-String readableQuantity(Quantity quantity) =>
-    '${readableAmountOf(quantity)} ${quantity.unit.symbol}';
+String readableQuantity(Quantity quantity) => '${readableAmountOf(quantity)} ${quantity.unit.symbol}';
 
 /// What a value looks like once its exact form has been approximated:
 /// [rounded], unless rounding has flattened it to nothing, in which case
@@ -49,5 +47,4 @@ String readableQuantity(Quantity quantity) =>
 /// a scale only to a value that has none, so a millionth of a tablespoon
 /// still reads `0.000001`, and only a value no decimal at that scale can
 /// express falls back. An amount that is exactly zero reads `0` either way.
-String _approximated(Rational exact, Decimal rounded) =>
-    rounded == Decimal.zero ? '$exact' : '$rounded';
+String _approximated(Rational exact, Decimal rounded) => rounded == Decimal.zero ? '$exact' : '$rounded';

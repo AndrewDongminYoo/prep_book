@@ -106,9 +106,7 @@ final class ProductionRun {
   int get recipeRevision => recipe.revision;
 
   /// Whether every blocking warning has been acknowledged.
-  bool get isFinalizable => result.warnings
-      .where((warning) => warning.isBlocking)
-      .every(acknowledgedWarnings.contains);
+  bool get isFinalizable => result.warnings.where((warning) => warning.isBlocking).every(acknowledgedWarnings.contains);
 
   /// This run with [warning] marked as seen.
   ProductionRun acknowledge(ProductionWarning warning) =>

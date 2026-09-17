@@ -37,12 +37,10 @@ final class ChampionshipRecipeMapper {
     var ingredientIndex = 0;
     for (final normalizedName in ingredientNames.keys) {
       ingredientIndex += 1;
-      ingredientIds[normalizedName] =
-          'championship-ingredient-$ingredientIndex';
+      ingredientIds[normalizedName] = 'championship-ingredient-$ingredientIndex';
     }
     final ingredients = <Ingredient>[
-      for (final MapEntry(key: normalizedName, value: name)
-          in ingredientNames.entries)
+      for (final MapEntry(key: normalizedName, value: name) in ingredientNames.entries)
         Ingredient(
           id: ingredientIds[normalizedName]!,
           name: name,
@@ -96,8 +94,7 @@ final class ChampionshipRecipeMapper {
 
   Unit _defaultUnit(VerifiedRecipeDraft draft, String normalizedName) {
     for (final component in draft.components) {
-      if (_normalizeName(component.name) == normalizedName &&
-          component.unit != null) {
+      if (_normalizeName(component.name) == normalizedName && component.unit != null) {
         return _resolveRequired(component.unit!);
       }
     }
@@ -109,10 +106,9 @@ final class ChampionshipRecipeMapper {
 
 String _normalizeName(String value) => value.trim().toLowerCase();
 
-ScalingBehavior _mapBehavior(DraftScalingBehavior behavior) =>
-    switch (behavior) {
-      DraftScalingBehavior.proportional => ScalingBehavior.proportional,
-      DraftScalingBehavior.perBatch => ScalingBehavior.perBatch,
-      DraftScalingBehavior.fixedOnce => ScalingBehavior.fixedOnce,
-      DraftScalingBehavior.manual => ScalingBehavior.manual,
-    };
+ScalingBehavior _mapBehavior(DraftScalingBehavior behavior) => switch (behavior) {
+  DraftScalingBehavior.proportional => ScalingBehavior.proportional,
+  DraftScalingBehavior.perBatch => ScalingBehavior.perBatch,
+  DraftScalingBehavior.fixedOnce => ScalingBehavior.fixedOnce,
+  DraftScalingBehavior.manual => ScalingBehavior.manual,
+};

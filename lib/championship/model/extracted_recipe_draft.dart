@@ -148,9 +148,7 @@ ExtractedRecipeDetails _parseRecipe(Object? value) {
       _required(json, 'baseYield', 'recipe'),
       'recipe.baseYield',
     ),
-    maxBatchYield: maxBatchYield == null
-        ? null
-        : _parseYield(maxBatchYield, 'recipe.maxBatchYield'),
+    maxBatchYield: maxBatchYield == null ? null : _parseYield(maxBatchYield, 'recipe.maxBatchYield'),
     preparationNotes: _parseList(
       _required(json, 'preparationNotes', 'recipe'),
       'recipe.preparationNotes',
@@ -180,8 +178,7 @@ ExtractedRecipeComponent _parseComponent(Object? value, String path) {
     '$path.amount',
   );
   final unit = _parseStringField(_required(json, 'unit', path), '$path.unit');
-  if (behavior.value == DraftScalingBehavior.manual &&
-      (amount.value != null || unit.value != null)) {
+  if (behavior.value == DraftScalingBehavior.manual && (amount.value != null || unit.value != null)) {
     throw FormatException('$path manual components cannot contain quantities.');
   }
   final note = _required(json, 'note', path);
@@ -194,13 +191,12 @@ ExtractedRecipeComponent _parseComponent(Object? value, String path) {
   );
 }
 
-ExtractedField<String> _parseStringField(Object? value, String path) =>
-    _parseField(value, path, (fieldValue) {
-      if (fieldValue != null && fieldValue is! String) {
-        throw FormatException('$path.value must be a string or null.');
-      }
-      return fieldValue as String?;
-    });
+ExtractedField<String> _parseStringField(Object? value, String path) => _parseField(value, path, (fieldValue) {
+  if (fieldValue != null && fieldValue is! String) {
+    throw FormatException('$path.value must be a string or null.');
+  }
+  return fieldValue as String?;
+});
 
 ExtractedField<DraftScalingBehavior> _parseBehaviorField(
   Object? value,
@@ -208,9 +204,7 @@ ExtractedField<DraftScalingBehavior> _parseBehaviorField(
 ) => _parseField(
   value,
   path,
-  (fieldValue) => fieldValue == null
-      ? null
-      : _parseEnum(fieldValue, DraftScalingBehavior.values, '$path.value'),
+  (fieldValue) => fieldValue == null ? null : _parseEnum(fieldValue, DraftScalingBehavior.values, '$path.value'),
 );
 
 ExtractedField<T> _parseField<T>(
@@ -262,8 +256,7 @@ List<T> _parseList<T>(
     throw FormatException('$path must be an array.');
   }
   return [
-    for (var index = 0; index < value.length; index += 1)
-      parseItem(value[index], '$path[$index]'),
+    for (var index = 0; index < value.length; index += 1) parseItem(value[index], '$path[$index]'),
   ];
 }
 

@@ -475,8 +475,7 @@ void main() {
       final notices = <RecipeLibraryNotice>[];
       final subscription = cubit.stream.listen((state) {
         final notice = state.notice;
-        if (notice != null &&
-            (notices.isEmpty || !identical(notices.last, notice))) {
+        if (notice != null && (notices.isEmpty || !identical(notices.last, notice))) {
           notices.add(notice);
         }
       });

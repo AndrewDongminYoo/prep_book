@@ -76,12 +76,11 @@ const _payloadRowLabel = 'production_runs row run-1';
 /// split buys is that the row each call claims is stated in an argument of
 /// its own, where a reader sees it missing, instead of being hidden inside a
 /// fragment nobody reads for that.
-Matcher corruptRowNaming(String row, String detail) =>
-    isA<CorruptDatabaseError>().having(
-      (error) => error.message,
-      'message',
-      allOf(contains(row), contains(detail)),
-    );
+Matcher corruptRowNaming(String row, String detail) => isA<CorruptDatabaseError>().having(
+  (error) => error.message,
+  'message',
+  allOf(contains(row), contains(detail)),
+);
 
 /// Matches a [CorruptDatabaseError] whose message names [row] exactly once
 /// and contains [detail].
@@ -92,14 +91,13 @@ Matcher corruptRowNaming(String row, String detail) =>
 /// assertion cannot tell a single label from a doubled one, so
 /// [corruptRowNaming] would certify `<row>: … in <row>: …` just as readily.
 /// Counting the occurrences is what pins the label's idempotence.
-Matcher corruptRowNamedOnce(String row, String detail) =>
-    isA<CorruptDatabaseError>()
-        .having((error) => error.message, 'message', contains(detail))
-        .having(
-          (error) => row.allMatches(error.message).length,
-          'occurrences of the row label',
-          1,
-        );
+Matcher corruptRowNamedOnce(String row, String detail) => isA<CorruptDatabaseError>()
+    .having((error) => error.message, 'message', contains(detail))
+    .having(
+      (error) => row.allMatches(error.message).length,
+      'occurrences of the row label',
+      1,
+    );
 
 void main() {
   setUpAll(sqfliteFfiInit);
@@ -494,8 +492,7 @@ void main() {
   });
 
   test('a zero denominator in a stored run payload is corrupt', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
     final recipe = encoded['recipe']! as Map<String, Object?>;
     (recipe['baseYield']! as Map<String, Object?>)['d'] = '0';
 
@@ -826,8 +823,7 @@ void main() {
   );
 
   test('an unparseable rounding increment in a run payload is corrupt', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
     final recipe = encoded['recipe']! as Map<String, Object?>;
     final components = recipe['components']! as List<Object?>;
     (components.first! as Map<String, Object?>)['roundingIncrement'] = 'a lot';
@@ -839,8 +835,7 @@ void main() {
   });
 
   test('an unparseable modifiedAt in a run payload is corrupt', () {
-    final encoded =
-        jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
+    final encoded = jsonDecode(encodeRunPayload(buildRun())) as Map<String, Object?>;
     (encoded['recipe']! as Map<String, Object?>)['modifiedAt'] = 'yesterday';
 
     expect(

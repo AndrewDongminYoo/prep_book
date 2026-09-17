@@ -123,12 +123,11 @@ Rational parseStoredRational(
 /// The numerator and denominator are stored as decimal strings because a
 /// `Rational`'s components are `BigInt`, which SQLite's 64-bit `INTEGER`
 /// cannot be relied on to hold.
-Map<String, Object?> quantityToColumns(Quantity quantity, String prefix) =>
-    <String, Object?>{
-      '${prefix}_numerator': quantity.amount.numerator.toString(),
-      '${prefix}_denominator': quantity.amount.denominator.toString(),
-      '${prefix}_unit': unitToStorage(quantity.unit),
-    };
+Map<String, Object?> quantityToColumns(Quantity quantity, String prefix) => <String, Object?>{
+  '${prefix}_numerator': quantity.amount.numerator.toString(),
+  '${prefix}_denominator': quantity.amount.denominator.toString(),
+  '${prefix}_unit': unitToStorage(quantity.unit),
+};
 
 /// Rebuilds the `Quantity` stored under [prefix] in [row], identifying the
 /// row as [rowLabel] if it cannot.

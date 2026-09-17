@@ -11,8 +11,7 @@ final class AcknowledgeWarning {
   const AcknowledgeWarning();
 
   /// [run] with [warning] marked as seen.
-  ProductionRun call(ProductionRun run, ProductionWarning warning) =>
-      run.acknowledge(warning);
+  ProductionRun call(ProductionRun run, ProductionWarning warning) => run.acknowledge(warning);
 }
 
 /// Records an operator-entered quantity for one component.
@@ -29,8 +28,7 @@ final class ApplyOverride {
     required String recipeId,
     required String componentId,
     required Quantity value,
-  }) =>
-      run.override(recipeId: recipeId, componentId: componentId, value: value);
+  }) => run.override(recipeId: recipeId, componentId: componentId, value: value);
 }
 
 /// Commits a calculated run and the state it carries.

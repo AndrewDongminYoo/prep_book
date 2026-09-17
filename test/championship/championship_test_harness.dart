@@ -13,8 +13,7 @@ import 'package:prep_book/championship/model/extracted_recipe_draft.dart';
 import 'package:prep_book/championship/sample/championship_sample_loader.dart';
 import 'package:prep_book/domain/domain.dart';
 
-const championshipFixturePath =
-    'assets/championship/sample_croissant_draft.json';
+const championshipFixturePath = 'assets/championship/sample_croissant_draft.json';
 
 Future<void> ignoreChampionshipProductionSheet(
   BuildContext context,

@@ -80,8 +80,7 @@ final class ProductionSetupState {
   /// blames the operator for not having had a turn. It is still not a
   /// target — [targetYield] is `null` and [canContinue] is false for it —
   /// it just says nothing about it.
-  bool get amountIsInvalid =>
-      targetAmount.trim().isNotEmpty && _positive(targetAmount) == null;
+  bool get amountIsInvalid => targetAmount.trim().isNotEmpty && _positive(targetAmount) == null;
 
   /// Whether the chosen unit is one the recipe's base yield cannot convert
   /// to.
@@ -96,8 +95,7 @@ final class ProductionSetupState {
   /// The mirror of `RecipeEditorState.maxBatchUnitIsIncompatible`, which is
   /// the same shape one screen earlier: a second yield measured against the
   /// recipe's own.
-  bool get targetUnitIsIncompatible =>
-      !recipe.baseYield.unit.canConvertTo(targetUnit);
+  bool get targetUnitIsIncompatible => !recipe.baseYield.unit.canConvertTo(targetUnit);
 
   /// The largest batch count this screen calculates a preview for, for any
   /// one recipe the run touches.
@@ -159,9 +157,7 @@ final class ProductionSetupState {
     }
     final baseUnit = recipe.baseYield.unit;
     final target = Quantity.fromDecimal(amount, targetUnit).convertTo(baseUnit);
-    final bound =
-        maxBatch.convertTo(baseUnit).amount *
-        Rational.fromInt(maxPlannedBatches);
+    final bound = maxBatch.convertTo(baseUnit).amount * Rational.fromInt(maxPlannedBatches);
     return target.amount > bound;
   }
 
@@ -219,9 +215,7 @@ final class ProductionSetupState {
     final run = preview;
     if (run == null) return const [];
     return [
-      for (final warning
-          in run.result.warnings.whereType<ArchivedDependencyWarning>())
-        _nameOf(run, warning.recipeId),
+      for (final warning in run.result.warnings.whereType<ArchivedDependencyWarning>()) _nameOf(run, warning.recipeId),
     ];
   }
 
@@ -229,9 +223,7 @@ final class ProductionSetupState {
   /// snapshot so an archived dependency is named the way the operator knows
   /// it rather than by identifier.
   static String _nameOf(ProductionRun run, String recipeId) =>
-      run.recipe.id == recipeId
-      ? run.recipe.name
-      : run.dependencySnapshot[recipeId]?.name ?? recipeId;
+      run.recipe.id == recipeId ? run.recipe.name : run.dependencySnapshot[recipeId]?.name ?? recipeId;
 
   /// Whether the operator may carry this target through to the production
   /// result.
@@ -247,10 +239,7 @@ final class ProductionSetupState {
   /// where `production_setup_cubit_test.dart` pins it, and the slice that
   /// builds the result screen gates its route on it.
   bool get canContinue =>
-      preview != null &&
-      !amountIsInvalid &&
-      !targetUnitIsIncompatible &&
-      archivedDependencies.isEmpty;
+      preview != null && !amountIsInvalid && !targetUnitIsIncompatible && archivedDependencies.isEmpty;
 
   /// This state with the named fields replaced.
   ///

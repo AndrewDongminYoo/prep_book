@@ -83,9 +83,7 @@ class _ChampionshipDemoPageState extends State<ChampionshipDemoPage> {
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final expanded =
-                      constraints.maxWidth >= 600 &&
-                      MediaQuery.textScalerOf(context).scale(16) <= 24;
+                  final expanded = constraints.maxWidth >= 600 && MediaQuery.textScalerOf(context).scale(16) <= 24;
                   return SingleChildScrollView(
                     key: const ValueKey('championship-demo-content'),
                     controller: _scrollController,
@@ -98,9 +96,7 @@ class _ChampionshipDemoPageState extends State<ChampionshipDemoPage> {
                         constraints: const BoxConstraints(maxWidth: 760),
                         child: _WorkflowShell(
                           key: ValueKey(
-                            expanded
-                                ? 'championship-expanded-layout'
-                                : 'championship-compact-layout',
+                            expanded ? 'championship-expanded-layout' : 'championship-compact-layout',
                           ),
                           phaseFocusNode: _phaseFocusNode,
                           openProductionSheet: widget.openProductionSheet,
@@ -141,9 +137,7 @@ class _WorkflowShell extends StatelessWidget {
         const _PhaseSteps(),
         const SizedBox(height: 24),
         KeyedSubtree(
-          key: phase == ChampionshipPhase.source
-              ? null
-              : const ValueKey('championship-task-layout'),
+          key: phase == ChampionshipPhase.source ? null : const ValueKey('championship-task-layout'),
           child: _PhasePanel(
             phaseFocusNode: phaseFocusNode,
             openProductionSheet: openProductionSheet,
@@ -311,10 +305,7 @@ class _PhaseSteps extends StatelessWidget {
         builder: (context, constraints) {
           final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
           final colors = Theme.of(context).colorScheme;
-          final compactLine =
-              constraints.maxWidth >= 280 &&
-              constraints.maxWidth < 600 &&
-              scale <= 1;
+          final compactLine = constraints.maxWidth >= 280 && constraints.maxWidth < 600 && scale <= 1;
           if (compactLine) {
             final markerSize = MediaQuery.textScalerOf(context).scale(14) + 14;
             return Stack(
@@ -333,9 +324,7 @@ class _PhaseSteps extends StatelessWidget {
                                 'championship-step-connector-$index',
                               ),
                               height: 1,
-                              color: index < phase.index
-                                  ? _completedStepLineColor
-                                  : colors.outlineVariant,
+                              color: index < phase.index ? _completedStepLineColor : colors.outlineVariant,
                             ),
                           ),
                       ],
@@ -375,9 +364,7 @@ class _PhaseSteps extends StatelessWidget {
                       key: ValueKey('championship-step-connector-${index - 1}'),
                       height: 1,
                       margin: const EdgeInsets.symmetric(horizontal: 8),
-                      color: index <= phase.index
-                          ? _completedStepLineColor
-                          : colors.outlineVariant,
+                      color: index <= phase.index ? _completedStepLineColor : colors.outlineVariant,
                     ),
                   ),
                 steps[index],

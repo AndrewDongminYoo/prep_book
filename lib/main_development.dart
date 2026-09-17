@@ -61,8 +61,7 @@ Future<void> main() async {
           restored: restored,
           restoreFailure: restoreFailure,
         ),
-    prepare: ({required recipes, required ingredients, required runs}) =>
-        _seedDevelopmentData(recipes, ingredients),
+    prepare: ({required recipes, required ingredients, required runs}) => _seedDevelopmentData(recipes, ingredients),
   );
 }
 

@@ -16,8 +16,7 @@ final class _FixedClock implements Clock {
 
 /// A calculated, unsaved run whose result carries one blocking warning.
 Future<ProductionRun> _buildRun() async {
-  final recipes = FakeRecipeRepository()
-    ..seed(buildRecipeWithManualComponent(id: 'a'));
+  final recipes = FakeRecipeRepository()..seed(buildRecipeWithManualComponent(id: 'a'));
   // `return await` for the reason Task 5 records: `async_return_with_no_await`
   // rejects an `async` body that returns a future without awaiting it.
   return await StartProductionRun(
@@ -73,8 +72,7 @@ void main() {
   test(
     'acknowledging one blocking warning leaves the other outstanding',
     () async {
-      final recipes = FakeRecipeRepository()
-        ..seed(_recipeWithTwoManualComponents(id: 'a'));
+      final recipes = FakeRecipeRepository()..seed(_recipeWithTwoManualComponents(id: 'a'));
       final run = await StartProductionRun(
         recipes,
         FakeIngredientRepository(),

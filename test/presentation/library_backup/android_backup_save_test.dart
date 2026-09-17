@@ -7,8 +7,7 @@ import 'package:prep_book/presentation/library_backup/view/android_backup_save.d
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('prep_book/backup_save');
-  final messenger =
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
 

@@ -36,12 +36,10 @@ final class _HistoryRepository implements ProductionRunRepository {
   }
 
   @override
-  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) =>
-      throw UnimplementedError();
+  Future<void> recordAcknowledgement(String runId, ProductionWarning warning) => throw UnimplementedError();
 
   @override
-  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) =>
-      throw UnimplementedError();
+  Future<void> recordOverride(String runId, OverrideKey key, Quantity value) => throw UnimplementedError();
 
   @override
   Future<void> save(ProductionRun run) => throw UnimplementedError();
@@ -59,8 +57,7 @@ final class _SheetPlatform implements ProductionSheetPlatform {
   }) => const Text('PDF preview');
 
   @override
-  Future<bool> print({required Uint8List bytes, required String name}) async =>
-      true;
+  Future<bool> print({required Uint8List bytes, required String name}) async => true;
 
   @override
   Future<bool> share({
@@ -94,16 +91,15 @@ ProductionRun _storedRun({required String id}) {
   );
 }
 
-ProductionRunSummary _summary({String id = 'run-1', bool isDraft = true}) =>
-    ProductionRunSummary(
-      id: id,
-      recipeId: 'morning-rolls',
-      recipeName: 'Morning rolls',
-      recipeRevision: 3,
-      targetYield: Quantity.parse('12', Unit.count('roll')),
-      createdAt: DateTime.utc(2026, 9, 15, 23),
-      isDraft: isDraft,
-    );
+ProductionRunSummary _summary({String id = 'run-1', bool isDraft = true}) => ProductionRunSummary(
+  id: id,
+  recipeId: 'morning-rolls',
+  recipeName: 'Morning rolls',
+  recipeRevision: 3,
+  targetYield: Quantity.parse('12', Unit.count('roll')),
+  createdAt: DateTime.utc(2026, 9, 15, 23),
+  isDraft: isDraft,
+);
 
 Widget _screen(
   _HistoryRepository repository, {
@@ -133,9 +129,7 @@ void main() {
 
       await tester.pumpWidget(_screen(repository));
       await tester.pump();
-      final normalTitleHeight = tester
-          .getSize(find.text('Morning rolls'))
-          .height;
+      final normalTitleHeight = tester.getSize(find.text('Morning rolls')).height;
       tester.platformDispatcher.textScaleFactorTestValue = 3;
       await tester.pumpAndSettle();
 
@@ -196,8 +190,7 @@ void main() {
   });
 
   testWidgets('shows loading and then the empty state', (tester) async {
-    final repository = _HistoryRepository()
-      ..pendingList = Completer<List<ProductionRunSummary>>();
+    final repository = _HistoryRepository()..pendingList = Completer<List<ProductionRunSummary>>();
     await tester.pumpWidget(_screen(repository));
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -249,8 +242,7 @@ void main() {
   });
 
   testWidgets('separates rows and labels a ready run', (tester) async {
-    final repository = _HistoryRepository()
-      ..summaries = [_summary(), _summary(id: 'run-2', isDraft: false)];
+    final repository = _HistoryRepository()..summaries = [_summary(), _summary(id: 'run-2', isDraft: false)];
     await tester.pumpWidget(_screen(repository));
     await tester.pump();
 

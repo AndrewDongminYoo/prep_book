@@ -37,9 +37,7 @@ void main() {
     });
 
     test('rejects removing the final component', () {
-      final json =
-          jsonDecode(File(_fixturePath).readAsStringSync())
-              as Map<String, Object?>;
+      final json = jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
       final components = json['components']! as List<Object?>;
       json['components'] = [components.first];
       final draft = ReviewRecipeDraft.fromExtracted(
@@ -88,10 +86,7 @@ void main() {
           _fixture(),
         ).confirmAllUnambiguous();
 
-        final corrected = bulk
-            .editComponentUnit(2, 'g')
-            .confirmComponentUnit(2)
-            .confirmComponentBehavior(3);
+        final corrected = bulk.editComponentUnit(2, 'g').confirmComponentUnit(2).confirmComponentBehavior(3);
 
         expect(corrected.components[2].unit.value, 'g');
         expect(corrected.components[2].unit.isConfirmed, isTrue);
@@ -102,9 +97,7 @@ void main() {
     );
 
     test('bulk confirmation skips an incompatible maximum yield unit', () {
-      final json =
-          jsonDecode(File(_fixturePath).readAsStringSync())
-              as Map<String, Object?>;
+      final json = jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
       final recipe = json['recipe']! as Map<String, Object?>;
       final maxYield = recipe['maxBatchYield']! as Map<String, Object?>;
       final unit = maxYield['unit']! as Map<String, Object?>;
@@ -119,9 +112,7 @@ void main() {
     });
 
     test('corrects and confirms every editable review field', () {
-      final json =
-          jsonDecode(File(_fixturePath).readAsStringSync())
-              as Map<String, Object?>;
+      final json = jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
       final recipe = json['recipe']! as Map<String, Object?>;
       (recipe['name']! as Map<String, Object?>)['value'] = null;
       final baseYield = recipe['baseYield']! as Map<String, Object?>;
@@ -273,10 +264,7 @@ void main() {
       var draft = ReviewRecipeDraft.fromExtracted(
         _fixtureWithFlaggedFlourAmount(),
       ).confirmAllUnambiguous();
-      draft = draft
-          .editComponentUnit(2, 'g')
-          .confirmComponentUnit(2)
-          .confirmComponentBehavior(3);
+      draft = draft.editComponentUnit(2, 'g').confirmComponentUnit(2).confirmComponentBehavior(3);
 
       expect(
         const RecipeDraftVerifier().verify(draft),
@@ -358,8 +346,7 @@ void main() {
 }
 
 ExtractedRecipeDraft _fixtureWithFlaggedFlourAmount() {
-  final json =
-      jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
+  final json = jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
   final components = json['components']! as List<Object?>;
   final flour = components[0]! as Map<String, Object?>;
   final amount = flour['amount']! as Map<String, Object?>;
@@ -369,8 +356,7 @@ ExtractedRecipeDraft _fixtureWithFlaggedFlourAmount() {
 }
 
 ExtractedRecipeDraft _fixtureWithoutWaterUnitIssue() {
-  final json =
-      jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
+  final json = jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, Object?>;
   final components = json['components']! as List<Object?>;
   final water = components[2]! as Map<String, Object?>;
   final unit = water['unit']! as Map<String, Object?>;

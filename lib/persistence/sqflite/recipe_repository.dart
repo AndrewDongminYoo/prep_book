@@ -75,9 +75,7 @@ ORDER BY recipes.id
 /// half-filled group unrepresentable and so block the `UPDATE` the failure
 /// tests use to plant exactly this corruption.
 bool _quantityGroupPresent(Map<String, Object?> row, String prefix) =>
-    row['${prefix}_numerator'] != null ||
-    row['${prefix}_denominator'] != null ||
-    row['${prefix}_unit'] != null;
+    row['${prefix}_numerator'] != null || row['${prefix}_denominator'] != null || row['${prefix}_unit'] != null;
 
 /// Decodes the `is_archived` flag [stored] holds, naming [rowLabel] when it
 /// is neither of the two values this file writes.
@@ -96,14 +94,13 @@ bool _quantityGroupPresent(Map<String, Object?> row, String prefix) =>
 /// enclosing `on TypeError` clause. The two messages differ, but both name
 /// the row and neither guesses a value, so nothing this layer promises turns
 /// on which of them fires.
-bool _archivedFromColumn(Object? stored, {required String rowLabel}) =>
-    switch (stored) {
-      0 => false,
-      1 => true,
-      _ => throw CorruptDatabaseError(
-        'unrecognised is_archived value in $rowLabel: $stored',
-      ),
-    };
+bool _archivedFromColumn(Object? stored, {required String rowLabel}) => switch (stored) {
+  0 => false,
+  1 => true,
+  _ => throw CorruptDatabaseError(
+    'unrecognised is_archived value in $rowLabel: $stored',
+  ),
+};
 
 /// [RecipeRepository] backed by the `recipes` and `recipe_components`
 /// tables.
@@ -266,9 +263,7 @@ final class SqfliteRecipeRepository implements RecipeRepository {
             ? quantityFromColumns(row, 'max_batch', rowLabel: rowLabel)
             : null,
         components: components,
-        preparationNotes:
-            (jsonDecode(row['preparation_notes']! as String) as List<dynamic>)
-                .cast<String>(),
+        preparationNotes: (jsonDecode(row['preparation_notes']! as String) as List<dynamic>).cast<String>(),
         modifiedAt: DateTime.parse(row['modified_at']! as String),
         isArchived: _archivedFromColumn(row['is_archived'], rowLabel: rowLabel),
       );

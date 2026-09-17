@@ -71,12 +71,8 @@ bool _hasPrimaryFocus(Finder finder) {
 }
 
 List<Key> _enabledButtonKeys() => [
-  for (final element
-      in find
-          .byWidgetPredicate((widget) => widget is ButtonStyleButton)
-          .evaluate())
-    if (element.widget case final ButtonStyleButton button
-        when button.onPressed != null && button.key != null)
+  for (final element in find.byWidgetPredicate((widget) => widget is ButtonStyleButton).evaluate())
+    if (element.widget case final ButtonStyleButton button when button.onPressed != null && button.key != null)
       button.key!,
 ];
 
@@ -320,9 +316,7 @@ void main() {
 
     expect(client.requests, hasLength(1));
     expect(
-      tester
-          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
-          .value,
+      tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator)).value,
       isNull,
       reason: 'the extraction has no known duration, so the bar animates',
     );
@@ -335,8 +329,7 @@ void main() {
   testWidgets('consent enables the next keyboard submit action', (
     tester,
   ) async {
-    final cubit = buildChampionshipTestCubit()
-      ..setSourceText('Dough\nFlour 100 g');
+    final cubit = buildChampionshipTestCubit()..setSourceText('Dough\nFlour 100 g');
     await _pumpApp(
       tester,
       cubit,
@@ -458,10 +451,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(cubit.state.sourceText, 'Externally restored source');
     expect(
-      tester
-          .widget<TextField>(find.byKey(const ValueKey('source-text-input')))
-          .controller
-          ?.text,
+      tester.widget<TextField>(find.byKey(const ValueKey('source-text-input'))).controller?.text,
       'Externally restored source',
     );
 
@@ -1036,10 +1026,7 @@ Future<void> _editAndConfirmText(
   );
   input.onChanged?.call(value);
   await tester.pump();
-  tester
-      .widget<OutlinedButton>(find.byKey(ValueKey('$path.confirm')))
-      .onPressed
-      ?.call();
+  tester.widget<OutlinedButton>(find.byKey(ValueKey('$path.confirm'))).onPressed?.call();
   await tester.pump();
 }
 
@@ -1066,10 +1053,7 @@ Future<void> _editAndConfirmUnit(
       .onChanged
       ?.call(value);
   await tester.pump();
-  tester
-      .widget<OutlinedButton>(find.byKey(ValueKey('$path.confirm')))
-      .onPressed
-      ?.call();
+  tester.widget<OutlinedButton>(find.byKey(ValueKey('$path.confirm'))).onPressed?.call();
   await tester.pump();
 }
 
@@ -1085,9 +1069,6 @@ Future<void> _editAndConfirmBehavior(
       .onChanged
       ?.call(value);
   await tester.pump();
-  tester
-      .widget<OutlinedButton>(find.byKey(ValueKey('$path.confirm')))
-      .onPressed
-      ?.call();
+  tester.widget<OutlinedButton>(find.byKey(ValueKey('$path.confirm'))).onPressed?.call();
   await tester.pump();
 }

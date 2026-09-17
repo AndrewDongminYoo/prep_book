@@ -24,12 +24,10 @@ final class _PendingPlatform implements ProductionSheetPlatform {
   }) => const SizedBox();
 
   @override
-  Future<bool> print({required Uint8List bytes, required String name}) =>
-      Future.value(false);
+  Future<bool> print({required Uint8List bytes, required String name}) => Future.value(false);
 
   @override
-  Future<bool> share({required Uint8List bytes, required String filename}) =>
-      Future.value(false);
+  Future<bool> share({required Uint8List bytes, required String filename}) => Future.value(false);
 }
 
 void main() {

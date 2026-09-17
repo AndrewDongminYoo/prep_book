@@ -202,8 +202,7 @@ class _IngredientPickerState extends State<_IngredientPicker> {
               ListTile(
                 title: Text(ingredient.name),
                 subtitle: Text(ingredient.defaultUnit.symbol),
-                onTap: () =>
-                    Navigator.of(context).pop(_ExistingIngredient(ingredient)),
+                onTap: () => Navigator.of(context).pop(_ExistingIngredient(ingredient)),
               ),
             // Only read when a new ingredient is created: an existing one
             // keeps the default unit it was stored with.
@@ -215,8 +214,7 @@ class _IngredientPickerState extends State<_IngredientPicker> {
                 border: const OutlineInputBorder(),
               ),
               items: [
-                for (final choice in widget.units)
-                  DropdownMenuItem(value: choice, child: Text(choice.symbol)),
+                for (final choice in widget.units) DropdownMenuItem(value: choice, child: Text(choice.symbol)),
               ],
               onChanged: (chosen) {
                 if (chosen != null) setState(() => _unit = chosen);
@@ -362,8 +360,7 @@ class _CustomUnitDialogState extends State<_CustomUnitDialog> {
               ),
             ],
             selected: {_isCounted},
-            onSelectionChanged: (selection) =>
-                setState(() => _isCounted = selection.first),
+            onSelectionChanged: (selection) => setState(() => _isCounted = selection.first),
           ),
         ],
       ),

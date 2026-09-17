@@ -30,9 +30,7 @@ Widget _screenOver(
   acknowledgeWarning: const AcknowledgeWarning(),
   applyOverride: const ApplyOverride(),
   saveProductionRun: SaveProductionRun(runs ?? FakeProductionRunRepository()),
-  productionSheet:
-      productionSheet ??
-      ProductionSheetLauncher(platform: _PendingProductionSheetPlatform()),
+  productionSheet: productionSheet ?? ProductionSheetLauncher(platform: _PendingProductionSheetPlatform()),
   run: run,
 );
 
@@ -66,12 +64,10 @@ final class _PendingProductionSheetPlatform implements ProductionSheetPlatform {
   }) => const SizedBox();
 
   @override
-  Future<bool> print({required Uint8List bytes, required String name}) =>
-      Future.value(false);
+  Future<bool> print({required Uint8List bytes, required String name}) => Future.value(false);
 
   @override
-  Future<bool> share({required Uint8List bytes, required String filename}) =>
-      Future.value(false);
+  Future<bool> share({required Uint8List bytes, required String filename}) => Future.value(false);
 }
 
 /// Opens or closes the line at [path].
@@ -81,21 +77,19 @@ Future<void> _toggle(WidgetTester tester, String path) async {
 }
 
 /// The warning of type [T] the run raised.
-T _warning<T extends ProductionWarning>(ProductionRun run) =>
-    run.result.warnings.whereType<T>().single;
+T _warning<T extends ProductionWarning>(ProductionRun run) => run.result.warnings.whereType<T>().single;
 
 /// The override amount field on the line at [path].
 ///
 /// Reached through its control rather than by its own key: the key sits on
 /// the control, which is what holds the field's text across the rebuilds
 /// its own row causes.
-TextFormField _amountField(WidgetTester tester, String path) =>
-    tester.widget<TextFormField>(
-      find.descendant(
-        of: find.byKey(ValueKey('override-amount-$path')),
-        matching: find.byType(TextFormField),
-      ),
-    );
+TextFormField _amountField(WidgetTester tester, String path) => tester.widget<TextFormField>(
+  find.descendant(
+    of: find.byKey(ValueKey('override-amount-$path')),
+    matching: find.byType(TextFormField),
+  ),
+);
 
 /// The path of the chained run's line at [depth].
 ///
@@ -146,9 +140,7 @@ Future<ProductionRun> _buildChainedRun({
         components: [
           RecipeComponent(
             id: 'line-$level',
-            target: level == depth
-                ? const IngredientRef('flour')
-                : SubRecipeRef('link-${level + 1}'),
+            target: level == depth ? const IngredientRef('flour') : SubRecipeRef('link-${level + 1}'),
             baseQuantity: Quantity.parse('1000', Unit.gram),
             behavior: ScalingBehavior.proportional,
             displayOrder: 0,

@@ -535,9 +535,7 @@ Recipe _recipe({
       [
         RecipeComponent(
           id: subRecipeId == null ? 'flour' : 'sub-$subRecipeId',
-          target: subRecipeId == null
-              ? const IngredientRef('flour')
-              : SubRecipeRef(subRecipeId),
+          target: subRecipeId == null ? const IngredientRef('flour') : SubRecipeRef(subRecipeId),
           baseQuantity: Quantity.parse('1', Unit.gram),
           behavior: ScalingBehavior.proportional,
           displayOrder: 0,

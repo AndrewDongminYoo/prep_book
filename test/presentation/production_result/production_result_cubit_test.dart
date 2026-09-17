@@ -18,12 +18,10 @@ ProductionResultCubit _cubit(
 );
 
 /// The line at [path], collapsed or not.
-ResultRow _row(ProductionResultState state, String path) =>
-    state.allRows.firstWhere((row) => row.path == path);
+ResultRow _row(ProductionResultState state, String path) => state.allRows.firstWhere((row) => row.path == path);
 
 /// The warning of type [T] the run raised.
-T _warning<T extends ProductionWarning>(ProductionRun run) =>
-    run.result.warnings.whereType<T>().single;
+T _warning<T extends ProductionWarning>(ProductionRun run) => run.result.warnings.whereType<T>().single;
 
 /// A count unit no recipe in [buildReviewableRun] uses, so a suite can tell
 /// a state that reads the whole expanded tree from one that reads the root.
@@ -541,9 +539,7 @@ void main() {
       // them to show is a choice with no better answer, and it is written
       // down rather than left to fall out of the walk.
       expect(
-        state.allRows
-            .where((row) => row.key == ('starter', 'rye'))
-            .map((row) => row.path),
+        state.allRows.where((row) => row.key == ('starter', 'rye')).map((row) => row.path),
         ['1/1/0', '2/0'],
       );
       expect(state.pathOf(('starter', 'rye')), '1/1/0');

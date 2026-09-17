@@ -70,9 +70,7 @@ void main() {
     expect(
       tester.getTopLeft(sample).dy,
       lessThan(
-        tester
-            .getTopLeft(find.byKey(const ValueKey('source-mode-selector')))
-            .dy,
+        tester.getTopLeft(find.byKey(const ValueKey('source-mode-selector'))).dy,
       ),
     );
     expect(
@@ -194,9 +192,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      tester
-          .getSize(find.byKey(const ValueKey('championship-phase-panel')))
-          .width,
+      tester.getSize(find.byKey(const ValueKey('championship-phase-panel'))).width,
       lessThanOrEqualTo(760),
     );
     expect(
@@ -299,8 +295,7 @@ void main() {
     tester.view
       ..physicalSize = const Size(390, 844)
       ..devicePixelRatio = 1;
-    tester.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
+    tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     final cubit = buildChampionshipTestCubit();

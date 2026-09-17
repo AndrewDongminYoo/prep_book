@@ -14,8 +14,7 @@ final class RecipeDraftVerified extends RecipeDraftVerification {
 }
 
 final class RecipeDraftRejected extends RecipeDraftVerification {
-  RecipeDraftRejected(List<RecipeDraftVerificationIssue> issues)
-    : issues = List.unmodifiable(issues);
+  RecipeDraftRejected(List<RecipeDraftVerificationIssue> issues) : issues = List.unmodifiable(issues);
 
   final List<RecipeDraftVerificationIssue> issues;
 }
@@ -117,8 +116,7 @@ final class RecipeDraftVerifier {
       if (!draft.recipe.isMaxBatchYieldAbsentConfirmed) {
         issues.add(
           const RecipeDraftVerificationIssue(
-            kind: RecipeDraftVerificationIssueKind
-                .maximumAbsenceConfirmationRequired,
+            kind: RecipeDraftVerificationIssueKind.maximumAbsenceConfirmationRequired,
             path: 'recipe.maxBatchYield',
           ),
         );
@@ -134,9 +132,7 @@ final class RecipeDraftVerifier {
         'recipe.maxBatchYield.unit',
         issues,
       );
-      if (baseUnit != null &&
-          maxUnit != null &&
-          !baseUnit.canConvertTo(maxUnit)) {
+      if (baseUnit != null && maxUnit != null && !baseUnit.canConvertTo(maxUnit)) {
         issues.add(
           const RecipeDraftVerificationIssue(
             kind: RecipeDraftVerificationIssueKind.maxUnitIncompatible,

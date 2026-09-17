@@ -249,8 +249,7 @@ final class RecipeEditorState {
   bool get maxBatchIsBlank => maxBatchAmount.trim().isEmpty;
 
   /// Whether a declared maximum batch yield is not a positive number.
-  bool get maxBatchIsInvalid =>
-      !maxBatchIsBlank && _positive(maxBatchAmount) == null;
+  bool get maxBatchIsInvalid => !maxBatchIsBlank && _positive(maxBatchAmount) == null;
 
   /// Whether a declared maximum batch yield is measured in a unit the base
   /// yield cannot convert to, which `Recipe` rejects.
@@ -263,15 +262,11 @@ final class RecipeEditorState {
   /// placeholder it would report a mismatch with a unit the form does not
   /// even show, on top of the error asking for that unit.
   bool get maxBatchUnitIsIncompatible =>
-      baseYieldUnitChosen &&
-      !maxBatchIsBlank &&
-      !maxBatchIsInvalid &&
-      !baseYieldUnit.canConvertTo(maxBatchUnit);
+      baseYieldUnitChosen && !maxBatchIsBlank && !maxBatchIsInvalid && !baseYieldUnit.canConvertTo(maxBatchUnit);
 
   /// Whether [draft] needs an amount and does not have a usable one.
   bool amountIsInvalid(ComponentDraft draft) =>
-      draft.behavior != ScalingBehavior.manual &&
-      _positive(draft.amount) == null;
+      draft.behavior != ScalingBehavior.manual && _positive(draft.amount) == null;
 
   /// Whether [draft] consumes a sub-recipe in a unit that recipe's own base
   /// yield cannot convert to.
@@ -329,9 +324,7 @@ final class RecipeEditorState {
   /// the two cannot drift apart into agreeing on the wrong direction.
   bool _blockedByBaseYieldUnit(RecipeComponent component) {
     final quantity = component.baseQuantity;
-    return quantity != null &&
-        component.target == SubRecipeRef(recipeId) &&
-        !baseYieldUnit.canConvertTo(quantity.unit);
+    return quantity != null && component.target == SubRecipeRef(recipeId) && !baseYieldUnit.canConvertTo(quantity.unit);
   }
 
   /// Whether [draft] declares a rounding increment that is not positive.
@@ -355,10 +348,7 @@ final class RecipeEditorState {
       maxBatchUnitIsIncompatible ||
       dependentsBlockedByBaseYieldUnit.isNotEmpty ||
       components.any(
-        (draft) =>
-            amountIsInvalid(draft) ||
-            roundingIsInvalid(draft) ||
-            subRecipeUnitIsIncompatible(draft),
+        (draft) => amountIsInvalid(draft) || roundingIsInvalid(draft) || subRecipeUnitIsIncompatible(draft),
       );
 
   /// Every unit a picker on this screen offers.

@@ -30,17 +30,15 @@ final class SqfliteIngredientRepository implements IngredientRepository {
   }
 
   @override
-  Future<void> upsert(Ingredient ingredient) =>
-      _db.insert('ingredients', <String, Object?>{
-        'id': ingredient.id,
-        'name': ingredient.name,
-        'default_unit': unitToStorage(ingredient.defaultUnit),
-        'category': ingredient.category,
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
+  Future<void> upsert(Ingredient ingredient) => _db.insert('ingredients', <String, Object?>{
+    'id': ingredient.id,
+    'name': ingredient.name,
+    'default_unit': unitToStorage(ingredient.defaultUnit),
+    'category': ingredient.category,
+  }, conflictAlgorithm: ConflictAlgorithm.replace);
 
   @override
-  Future<void> delete(String id) =>
-      _db.delete('ingredients', where: 'id = ?', whereArgs: [id]);
+  Future<void> delete(String id) => _db.delete('ingredients', where: 'id = ?', whereArgs: [id]);
 
   /// Rebuilds the [Ingredient] an `ingredients` row holds.
   ///
