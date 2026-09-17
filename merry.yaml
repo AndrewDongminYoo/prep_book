@@ -142,9 +142,8 @@ build:
     (scripts): flutter build ipa --release --flavor production --target lib/main_production.dart --tree-shake-icons
 
   championship-web:
-    # The same command `.github/workflows/main.yaml` and `vercel.json` run,
-    # define included: the entrypoint's fallback happens to equal it today, so
-    # an artifact built without the define is only accidentally the deployed
-    # one, and `gate` is meant to exercise the build CI and Vercel ship.
+    # The same command `.github/workflows/main.yaml` and `vercel.json` run.
+    # The entrypoint owns the default API path; `gate` exercises the build
+    # CI and Vercel ship.
     (description): Builds the isolated championship web release, as CI and Vercel build it.
-    (scripts): flutter build web --release --target lib/main_championship.dart --dart-define=AI_IMPORT_ENDPOINT=/api/extract-recipe --tree-shake-icons
+    (scripts): flutter build web --release --target lib/main_championship.dart --tree-shake-icons

@@ -3,7 +3,7 @@
   "git": {
     "deploymentEnabled": false
   },
-  "buildCommand": "flutter build web --release --target lib/main_championship.dart --dart-define=AI_IMPORT_ENDPOINT=/api/extract-recipe --tree-shake-icons",
+  "buildCommand": "flutter build web --release --target lib/main_championship.dart --tree-shake-icons",
   "outputDirectory": "build/web",
   "functions": {
     "api/extract-recipe.mjs": {
