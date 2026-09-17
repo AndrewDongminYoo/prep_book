@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/championship/input/file_picker_recipe_image_picker.dart';
 import 'package:prep_book/championship/input/recipe_image_picker.dart';
@@ -66,6 +67,25 @@ void main() {
     final picker = FilePickerRecipeImagePicker(pickFiles: (_) async => []);
 
     expect(await picker.pick(), isNull);
+  });
+
+  test('reports an unavailable selected-file length as unreadable', () async {
+    final previous = FilePickerPlatform.instance;
+    final file = _NullLengthPlatformFile();
+    FilePickerPlatform.instance = _NullLengthFilePickerPlatform(file);
+    addTearDown(() => FilePickerPlatform.instance = previous);
+
+    await expectLater(
+      const FilePickerRecipeImagePicker().pick(),
+      throwsA(
+        isA<RecipeImagePickerException>().having(
+          (error) => error.failure,
+          'failure',
+          RecipeImagePickerFailure.missingBytes,
+        ),
+      ),
+    );
+    expect(file.readAttempted, isFalse);
   });
 
   test('rejects multiple files and absent bytes', () async {
@@ -141,4 +161,53 @@ void main() {
     expect(selected?.bytes.length, recipeImportMaxImageBytes + 1);
     expect(recipeImportMaxSelectedImageBytes, 32 * 1024 * 1024);
   });
+}
+
+final class _NullLengthFilePickerPlatform extends FilePickerPlatform {
+  new(this.file);
+
+  final _NullLengthPlatformFile file;
+
+  @override
+  Future<PlatformFile?> pickFile({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    void Function(FilePickerStatus status)? onFileLoading,
+    int compressionQuality = 0,
+    AndroidOptions androidOptions = const AndroidOptions(),
+    DarwinOptions darwinOptions = const DarwinOptions(),
+    WindowsOptions windowsOptions = const WindowsOptions(),
+    LinuxOptions linuxOptions = const LinuxOptions(),
+    WebOptions webOptions = const WebOptions(),
+  }) async => file;
+}
+
+final class _NullLengthPlatformFile extends PlatformFile {
+  bool readAttempted = false;
+
+  @override
+  String get name => 'recipe.png';
+
+  @override
+  Uri get uri => Uri.parse('content://prepbook/recipe');
+
+  @override
+  Never get xFile => throw UnimplementedError();
+
+  @override
+  int? lengthSync() => null;
+
+  @override
+  Future<int?> length() async => null;
+
+  @override
+  Future<Uint8List> readAsBytes() async {
+    readAttempted = true;
+    return _pngBytes();
+  }
+
+  @override
+  Stream<Uint8List> readAsByteStream() => throw StateError('must not read');
 }

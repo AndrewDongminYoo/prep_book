@@ -51,6 +51,26 @@ void main() {
     expect(identical(bytes, first), isFalse);
   });
 
+  test('reports an unavailable selected-file length without reading it', () async {
+    var listened = false;
+    final platform = FilePickerLibraryBackupPlatform(
+      openPicker: () async => PickedLibraryBackup(
+        resolveLength: () async => null,
+        openRead: () {
+          listened = true;
+          return Stream.value(Uint8List.fromList([1]));
+        },
+      ),
+    );
+
+    await expectLater(
+      platform.pickBackup(),
+      throwsA(_failureKind(LibraryBackupFailureKind.restoreFailed)),
+    );
+
+    expect(listened, isFalse);
+  });
+
   test('rejects a file whose size changes while it is read', () async {
     final platform = FilePickerLibraryBackupPlatform(
       openPicker: () async => PickedLibraryBackup(
