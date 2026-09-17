@@ -24,6 +24,7 @@ jobs:
     with:
       flutter_version: 3.47.x
       format_line_length: 120
+      analyze_directories: lib test integration_test
       run_bloc_lint: true
       setup: |
         npm run test:api

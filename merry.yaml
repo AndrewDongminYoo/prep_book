@@ -43,11 +43,11 @@ format:
     (scripts):
       - dart fix --apply lib
       - dart fix --apply test
-      - dart format lib test
+      - dart format lib test integration_test
 
   check:
     (description): Fails when sources are not formatted, without writing anything.
-    (scripts): dart format --output=none --set-exit-if-changed lib test
+    (scripts): dart format --output=none --set-exit-if-changed lib test integration_test
 
 pretest:
   (description): Clears the previous coverage report.
