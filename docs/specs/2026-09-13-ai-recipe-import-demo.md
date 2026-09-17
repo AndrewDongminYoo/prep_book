@@ -4,13 +4,15 @@
 
 Approved as an isolated competition variant in conversation on 2026-09-13.
 
-The implementation baseline is `main@8a8e6c8e394960346eadaa16f8defda1973b496a`.
-The 2026-09-15 post-deployment acceptance found that the self-hosted pdf.js base path was not a valid dynamic-import specifier, so the production-sheet preview failed before it requested either bundled module.
-The current branch uses an explicit `./assets/` specifier.
-Its local release build loaded both modules from the application origin and rendered the preview.
-Production verification remains incomplete until the correction is merged and deployed.
-The production Share action produced a non-zero readable PDF.
-Safari, an isolated browser-storage comparison, successful Retry recovery, and direct print-dialog observation also remain incomplete.
+The implementation baseline was `main@8a8e6c8e394960346eadaa16f8defda1973b496a`.
+The 2026-09-15 production pass found an invalid pdf.js dynamic-import specifier.
+The corrected `./assets/` path is deployed at `main@51a85e29efce5b8ef97bbbcbf4f883f8190c1f12`.
+On 2026-09-17 KST, Chrome rendered the batch and total production-sheet previews from that deployment.
+The browser requested both pdf.js modules from the application origin and made no `unpkg.com` request during the observed sample flow.
+Direct HTTP requests returned `200` for both modules, and the browser recorded `200` for `pdf.min.mjs`.
+Share downloaded a 13,273-byte, one-page PDF that passed `qpdf --check`.
+Back preserved the `180 piece` result and its 15 batches of 12 pieces.
+Safari, a clean isolated browser-storage comparison, successful Retry recovery, and direct print-dialog observation remain incomplete.
 See `docs/notes/2026-09-20-ai-championship-submission.md`.
 
 This document authorizes one narrow exception to the first-release scope in

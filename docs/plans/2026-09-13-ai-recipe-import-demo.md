@@ -41,22 +41,20 @@ variant-only until separate kitchen-user validation justifies a product change.
 
 ## Definition of Done
 
-- [ ] A fresh unauthenticated browser opens the public demo.
-- [ ] The checked-in sample completes without a network request.
-- [ ] Sample, text, and one supported image reach the same review model.
-- [ ] Every extracted value displays evidence, confidence, and issues.
-- [ ] Missing or unsupported values block calculation until corrected and
-      explicitly confirmed.
+- [x] An unauthenticated browser opens the public demo.
+- [x] The checked-in sample completes without an extraction API request.
+- [x] Sample, text, and one supported image reach the same review model.
+- [x] Every extracted value displays evidence, confidence, and issues.
+- [x] Missing or unsupported values block calculation until corrected and explicitly confirmed.
 - [ ] The AI endpoint never scales quantities, converts units, infers density,
       or fabricates missing values.
-- [ ] The existing exact calculator produces every total and batch value.
-- [ ] The existing production-sheet flow opens from the in-memory run.
+- [x] The existing exact calculator produces every total and batch value.
+- [x] The existing production-sheet flow opens from the in-memory run.
 - [ ] Reset and reload leave no source, draft, or run in application storage.
 - [ ] No API key appears in Flutter assets, browser requests, logs, or the
       repository.
 - [ ] Normal Android and iOS development entrypoints still build.
-- [ ] Analysis, Bloc lint, Flutter tests, Node tests, randomized coverage,
-      boundary tests, and web release build pass.
+- [x] Analysis, Bloc lint, Flutter tests, Node tests, randomized coverage, boundary tests, and web release build pass.
 - [ ] The public deployment remains available through 2026-10-17.
 
 ## Global constraints
@@ -555,6 +553,8 @@ piece` -> exact calculation. Assert `15` batches and checked totals. Assert
   because the OS print dialog blocks browser
   automation: serve `build/web`, run the sample to Result, open the production
   sheet, press 인쇄, and cancel at the system dialog.
+  `[PARTIAL]` On 2026-09-17 KST, production `main@51a85e2` rendered batch and total previews, downloaded a valid one-page PDF, and preserved Result after Back.
+  Direct print-dialog observation remains open, so this task stays unchecked.
 
 - [x] **6.4 Add Vercel configuration.** Use local prebuilt deployment. Configure
       championship Flutter build, `build/web` output, `30` second endpoint duration,
@@ -663,11 +663,13 @@ runtime evidence proves a defect.
   The first preview pass made one unexpected request to `unpkg.com` for pdf.js, which violates the no-network export contract.
   Commit `8a8e6c8` deployed the official `pdfjs-dist@5.7.284` browser files, but the post-deployment pass found that its `assets/js/` base path was a bare module specifier.
   The preview failed before either bundled module was requested.
-  This branch uses the explicit relative specifier `./assets/js/`.
-  Its local release build requested `pdf.min.mjs` and `pdf.worker.min.mjs` from `127.0.0.1`, received `200` responses, made no `unpkg.com` request, and rendered the preview.
-  A merged production deployment must repeat the same-origin network check.
-  The production Share action created a 13,214-byte, one-page A4 PDF that passed `qpdf --check`.
-  Safari, an isolated storage before-and-after comparison, successful Retry recovery, and direct print-dialog observation remain `[PARTIAL]` or failed.
+  The corrected `./assets/js/` specifier is deployed at `main@51a85e29efce5b8ef97bbbcbf4f883f8190c1f12`.
+  On 2026-09-17 KST, Chrome rendered both production previews and requested `pdf.min.mjs` and `pdf.worker.min.mjs` from the public origin.
+  The observed sample flow made zero `unpkg.com` and extraction API requests.
+  Direct HTTP requests returned `200` for both modules, and the browser recorded `200` for `pdf.min.mjs`.
+  Share downloaded a 13,273-byte, one-page PDF that passed `qpdf --check`.
+  Back preserved the `180 piece` result with 15 batches of 12 pieces.
+  Safari, an isolated storage before-and-after comparison, successful Retry recovery, and direct print-dialog observation remain `[PARTIAL]`.
   See `docs/notes/2026-09-20-ai-championship-submission.md`.
 
 - [x] **7.6 Write the submission note.** Include Service, Problem, Solution, AI
@@ -681,6 +683,10 @@ runtime evidence proves a defect.
       design `Implemented and publicly verified` and append final commit, toolchain,
       commands/results, tests, coverage, builds, URL, browser matrix, artifact
       directory, and any `[PARTIAL]` item with consequence.
+
+  The submission note records the verified production path and open partial checks.
+  Full public acceptance remains partial.
+  The Wanted `My Project` page showed no registered task on 2026-09-17 KST.
 
 - [x] **7.8 Run repository hygiene review.** Run:
 

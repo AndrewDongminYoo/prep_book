@@ -4,14 +4,20 @@
 
 ## Status
 
-Core runtime evidence was collected on 2026-09-15 against the production application at commit `ca428e9566a5aa811d8e3755190c3ea33256301c`.
-The hardened Function route surface was then verified against production commit `66b7b120e9c35d99ca3d1c3215d5502c4034b3a3`.
-Production commit `8a8e6c8e394960346eadaa16f8defda1973b496a` deployed the self-hosted pdf.js files.
-The core sample, live text, live image, review, and calculation paths passed in Chrome.
-The post-deployment preview failed before requesting the bundled modules because the configured base path was not a valid dynamic-import specifier.
-The corrected local release build loaded both modules from the application origin and rendered the preview.
-The production Share action produced a non-zero readable PDF.
+The current production baseline is `main@51a85e29efce5b8ef97bbbcbf4f883f8190c1f12`.
+The [main CI run](https://github.com/AndrewDongminYoo/prep_book/actions/runs/35132393769) and [production deployment run](https://github.com/AndrewDongminYoo/prep_book/actions/runs/35132393107) passed at that commit.
+On 2026-09-17 KST, Chrome completed the public Sample to Result flow, rendered both production-sheet previews, and downloaded a readable PDF.
+The observed sample flow made no extraction API or `unpkg.com` request.
+The earlier live text and image checks remain recorded below with their original deployment context.
 The remaining partial checks are Safari, an isolated browser-storage before-and-after comparison, direct print cancellation, and successful recovery after a forced rate limit.
+
+The operator confirmed that Championship participation registration is complete on 2026-09-17.
+The Wanted `My Project` page showed no registered task and offered `Register Project` on 2026-09-17 KST.
+The task submission is `[INCOMPLETE]` at that check.
+The [official FAQ](https://static.wanted.co.kr/ai-championship/2026/landing.html) sets the participation-registration deadline at 2026-09-18 23:59:59 KST and the task-submission deadline at 2026-09-20 23:59:59 KST.
+The FAQ says that a saved draft does not count as final submission and that submitted tasks can be edited until the task-submission deadline.
+The live submission form requires a representative image, title, one-line problem, AI use and result within 500 characters, at least one tool or stack tag, service URL, and at least one 16:9 screenshot.
+It showed no required video field.
 
 ## Service
 
@@ -101,16 +107,15 @@ The active rule was re-read after the hardened deployment, and Vercel reported n
 
 ## Deployment and judging availability
 
-The [`deploy-championship` run](https://github.com/AndrewDongminYoo/prep_book/actions/runs/34924752366) succeeded for `main@66b7b120e9c35d99ca3d1c3215d5502c4034b3a3`.
-The `vercel pull`, `vercel build --prod`, and `vercel deploy --prebuilt --prod` steps all passed.
-Vercel reported deployment `dpl_HmV9d59Giu5udhjGFtERasd9rY3w` as `READY`, with the public alias assigned to production.
-The [main CI run](https://github.com/AndrewDongminYoo/prep_book/actions/runs/34924752786) also passed at the same commit.
+The [latest `deploy-championship` run](https://github.com/AndrewDongminYoo/prep_book/actions/runs/35132393107) succeeded for `main@51a85e29efce5b8ef97bbbcbf4f883f8190c1f12`.
+The Vercel pull, build, and deploy steps passed, and the run assigned the production alias <https://prep-book-fawn.vercel.app>.
+The [same-commit main CI run](https://github.com/AndrewDongminYoo/prep_book/actions/runs/35132393769) also passed.
 
 Earlier acceptance found that Vercel also packaged three non-entrypoint files under `api/lib` as public Functions.
 The hardened deployment prefixes those support filenames with `_`, and Vercel now reports only `api/extract-recipe` as a Function.
 Public probes returned HTTP `404` for the three former routes and their three underscore-prefixed equivalents.
 The intended endpoint returned HTTP `405`, `Allow: POST`, and `Cache-Control: no-store` for a deliberate `GET` probe.
-The current deployment log query contained that one metadata-only `405` entry and no unexpected 5xx response.
+The 2026-09-15 hardened deployment log query contained that one metadata-only `405` entry and no unexpected 5xx response.
 
 The project must retain the public URL and required environment configuration through the judging end date of 2026-10-17.
 
@@ -119,6 +124,8 @@ The project must retain the public URL and required environment configuration th
 PrepBook's recipe domain, exact calculator, batch planner, and production-sheet export existed before this competition variant.
 The competition work adds the isolated Flutter Web entrypoint, guarded AI extraction endpoint, strict draft schema, evidence-based human review, browser image reduction, and web deployment path.
 The normal mobile product does not require the AI endpoint.
+The operator confirmed that the mobile product was not a public service before the competition variant.
+The [official FAQ](https://static.wanted.co.kr/ai-championship/2026/landing.html) requests a separate operating-period and revenue notice for a result that was already in service.
 
 ## Demo script
 
@@ -133,7 +140,46 @@ Target duration: 85 seconds.
 7. `70–80s`: Return to Source and show text and image import with the privacy boundary.
 8. `80–85s`: Close with the deterministic calculation and no-persistence boundary.
 
-## Verification evidence
+## Submission form draft
+
+Title: `PrepBook AI Recipe Import`.
+
+Problem: 사진·메시지로 받은 레시피를 옮겨 적는 과정은 느리고, 누락된 수량이나 단위를 AI가 임의로 채우면 생산 계획이 틀릴 수 있습니다.
+
+AI use and result: OpenAI Responses API는 레시피 텍스트·이미지에서 원문 근거, 신뢰도, 확인할 문제를 포함한 구조화 초안만 만듭니다.
+누락된 단위를 추측하지 않고 사용자가 검토·수정·확인하도록 합니다.
+확인된 값은 기존 ProductionCalculator가 정확하게 계산합니다.
+샘플에서는 180 piece를 12 piece씩 15배치로 계산하고 생산 지시서 PDF를 생성했습니다.
+개발에는 OpenAI Codex를 사용했으며, 이는 런타임 AI와 구분됩니다.
+
+The form offers `Vercel` as an accurate stack tag.
+It does not offer separate `OpenAI Responses API`, `OpenAI Codex`, or `Flutter` tags, so the text names the AI tools.
+Service URL: <https://prep-book-fawn.vercel.app>.
+
+The following actual production screenshots are outside the repository under `~/Downloads/prepbook-championship-submission/`:
+
+- Representative image: `cover-review-square-2026-09-17.jpg` (600×600).
+- Screenshots: `source-16x9-2026-09-17.jpg`, `review-16x9-2026-09-17.jpg`, and `result-16x9-2026-09-17.jpg` (each 1600×900).
+
+The form has not been filled, saved, or submitted.
+
+## 2026-09-17 production recheck
+
+| Check                     | Result     | Evidence                                                                                                                                                                                                                                                       |
+| ------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deployment and CI         | PASS       | Production alias and both GitHub Actions runs point to `main@51a85e29efce5b8ef97bbbcbf4f883f8190c1f12`.                                                                                                                                                        |
+| Current checks            | PASS       | Main CI passed 1,118 Flutter tests, 56 API tests, analysis, and Bloc lint. A local `merry coverage` run passed 1,118 tests and measured 6,625 of 6,625 reached lines. The deploy build passed.                                                                 |
+| Sample to Result          | PASS       | Chrome loaded the sample draft, corrected Water to `g`, confirmed the values, and displayed `180 piece` as 15 batches of 12 pieces.                                                                                                                            |
+| Production-sheet previews | PASS       | Batch preview showed 12 pieces per batch. Total preview showed Flour 7,500 g, Butter 3,750 g, and Water 3,600 g.                                                                                                                                               |
+| PDF dependency            | PASS       | Chrome requested `pdf.min.mjs` and `pdf.worker.min.mjs` from the public origin. Chrome recorded `200` for `pdf.min.mjs`, and direct HTTP requests returned `200` for both modules. The observed sample flow made zero `unpkg.com` and extraction API requests. |
+| Share PDF                 | PASS       | Share downloaded `production-sheet-Croissant-dough-20260916T232651Z.pdf` outside the repository. It was 13,273 bytes, had one page, and passed `qpdf --check`.                                                                                                 |
+| Return to Result          | PASS       | Back preserved the `180 piece` result and its 15 batches of 12 pieces.                                                                                                                                                                                         |
+| Browser isolation         | PARTIAL    | The pass used a new Chrome tab. It did not establish a clean incognito profile or a storage baseline.                                                                                                                                                          |
+| Task submission           | INCOMPLETE | Participation registration is operator-confirmed. The Wanted `My Project` page showed no registered task. The required image files and form copy are prepared outside the form.                                                                                |
+
+Coverage is limited to measured Dart lines. It does not establish execution of excluded web or platform files.
+
+## 2026-09-15 verification evidence
 
 | Check                       | Result  | Evidence                                                                                                                                                                                                                                                                                                                                             |
 | --------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -165,7 +211,6 @@ Target duration: 85 seconds.
 
 - Complete one desktop Safari pass without changing security settings outside an approved session.
 - Repeat the storage check in a fresh isolated browser context and compare all four storage surfaces before the Sample flow and after Reset and reload.
-- Verify that production-sheet preview loads `pdf.min.mjs` and `pdf.worker.min.mjs` only from the deployed application origin.
 - Directly observe the print dialog opening and then cancel it.
 - Verify one forced-busy Retry reaches Review after the WAF window resets.
 - Keep the public URL available through 2026-10-17.
