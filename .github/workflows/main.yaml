@@ -17,10 +17,10 @@ permissions:
 
 jobs:
   semantic-pull-request:
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/semantic_pull_request.yml@bca17593224500d894e3fc7df09937ec603e35cd # v1.21.0
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/semantic_pull_request.yml@61d25935870f12a1f2c23f2a04d5f193c83f4e5d # v1.21.1
 
   build:
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@bca17593224500d894e3fc7df09937ec603e35cd # v1.21.0
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@61d25935870f12a1f2c23f2a04d5f193c83f4e5d # v1.21.1
     with:
       flutter_version: 3.47.x
       run_bloc_lint: true
@@ -31,7 +31,7 @@ jobs:
       analyze_directories: lib test integration_test
 
   spell-check:
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/spell_check.yml@bca17593224500d894e3fc7df09937ec603e35cd # v1.21.0
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/spell_check.yml@61d25935870f12a1f2c23f2a04d5f193c83f4e5d # v1.21.1
     with:
       includes: |
         **/*.md
