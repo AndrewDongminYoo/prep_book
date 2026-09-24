@@ -377,6 +377,90 @@ void expectDependencySnapshot(
 }
 
 void main() {
+  group('snapshot consistency', () {
+    final mutations = <String, void Function(Map<String, Object?>)>{
+      'target': (source) => (source['target']! as Map<String, Object?>)['id'] = 'salt',
+      'id': (source) => source['id'] = 'other',
+      'note': (source) => source['note'] = 'changed',
+      'display order': (source) => source['displayOrder'] = 9,
+      'rounding': (source) => source['roundingIncrement'] = '0.1',
+      'base quantity': (source) => (source['baseQuantity']! as Map<String, Object?>)['n'] = '2',
+      'behavior': (source) => source['behavior'] = 'fixedOnce',
+    };
+    for (final mutation in mutations.entries) {
+      test('rejects component ${mutation.key} differing from the saved recipe', () {
+        final json = jsonDecode(encodeRunPayload(buildRunScaledByOneThird())) as Map<String, Object?>;
+        final recipe = json['recipe']! as Map<String, Object?>;
+        final components = recipe['components']! as List<Object?>;
+        mutation.value(components.first! as Map<String, Object?>);
+        expect(
+          () => decodeRunPayload(jsonEncode(json), rowLabel: _rowLabel),
+          throwsA(isA<CorruptDatabaseError>().having((e) => e.message, 'row', contains(_rowLabel))),
+        );
+      });
+    }
+
+    for (final mutation in ['missing', 'extra', 'reordered', 'unexpected expansion']) {
+      test('rejects $mutation result components', () {
+        final json = jsonDecode(encodeRunPayload(buildRunScaledByOneThird())) as Map<String, Object?>;
+        final result = json['result']! as Map<String, Object?>;
+        final components = result['components']! as List<Object?>;
+        switch (mutation) {
+          case 'missing':
+            components.removeLast();
+          case 'extra':
+            components.add(components.first);
+          case 'reordered':
+            result['components'] = components.reversed.toList();
+          case 'unexpected expansion':
+            final other = jsonDecode(encodeRunPayload(buildRunScaledByOneThird())) as Map<String, Object?>;
+            (components.first! as Map<String, Object?>)['subRecipe'] = other['result'];
+        }
+        expect(
+          () => decodeRunPayload(jsonEncode(json), rowLabel: _rowLabel),
+          throwsA(isA<CorruptDatabaseError>()),
+        );
+      });
+    }
+
+    for (final mutation in ['nested source', 'missing expansion', 'missing dependency', 'dependency key']) {
+      test('rejects $mutation in a nested run', () {
+        final json = jsonDecode(encodeRunPayload(buildRunWithSubRecipeAndBatches())) as Map<String, Object?>;
+        final result = json['result']! as Map<String, Object?>;
+        final components = result['components']! as List<Object?>;
+        final child = components[1]! as Map<String, Object?>;
+        final dependencies = json['dependencySnapshot']! as Map<String, Object?>;
+        switch (mutation) {
+          case 'nested source':
+            final nested = child['subRecipe']! as Map<String, Object?>;
+            final nestedComponents = nested['components']! as List<Object?>;
+            final nestedSource = (nestedComponents.first! as Map<String, Object?>)['source']! as Map<String, Object?>;
+            (nestedSource['target']! as Map<String, Object?>)['id'] = 'salt';
+          case 'missing expansion':
+            child['subRecipe'] = null;
+          case 'missing dependency':
+            dependencies.clear();
+          case 'dependency key':
+            (dependencies['syrup']! as Map<String, Object?>)['id'] = 'other';
+        }
+        expect(
+          () => decodeRunPayload(jsonEncode(json), rowLabel: _rowLabel),
+          throwsA(isA<CorruptDatabaseError>()),
+        );
+      });
+    }
+
+    test('rejects an ingredient stored under another id', () {
+      final json = jsonDecode(encodeRunPayload(buildRunWithSnapshottedIngredients())) as Map<String, Object?>;
+      final ingredients = json['ingredientSnapshot']! as Map<String, Object?>;
+      (ingredients['bread-flour']! as Map<String, Object?>)['id'] = 'salt';
+      expect(
+        () => decodeRunPayload(jsonEncode(json), rowLabel: _rowLabel),
+        throwsA(isA<CorruptDatabaseError>()),
+      );
+    });
+  });
+
   test('a run payload round-trips including a non-terminating quantity', () {
     final run = buildRunScaledByOneThird();
     final decoded = decodeRunPayload(

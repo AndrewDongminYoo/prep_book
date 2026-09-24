@@ -40,6 +40,33 @@ void _fillRequiredFields(RecipeEditorCubit cubit, {String name = 'Ciabatta'}) =>
   ..baseYieldAmountChanged('1000')
   ..baseYieldUnitChanged(Unit.gram);
 
+void _attemptLockedEdits(RecipeEditorCubit cubit) {
+  final before = cubit.state;
+  final id = before.components.first.id;
+  final recipe = buildRecipe(id: 'other', name: 'Other');
+  cubit
+    ..nameChanged('Changed')
+    ..categoryChanged('Changed')
+    ..baseYieldAmountChanged('99')
+    ..baseYieldUnitChanged(Unit.kilogram)
+    ..maxBatchAmountChanged('10')
+    ..maxBatchUnitChanged(Unit.kilogram)
+    ..preparationNotesChanged('Changed')
+    ..addCustomUnit(_tray)
+    ..addIngredientComponent(buildIngredient(id: 'extra'))
+    ..addSubRecipeComponent(recipe)
+    ..componentTargetChanged(id, const IngredientRef('extra'))
+    ..subRecipeTargetChanged(id, recipe)
+    ..componentAmountChanged(id, '99')
+    ..componentUnitChanged(id, Unit.kilogram)
+    ..componentBehaviorChanged(id, ScalingBehavior.fixedOnce)
+    ..componentRoundingChanged(id, '10')
+    ..componentNoteChanged(id, 'Changed')
+    ..reorderComponent(oldIndex: 0, newIndex: 1)
+    ..removeComponent(id);
+  expect(cubit.state, same(before));
+}
+
 void main() {
   group('loading', () {
     test('reads both libraries into the pickers', () async {
@@ -918,6 +945,67 @@ void main() {
   });
 
   group('saving', () {
+    test('two saves in one frame write once', () async {
+      final recipes = DeferredWriteRecipeRepository(FakeRecipeRepository());
+      final ingredients = FakeIngredientRepository();
+      final cubit = RecipeEditorCubit(
+        ListLibrary(recipes),
+        ListIngredients(ingredients),
+        SaveRecipeRevision(recipes, _FixedClock()),
+        SaveIngredient(ingredients),
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+      _fillRequiredFields(cubit);
+      final first = cubit.save();
+      final second = cubit.save();
+      await pumpEventQueue();
+      final writes = recipes.pendingWrites.length;
+      for (var i = 0; i < writes; i++) {
+        recipes.completeWrite(i);
+      }
+      await Future.wait([first, second]);
+      expect(writes, 1);
+      await cubit.save();
+      expect(recipes.pendingWrites, hasLength(1));
+    });
+
+    test('ingredient creation excludes concurrent writes and edits', () async {
+      final recipes = FakeRecipeRepository();
+      final ingredients = DeferredIngredientRepository()..deferWrites = true;
+      final cubit = RecipeEditorCubit(
+        ListLibrary(recipes),
+        ListIngredients(ingredients),
+        SaveRecipeRevision(recipes, _FixedClock()),
+        SaveIngredient(ingredients),
+      );
+      addTearDown(cubit.close);
+      final loading = cubit.load();
+      ingredients.complete(0, []);
+      await loading;
+      _fillRequiredFields(cubit);
+      final first = cubit.createIngredient(name: 'Flour', defaultUnit: Unit.gram);
+      final locked = cubit.state;
+      cubit.nameChanged('Lost edit');
+      final saving = cubit.save();
+      final second = cubit.createIngredient(name: 'Salt', defaultUnit: Unit.gram);
+      final reload = cubit.load();
+      await pumpEventQueue();
+      final written = ingredients.written.length;
+      for (var i = 0; i < ingredients.pendingWrites.length; i++) {
+        ingredients.completeWrite(i);
+      }
+      for (var i = 1; i < ingredients.pending.length; i++) {
+        ingredients.complete(i, []);
+      }
+      await Future.wait([first, second, saving, reload]);
+      expect(written, 1);
+      expect(recipes.calls.where((call) => call.startsWith('saveRevision:')), isEmpty);
+      expect(cubit.state.name, locked.name);
+      expect(cubit.state.components.single.target, const IngredientRef('flour'));
+      expect(cubit.state.isEditable, isTrue);
+    });
+
     test(
       'a form with field errors writes nothing and starts reporting',
       () async {
@@ -1172,10 +1260,20 @@ void main() {
       );
       await cubit.load();
       _fillRequiredFields(cubit);
+      for (final id in ['flour', 'salt']) {
+        cubit.addIngredientComponent(buildIngredient(id: id));
+        cubit.componentAmountChanged(cubit.state.components.last.id, '1');
+      }
 
       final saving = cubit.save();
       expect(cubit.state.isWriting, isTrue);
       expect(cubit.state.isEditable, isFalse);
+
+      _attemptLockedEdits(cubit);
+      await cubit.createIngredient(name: 'Sugar', defaultUnit: Unit.gram);
+      await cubit.load();
+      expect(cubit.state.status, RecipeEditorStatus.saving);
+      expect(ingredients.stored, isEmpty);
 
       await pumpEventQueue();
       recipes.completeWrite(0);
@@ -1186,6 +1284,9 @@ void main() {
       // nothing left will read.
       expect(cubit.state.isWriting, isFalse);
       expect(cubit.state.isEditable, isFalse);
+      expect(cubit.state.status, RecipeEditorStatus.saved);
+      _attemptLockedEdits(cubit);
+      await cubit.load();
       expect(cubit.state.status, RecipeEditorStatus.saved);
     });
 

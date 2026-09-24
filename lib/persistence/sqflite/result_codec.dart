@@ -122,7 +122,7 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
     final ingredientsJson = map.containsKey('ingredientSnapshot')
         ? map['ingredientSnapshot']! as Map<String, Object?>
         : const <String, Object?>{};
-    return RunPayload(
+    final payload = RunPayload(
       recipe: _recipeFromJson(map['recipe']! as Map<String, Object?>),
       dependencySnapshot: <String, Recipe>{
         for (final entry in snapshotJson.entries) entry.key: _recipeFromJson(entry.value! as Map<String, Object?>),
@@ -136,6 +136,18 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
         rowLabel: rowLabel,
       ),
     );
+    for (final entry in payload.dependencySnapshot.entries) {
+      if (entry.key != entry.value.id) {
+        throw CorruptDatabaseError('dependency snapshot key ${entry.key} differs from recipe ${entry.value.id}');
+      }
+    }
+    for (final entry in payload.ingredientSnapshot.entries) {
+      if (entry.key != entry.value.id) {
+        throw CorruptDatabaseError('ingredient snapshot key ${entry.key} differs from ingredient ${entry.value.id}');
+      }
+    }
+    _checkResultSources(payload.recipe, payload.result, payload.dependencySnapshot);
+    return payload;
     // A cast failure here is Dart's `TypeError`, thrown for a `Map` whose
     // shape does not match, a missing key forced non-null by `!`, or a
     // `null` payload. The brief calls for exactly this: any cast failure
@@ -190,6 +202,46 @@ RunPayload decodeRunPayload(String json, {required String rowLabel}) {
     // as a failure spanning two rows.
     if (error.message.contains(rowLabel)) rethrow;
     throw CorruptDatabaseError('$rowLabel: ${error.message}');
+  }
+}
+
+// Compare only frozen sources; reopening a run must never recalculate it.
+void _checkResultSources(Recipe recipe, ProductionResult result, Map<String, Recipe> dependencies) {
+  if (recipe.components.length != result.components.length) {
+    throw CorruptDatabaseError('result component count differs from recipe ${recipe.id}');
+  }
+  for (var i = 0; i < recipe.components.length; i++) {
+    final expected = recipe.components[i];
+    final component = result.components[i];
+    final source = component.source;
+    if (source.id != expected.id ||
+        source.target != expected.target ||
+        source.baseQuantity != expected.baseQuantity ||
+        source.behavior != expected.behavior ||
+        source.displayOrder != expected.displayOrder ||
+        source.rounding?.increment != expected.rounding?.increment ||
+        source.note != expected.note) {
+      throw CorruptDatabaseError(
+        'result source ${source.id} differs from recipe ${recipe.id} component ${expected.id}',
+      );
+    }
+    final nested = component.subRecipe;
+    if (source.target case SubRecipeRef(:final recipeId)) {
+      final dependency = dependencies[recipeId];
+      if (dependency == null) {
+        throw CorruptDatabaseError('result source ${source.id} has no dependency snapshot for $recipeId');
+      }
+      if (source.behavior != ScalingBehavior.manual) {
+        if (nested == null) {
+          throw CorruptDatabaseError('result source ${source.id} has no expanded sub-recipe');
+        }
+        _checkResultSources(dependency, nested, dependencies);
+        continue;
+      }
+    }
+    if (nested != null) {
+      throw CorruptDatabaseError('result source ${source.id} has an unexpected expanded sub-recipe');
+    }
   }
 }
 

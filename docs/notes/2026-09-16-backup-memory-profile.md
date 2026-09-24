@@ -5,7 +5,7 @@
 The corrected fixture passed a full near-limit iOS Simulator run.
 The Android Emulator reproduced a production native-save out-of-memory failure with the same fixture size.
 The Android streaming save correction passed both emulator sizes.
-Physical-device safety remains unverified, and Issue #31 remains open.
+The physical iPhone follow-up below adds one-device evidence; supported-device safety remains unverified, and Issue #31 remains open.
 
 ## Method
 
@@ -103,3 +103,238 @@ Focused failing regressions exposed both fixture problems before the current ent
 Do not change `maxLibraryBackupBytes` on the strength of Simulator or Emulator measurements alone.
 The Android streaming correction passed both native runs; supported physical-device safety still requires separate evidence.
 Keep the current integrity, schema, archive-size, and atomic-restore checks intact.
+
+## Physical iPhone follow-up on 2026-09-24
+
+The operator authorized installation and execution on the daily iPhone 16 Pro in this follow-up.
+This extends the earlier milestone's Simulator-only scope for this device.
+No physical Android run was performed.
+After these measurements, the operator limited further verification to Simulator and Emulator; physical-device testing is deferred.
+The repository base was `8bfbc1f3cb1621a0df0037fe9f1d659f32be2683`, with only the phase-reporting harness changes described below.
+The device ran iOS 26.6.1, build 23G83, and both runs used Flutter profile mode.
+
+Both the 8 MiB smoke run and the 240 MiB near-limit run completed create, native save, native pick, decode, validate, restore, and forced rollback without process termination.
+The operator completed the real Files save and selection interfaces.
+The 8 MiB database was 8,527,872 bytes and its archive was 8,411,299 bytes.
+The 240 MiB database was 252,112,896 bytes and its archive was 250,576,938 bytes.
+
+| Phase      | 8 MiB peak RSS bytes | 240 MiB peak RSS bytes |
+| ---------- | -------------------: | ---------------------: |
+| create     |          147,292,160 |          1,407,713,280 |
+| nativeSave |          122,978,304 |          1,657,241,600 |
+| nativePick |          111,591,424 |            916,291,584 |
+| decode     |          140,771,328 |          1,294,090,240 |
+| validate   |          138,723,328 |          1,700,528,128 |
+| restore    |          168,640,512 |          1,707,311,104 |
+| rollback   |          147,603,456 |          1,712,635,904 |
+
+The highest sampled near-limit RSS was 1,712,635,904 bytes during rollback, approximately 1,633 MiB.
+This demonstrates completion for this fixture on this device in profile mode, not a safe threshold across supported devices.
+The fixture has one ingredient and retained random free pages, so it exercises buffer pressure rather than a densely populated library's domain-object loading.
+The activation callback checks the fixture row count and does not mount the production UI.
+No 256 MiB boundary run or physical Android run was performed.
+The supported limit remains unchanged, and Issue #31 remains open.
+
+### Incremental evidence
+
+`measureBackupMemoryPhase` now emits one `BACKUP_MEMORY_PHASE` JSON line before each operation and one after its measurement completes.
+A thrown operation emits `failed` and rethrows the original error.
+A hard process termination can leave only the last `started` event, so it must not be reported as a completed measurement.
+Previously the harness printed measurements only after every phase completed, which lost completed phase results on an earlier process termination.
+Two host regressions failed against the previous behavior and pass with the incremental reporter.
+Both physical runs also exercised the new reporter.
+The physical iOS console truncated the long final `BACKUP_MEMORY_REPORT` line, while the host integration driver's JSON retained the complete report.
+Preserve both the phase log and the driver JSON.
+
+### Reproduction and artifacts
+
+The iOS target resolver preserves a live temporary `flutter_test_listener.*/listener.dart` path, but intentionally replaces stale ordinary flavor targets.
+These runs used a temporary listener that imported `integration_test/backup_memory_profile_test.dart` and called its `main`, plus a host driver using `integrationDriver` with a 30-minute timeout and `writeResponseData`.
+The temporary wrappers were outside the repository.
+The command shape was:
+
+```sh
+flutter drive --profile --flavor development -d <approved-device-id> \
+  --target <temporary-listener-directory>/listener.dart \
+  --driver <temporary-listener-directory>/driver.dart \
+  --test-arguments=--packages=<repo>/.dart_tool/package_config.json \
+  --dart-define=BACKUP_PROFILE_MIB=<8-or-240> \
+  --keep-app-running --no-uninstall-first --no-pub
+```
+
+The listener directory must match `flutter_test_listener.*` for the existing iOS resolver.
+Remove the temporary listener after profiling so subsequent Xcode builds return to the normal flavor entrypoint.
+`--no-uninstall-first` preserves the installed development app's data during installation.
+`--keep-app-running` prevents `flutter drive` from uninstalling the app after the test.
+The app on the phone at the end of measurement was the 240 MiB profile harness under `kr.donminzzi.prep-book.dev`, version `0.1.0+1`.
+The harness uses dedicated `backup_memory_profile` database paths rather than the application's `prep_book.db`.
+
+Local raw artifacts:
+
+- `/tmp/prep-book-issue31-ios-profile-8.log`
+- `/tmp/prep-book-issue31-ios-profile-8.json`
+- `/tmp/prep-book-issue31-ios-profile-240.log`
+- `/tmp/prep-book-issue31-ios-profile-240.json`
+
+The 8 MiB JSON artifact SHA-256 is `88dd5cd8f37a977efdddee9118910b041cad567bf1d44c1ca0460bfd671e668e`.
+
+```json
+{
+  "schemaVersion": 2,
+  "platform": "ios",
+  "platformVersion": "Version 26.6.1 (Build 23G83)",
+  "buildMode": "profile",
+  "requestedMiB": 8,
+  "fixtureBytes": 8527872,
+  "ingredientCount": 1,
+  "archiveBytes": 8411299,
+  "rssSamplingIntervalMicroseconds": 10000,
+  "measurements": [
+    {
+      "phase": "create",
+      "baselineBytes": 77840384,
+      "peakBytes": 147292160,
+      "endingBytes": 107249664,
+      "sampleCount": 20,
+      "elapsedMicroseconds": 178521
+    },
+    {
+      "phase": "nativeSave",
+      "baselineBytes": 107266048,
+      "peakBytes": 122978304,
+      "endingBytes": 110297088,
+      "sampleCount": 3306,
+      "elapsedMicroseconds": 33058237
+    },
+    {
+      "phase": "nativePick",
+      "baselineBytes": 110460928,
+      "peakBytes": 111591424,
+      "endingBytes": 103268352,
+      "sampleCount": 497,
+      "elapsedMicroseconds": 4959036
+    },
+    {
+      "phase": "decode",
+      "baselineBytes": 103284736,
+      "peakBytes": 140771328,
+      "endingBytes": 122142720,
+      "sampleCount": 7,
+      "elapsedMicroseconds": 60695
+    },
+    {
+      "phase": "validate",
+      "baselineBytes": 121618432,
+      "peakBytes": 138723328,
+      "endingBytes": 138723328,
+      "sampleCount": 3,
+      "elapsedMicroseconds": 14458
+    },
+    {
+      "phase": "restore",
+      "baselineBytes": 138788864,
+      "peakBytes": 168640512,
+      "endingBytes": 142589952,
+      "sampleCount": 13,
+      "elapsedMicroseconds": 121112
+    },
+    {
+      "phase": "rollback",
+      "baselineBytes": 142589952,
+      "peakBytes": 147603456,
+      "endingBytes": 142835712,
+      "sampleCount": 12,
+      "elapsedMicroseconds": 106550
+    }
+  ]
+}
+```
+
+The 240 MiB JSON artifact SHA-256 is `3ff841a6eac5ca2bc02a579999b800d3f6daf46b1a8437783338bc1b5fa47d50`.
+
+```json
+{
+  "schemaVersion": 2,
+  "platform": "ios",
+  "platformVersion": "Version 26.6.1 (Build 23G83)",
+  "buildMode": "profile",
+  "requestedMiB": 240,
+  "fixtureBytes": 252112896,
+  "ingredientCount": 1,
+  "archiveBytes": 250576938,
+  "rssSamplingIntervalMicroseconds": 10000,
+  "measurements": [
+    {
+      "phase": "create",
+      "baselineBytes": 81313792,
+      "peakBytes": 1407713280,
+      "endingBytes": 1155923968,
+      "sampleCount": 507,
+      "elapsedMicroseconds": 5161519
+    },
+    {
+      "phase": "nativeSave",
+      "baselineBytes": 1155923968,
+      "peakBytes": 1657241600,
+      "endingBytes": 915587072,
+      "sampleCount": 5378,
+      "elapsedMicroseconds": 53865114
+    },
+    {
+      "phase": "nativePick",
+      "baselineBytes": 915800064,
+      "peakBytes": 916291584,
+      "endingBytes": 666533888,
+      "sampleCount": 521,
+      "elapsedMicroseconds": 5212286
+    },
+    {
+      "phase": "decode",
+      "baselineBytes": 666550272,
+      "peakBytes": 1294090240,
+      "endingBytes": 1202405376,
+      "sampleCount": 115,
+      "elapsedMicroseconds": 1143029
+    },
+    {
+      "phase": "validate",
+      "baselineBytes": 1196244992,
+      "peakBytes": 1700528128,
+      "endingBytes": 1692237824,
+      "sampleCount": 68,
+      "elapsedMicroseconds": 683940
+    },
+    {
+      "phase": "restore",
+      "baselineBytes": 1692286976,
+      "peakBytes": 1707311104,
+      "endingBytes": 1697267712,
+      "sampleCount": 214,
+      "elapsedMicroseconds": 2169367
+    },
+    {
+      "phase": "rollback",
+      "baselineBytes": 1697284096,
+      "peakBytes": 1712635904,
+      "endingBytes": 1446346752,
+      "sampleCount": 1113,
+      "elapsedMicroseconds": 11151420
+    }
+  ]
+}
+```
+
+### Local verification
+
+`flutter analyze --no-pub` reported no issues.
+`dart run bloc_tools:bloc lint .` inspected 238 files and reported no issues.
+`very_good test --coverage --test-randomize-ordering-seed random` passed 1,135 tests, including the new phase-reporting regressions and the existing backup corruption, size, cancellation, and rollback cases.
+`npm run test:api` passed 56 tests.
+Formatting was checked on the three changed Dart files.
+These host checks do not establish device-memory safety.
+
+### Precedent consulted
+
+The personal-account Oracle lookup for `prep_book` found no project-specific match for `backup memory` or `physical device`: \[no precedent found\].
+It returned the global evidence guidance in `wiki/entities/flutter-ui-ux-review.md` and `raw/sources/.claude/skills/flutter-ui-ux-review/references/evidence-and-runtime.md`.
+That guidance confirmed the decision to keep one-device profiling evidence separate from supported-device safety and to leave Issue #31 open.

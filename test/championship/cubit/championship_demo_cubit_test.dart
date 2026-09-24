@@ -97,6 +97,55 @@ void _completeSampleReview(ChampionshipDemoCubit cubit) {
 }
 
 void main() {
+  for (final failure in <Exception>[
+    PlatformException(code: 'picker_unavailable'),
+    const FileSystemException('cannot read selection'),
+  ]) {
+    test('unexpected image selection failure clears the old image: $failure', () async {
+      var calls = 0;
+      final cubit = _cubit(
+        picker: _FakeImagePicker(() async {
+          if (++calls == 1) {
+            return SelectedRecipeImage(
+              name: 'old.png',
+              mimeType: 'image/png',
+              bytes: Uint8List.fromList([137, 80, 78, 71]),
+            );
+          }
+          throw failure;
+        }),
+      );
+      addTearDown(cubit.close);
+      await cubit.pickImage();
+      expect(cubit.state.preparedImage, isNotNull);
+      await cubit.pickImage();
+      expect(cubit.state.preparedImage, isNull);
+      expect(cubit.state.sourceFailure, ChampionshipSourceFailure.imageSelection);
+    });
+  }
+
+  test('a late unexpected picker failure cannot overwrite a newer selection', () async {
+    final pending = Completer<SelectedRecipeImage?>();
+    var calls = 0;
+    final cubit = _cubit(
+      picker: _FakeImagePicker(() async {
+        if (++calls == 1) return await pending.future;
+        return SelectedRecipeImage(
+          name: 'new.png',
+          mimeType: 'image/png',
+          bytes: Uint8List.fromList([137, 80, 78, 71]),
+        );
+      }),
+    );
+    addTearDown(cubit.close);
+    final first = cubit.pickImage();
+    await cubit.pickImage();
+    pending.completeError(PlatformException(code: 'cancelled'));
+    await first;
+    expect(cubit.state.preparedImage?.image.name, 'new.png');
+    expect(cubit.state.sourceFailure, isNull);
+  });
+
   test(
     'loads the checked-in sample without calling the import client',
     () async {

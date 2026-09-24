@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,8 @@ import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/persistence.dart';
 import 'package:prep_book/persistence/schema/v1.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import '../persistence/result_codec_test.dart' as fixtures;
 
 void main() {
   setUpAll(sqfliteFfiInit);
@@ -20,6 +23,30 @@ void main() {
   });
 
   tearDown(() => directory.delete(recursive: true));
+
+  test('rejects a well-shaped run whose result names the wrong ingredient', () async {
+    final candidatePath = '${directory.path}/inconsistent-run.db';
+    final db = await _openCandidate(candidatePath);
+    final run = fixtures.buildRunScaledByOneThird();
+    await SqfliteProductionRunRepository(db).save(run);
+    final payload = jsonDecode(encodeRunPayload(run)) as Map<String, Object?>;
+    final result = payload['result']! as Map<String, Object?>;
+    final components = result['components']! as List<Object?>;
+    final source = (components.first! as Map<String, Object?>)['source']! as Map<String, Object?>;
+    (source['target']! as Map<String, Object?>)['id'] = 'salt';
+    await db.update(
+      'production_runs',
+      {'result_json': jsonEncode(payload)},
+      where: 'id = ?',
+      whereArgs: [run.id],
+    );
+    await db.close();
+
+    await expectLater(
+      validator.validate(candidatePath: candidatePath, manifestSchemaVersion: currentSchemaVersion),
+      throwsA(_failureKind(LibraryBackupFailureKind.invalidDatabase)),
+    );
+  });
 
   test('rejects schema zero without creating or upgrading tables', () async {
     final candidatePath = await _createRawDatabase(directory, userVersion: 0);

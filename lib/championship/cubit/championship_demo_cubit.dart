@@ -121,10 +121,7 @@ final class ChampionshipDemoCubit extends Cubit<ChampionshipDemoState> {
       final prepared = await _dependencies.imageReducer.reduce(selected);
       if (generation != _requestGeneration) return;
       emit(state.copyWith(preparedImage: prepared));
-    } on RecipeImagePickerException {
-      if (generation != _requestGeneration) return;
-      emit(_imageSelectionFailed());
-    } on RecipeImageReducerException {
+    } on Object {
       if (generation != _requestGeneration) return;
       emit(_imageSelectionFailed());
     }
