@@ -13,6 +13,7 @@ import 'package:prep_book/presentation/library_backup/view/library_backup_platfo
 import 'package:sqflite/sqflite.dart';
 
 import 'support/backup_memory_fixture.dart';
+import 'support/backup_memory_report.dart';
 import 'support/process_rss_sampler.dart';
 
 const _profileMiBText = String.fromEnvironment(
@@ -90,7 +91,13 @@ void main() {
         String phase,
         FutureOr<T> Function() operation,
       ) async {
-        final result = await sampler!.measure(phase, operation);
+        final result = await measureBackupMemoryPhase(
+          sampler!,
+          phase,
+          operation,
+          // Print immediately so a later process termination keeps prior phases.
+          writeLine: print,
+        );
         measurements.add(result.measurement);
         return result.value;
       }
