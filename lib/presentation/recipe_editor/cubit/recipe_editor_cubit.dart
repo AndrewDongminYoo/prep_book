@@ -48,6 +48,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
 
   /// Reads the ingredient library and the recipe library the pickers offer.
   Future<void> load() async {
+    if (_isLocked) return;
     emit(state.copyWith(status: RecipeEditorStatus.loading));
     final next = await _loadOutcome();
     if (isClosed) return;
@@ -55,34 +56,34 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   }
 
   /// Records the typed recipe name.
-  void nameChanged(String value) => emit(state.copyWith(name: value));
+  void nameChanged(String value) => _edit(() => state.copyWith(name: value));
 
   /// Records the typed category.
-  void categoryChanged(String value) => emit(state.copyWith(category: value));
+  void categoryChanged(String value) => _edit(() => state.copyWith(category: value));
 
   /// Records the typed base yield amount.
-  void baseYieldAmountChanged(String value) => emit(state.copyWith(baseYieldAmount: value));
+  void baseYieldAmountChanged(String value) => _edit(() => state.copyWith(baseYieldAmount: value));
 
   /// Records the chosen base yield unit.
-  void baseYieldUnitChanged(Unit unit) => emit(state.copyWith(baseYieldUnit: unit));
+  void baseYieldUnitChanged(Unit unit) => _edit(() => state.copyWith(baseYieldUnit: unit));
 
   /// Records the typed maximum batch yield.
-  void maxBatchAmountChanged(String value) => emit(state.copyWith(maxBatchAmount: value));
+  void maxBatchAmountChanged(String value) => _edit(() => state.copyWith(maxBatchAmount: value));
 
   /// Records the chosen maximum batch yield unit.
-  void maxBatchUnitChanged(Unit unit) => emit(state.copyWith(maxBatchUnit: unit));
+  void maxBatchUnitChanged(Unit unit) => _edit(() => state.copyWith(maxBatchUnit: unit));
 
   /// Records the typed preparation notes, one per line.
-  void preparationNotesChanged(String value) => emit(state.copyWith(preparationNotes: value));
+  void preparationNotesChanged(String value) => _edit(() => state.copyWith(preparationNotes: value));
 
   /// Offers [unit] in every unit picker on this screen.
   ///
   /// The domain builds count and yield-only units from arbitrary symbols, so
   /// this is how an operator names one the data does not already contain.
-  void addCustomUnit(Unit unit) => emit(state.copyWith(customUnits: [...state.customUnits, unit]));
+  void addCustomUnit(Unit unit) => _edit(() => state.copyWith(customUnits: [...state.customUnits, unit]));
 
   /// Appends a component consuming [ingredient].
-  void addIngredientComponent(Ingredient ingredient) => emit(_withComponent(state, _draftFor(ingredient)));
+  void addIngredientComponent(Ingredient ingredient) => _edit(() => _withComponent(state, _draftFor(ingredient)));
 
   /// Stores a new ingredient named [name] and puts it on a component.
   ///
@@ -104,6 +105,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
     required Unit defaultUnit,
     String? forComponentId,
   }) async {
+    if (_isLocked) return;
     emit(state.copyWith(isWriting: true));
     final ingredient = Ingredient(
       id: uniqueSlug(name, {
@@ -118,8 +120,8 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   }
 
   /// Appends a component consuming the output of [recipe].
-  void addSubRecipeComponent(Recipe recipe) => emit(
-    _withComponent(
+  void addSubRecipeComponent(Recipe recipe) => _edit(
+    () => _withComponent(
       state,
       ComponentDraft(
         id: _nextComponentId(),
@@ -139,7 +141,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// The amount, unit, behavior and note are deliberately kept: retargeting
   /// a line answers "this is the wrong ingredient", not "start this line
   /// again", and the operator can still edit every one of those fields.
-  void componentTargetChanged(String id, ComponentTarget target) => emit(_withTarget(state, id, target));
+  void componentTargetChanged(String id, ComponentTarget target) => _edit(() => _withTarget(state, id, target));
 
   /// Points the component [id] at the output of [recipe].
   ///
@@ -194,8 +196,8 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   void componentNoteChanged(String id, String value) => _updateComponent(id, (draft) => draft.copyWith(note: value));
 
   /// Removes the component [id].
-  void removeComponent(String id) => emit(
-    state.copyWith(
+  void removeComponent(String id) => _edit(
+    () => state.copyWith(
       components: [
         for (final draft in state.components)
           if (draft.id != id) draft,
@@ -209,6 +211,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// each draft's position when the recipe is built, so moving a row here is
   /// the only thing that has to happen for the stored order to change.
   void reorderComponent({required int oldIndex, required int newIndex}) {
+    if (_isLocked) return;
     final moved = [...state.components];
     final draft = moved.removeAt(oldIndex);
     moved.insert(newIndex, draft);
@@ -222,6 +225,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// judgement — a dependency cycle, a missing sub-recipe, a failed write —
   /// and arrives as `state.saveError` for the screen to render.
   Future<void> save() async {
+    if (_isLocked) return;
     if (state.hasFieldErrors) {
       emit(state.copyWith(submitted: true));
       return;
@@ -296,12 +300,19 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
     }
   }
 
+  bool get _isLocked => isClosed || state.isWriting || state.status == RecipeEditorStatus.saved;
+
+  void _edit(RecipeEditorState Function() change) {
+    if (_isLocked) return;
+    emit(change());
+  }
+
   /// Replaces the component [id] with what [change] returns.
   void _updateComponent(
     String id,
     ComponentDraft Function(ComponentDraft draft) change,
-  ) => emit(
-    state.copyWith(
+  ) => _edit(
+    () => state.copyWith(
       components: [
         for (final draft in state.components)
           if (draft.id == id) change(draft) else draft,
