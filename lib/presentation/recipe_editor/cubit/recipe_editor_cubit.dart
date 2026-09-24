@@ -14,20 +14,24 @@ final _generatedComponentId = RegExp(r'^component-(\d+)$');
 
 /// Drives the recipe editor screen.
 ///
-/// Holds the four use cases the screen reads and writes through, never a
+/// Holds the five use cases the screen reads and writes through, never a
 /// repository, for the reason the recipe library screen's cubit gives.
 ///
-/// Creating a recipe and editing one are the same cubit with the same save
-/// call, because `SaveRecipeRevision` computes the next revision number
-/// itself: a new recipe simply has no stored revision to count from.
+/// Creating a recipe and editing one are the same cubit, but not the same
+/// write. An edit goes through `SaveRecipeRevision`, which numbers the
+/// revision from what is stored; a new recipe goes through `CreateRecipe`,
+/// which refuses an id something is already stored under. One call for
+/// both let a new recipe whose id a concurrent write had taken become that
+/// recipe's next revision — see [save].
 final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// Creates the cubit over the use cases it reads and writes through: the
-  /// two reads the pickers need first, then the two writes. [recipe] is the
-  /// revision being edited, or `null` to create one.
+  /// two reads the pickers need first, then the three writes. [recipe] is
+  /// the revision being edited, or `null` to create one.
   new(
     this._listLibrary,
     this._listIngredients,
     this._saveRecipeRevision,
+    this._createRecipe,
     this._saveIngredient, {
     Recipe? recipe,
   }) : _componentSequence = _highestGeneratedIndex(recipe),
@@ -36,6 +40,7 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   final ListLibrary _listLibrary;
   final ListIngredients _listIngredients;
   final SaveRecipeRevision _saveRecipeRevision;
+  final CreateRecipe _createRecipe;
   final SaveIngredient _saveIngredient;
 
   /// The highest number a generated component id has used so far.
@@ -218,12 +223,25 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
     emit(state.copyWith(components: moved));
   }
 
-  /// Validates the form, then stores the recipe as its next revision.
+  /// Validates the form, then stores an edit as the recipe's next revision
+  /// or a new recipe as revision 1.
   ///
   /// Field errors stop the save without reaching storage and turn on the
   /// messages the form shows. Everything past that point is the domain's
   /// judgement — a dependency cycle, a missing sub-recipe, a failed write —
   /// and arrives as `state.saveError` for the screen to render.
+  ///
+  /// A new recipe's id is slugged from its name against the whole library
+  /// read here, at the save, rather than against `state.libraryRecipes`,
+  /// which is the library as it was when the editor opened. The library can
+  /// move while the editor is up — a duplicate tapped just before New is
+  /// still being stored when this screen appears — and an id that was free
+  /// at the open can be taken by the save. Reading again means a recipe
+  /// stored meanwhile only pushes this one to the next suffix, the same as
+  /// one stored before the open. A write landing after this read is the
+  /// part no read can see; `CreateRecipe` refuses it rather than storing
+  /// this recipe as the occupant's next revision, and the operator's next
+  /// save reads again and slugs past it.
   Future<void> save() async {
     if (_isLocked) return;
     if (state.hasFieldErrors) {
@@ -284,7 +302,9 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// The state the save produces, whether it succeeds or throws.
   Future<RecipeEditorState> _saveOutcome() async {
     try {
-      final saved = await _saveRecipeRevision(_recipeFrom(state));
+      final saved = state.isNewRecipe
+          ? await _create()
+          : await _saveRecipeRevision(_recipeFrom(state, id: state.recipeId));
       return state.copyWith(
         status: RecipeEditorStatus.saved,
         isWriting: false,
@@ -298,6 +318,19 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
         saveError: error,
       );
     }
+  }
+
+  /// Stores the form as a new recipe, under an id no recipe in the library,
+  /// as it is now, already has. [save] gives the reason for the read.
+  ///
+  /// The form itself cannot move during the read: [save] has set
+  /// `isWriting`, and every edit is refused while it is up.
+  Future<Recipe> _create() async {
+    final library = await _listLibrary();
+    final id = uniqueSlug(state.name, {
+      for (final recipe in library) recipe.id,
+    }, fallback: 'recipe');
+    return await _createRecipe(_recipeFrom(state, id: id));
   }
 
   bool get _isLocked => isClosed || state.isWriting || state.status == RecipeEditorStatus.saved;
@@ -353,18 +386,14 @@ final class RecipeEditorCubit extends Cubit<RecipeEditorState> {
   /// An identifier no component of this recipe can already be using.
   String _nextComponentId() => 'component-${++_componentSequence}';
 
-  /// The recipe the current form describes.
+  /// The recipe the current form describes, under [id].
   ///
   /// Reachable only once `hasFieldErrors` is false, which is what makes the
   /// parses here safe. Both `revision` and `modifiedAt` are ignored by
-  /// `SaveRecipeRevision`, which assigns the real values, so the constants
-  /// below are placeholders rather than claims.
-  static Recipe _recipeFrom(RecipeEditorState state) => Recipe(
-    id: state.isNewRecipe
-        ? uniqueSlug(state.name, {
-            for (final recipe in state.libraryRecipes) recipe.id,
-          }, fallback: 'recipe')
-        : state.recipeId,
+  /// `SaveRecipeRevision` and `CreateRecipe`, which assign the real values,
+  /// so the constants below are placeholders rather than claims.
+  static Recipe _recipeFrom(RecipeEditorState state, {required String id}) => Recipe(
+    id: id,
     revision: 1,
     name: state.name.trim(),
     category: state.category.trim().isEmpty ? null : state.category.trim(),

@@ -5,7 +5,7 @@ import 'package:prep_book/presentation/recipe_editor/view/recipe_editor_page.dar
 
 /// Opens the recipe editor.
 ///
-/// One value threaded through the library screen rather than four use cases,
+/// One value threaded through the library screen rather than five use cases,
 /// and the one place the editor's route is built — so a screen that offers
 /// "create" and a row that offers "edit" cannot drift into opening two
 /// differently-configured editors.
@@ -17,6 +17,7 @@ final class RecipeEditorLauncher {
     required this.listLibrary,
     required this.listIngredients,
     required this.saveRecipeRevision,
+    required this.createRecipe,
     required this.saveIngredient,
   });
 
@@ -28,6 +29,9 @@ final class RecipeEditorLauncher {
 
   /// Stores the edit as the recipe's next revision.
   final SaveRecipeRevision saveRecipeRevision;
+
+  /// Stores a new recipe as revision 1 of an id nothing holds yet.
+  final CreateRecipe createRecipe;
 
   /// Stores an ingredient the operator names while editing.
   final SaveIngredient saveIngredient;
@@ -43,6 +47,7 @@ final class RecipeEditorLauncher {
         listLibrary: listLibrary,
         listIngredients: listIngredients,
         saveRecipeRevision: saveRecipeRevision,
+        createRecipe: createRecipe,
         saveIngredient: saveIngredient,
         recipe: recipe,
       ),

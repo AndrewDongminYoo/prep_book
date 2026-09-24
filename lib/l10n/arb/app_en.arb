@@ -469,6 +469,10 @@
             }
         }
     },
+    "recipeEditorIdOccupied": "A recipe with a matching name was saved while you were editing. Save again to store this one beside it.",
+    "@recipeEditorIdOccupied": {
+        "description": "Shown when a new recipe's identifier was taken by another write during the save; saving again picks the next free identifier"
+    },
     "productionSetupTitle": "Production run",
     "@productionSetupTitle": {
         "description": "Title of the production setup screen"

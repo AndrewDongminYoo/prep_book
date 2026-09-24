@@ -86,6 +86,7 @@ void main() {
       ListLibrary(recipes),
       ListIngredients(ingredients),
       SaveRecipeRevision(recipes, _Clock()),
+      CreateRecipe(recipes, _Clock()),
       SaveIngredient(ingredients),
     );
     addTearDown(editor.close);

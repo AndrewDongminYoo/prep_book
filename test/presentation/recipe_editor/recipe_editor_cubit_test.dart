@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
+import 'package:prep_book/persistence/repositories.dart';
 import 'package:prep_book/presentation/presentation.dart';
 
 import '../../application/fakes.dart';
@@ -16,7 +17,7 @@ final class _FixedClock implements Clock {
 final _piece = Unit.count('piece');
 final _tray = Unit.namedYield('tray');
 
-/// An editor over in-memory storage. The same four use cases the screen
+/// An editor over in-memory storage. The same five use cases the screen
 /// builds, so nothing here is a shortcut past the boundary the editor keeps.
 RecipeEditorCubit _editor({
   FakeRecipeRepository? recipes,
@@ -29,8 +30,22 @@ RecipeEditorCubit _editor({
     ListLibrary(storedRecipes),
     ListIngredients(storedIngredients),
     SaveRecipeRevision(storedRecipes, _FixedClock()),
+    CreateRecipe(storedRecipes, _FixedClock()),
     SaveIngredient(storedIngredients),
     recipe: recipe,
+  );
+}
+
+/// An editor over [recipes], for a test whose storage is not the plain
+/// fake [_editor] builds on.
+RecipeEditorCubit _editorOver(RecipeRepository recipes) {
+  final ingredients = FakeIngredientRepository();
+  return RecipeEditorCubit(
+    ListLibrary(recipes),
+    ListIngredients(ingredients),
+    SaveRecipeRevision(recipes, _FixedClock()),
+    CreateRecipe(recipes, _FixedClock()),
+    SaveIngredient(ingredients),
   );
 }
 
@@ -88,6 +103,7 @@ void main() {
         ListLibrary(FakeRecipeRepository()),
         ListIngredients(ingredients),
         SaveRecipeRevision(FakeRecipeRepository(), _FixedClock()),
+        CreateRecipe(FakeRecipeRepository(), _FixedClock()),
         SaveIngredient(ingredients),
       );
 
@@ -108,6 +124,7 @@ void main() {
         ListLibrary(FakeRecipeRepository()),
         ListIngredients(ingredients),
         SaveRecipeRevision(FakeRecipeRepository(), _FixedClock()),
+        CreateRecipe(FakeRecipeRepository(), _FixedClock()),
         SaveIngredient(ingredients),
       );
 
@@ -543,9 +560,9 @@ void main() {
 
         await cubit.save();
 
-        // Nothing reached storage: `SaveRecipeRevision` checks the dependency
-        // graph and never the units, so a save that got this far would be
-        // written and would throw on every production run afterwards.
+        // Nothing reached storage: `CreateRecipe` checks the dependency graph
+        // and never the units, so a save that got this far would be written
+        // and would throw on every production run afterwards.
         expect(recipes.calls, isEmpty);
         expect(cubit.state.submitted, isTrue);
         expect(cubit.state.status, RecipeEditorStatus.ready);
@@ -620,7 +637,7 @@ void main() {
 
       // Nothing here knows what 'ghost' yields, and reporting a unit error
       // for it would name the wrong problem: it is a missing dependency, and
-      // `SaveRecipeRevision` says so by name.
+      // `CreateRecipe` says so by name.
       expect(cubit.state.subRecipeUnitIsIncompatible(draft), isFalse);
       expect(cubit.state.unitChoicesFor(draft), cubit.state.unitChoices);
       expect(cubit.state.hasFieldErrors, isFalse);
@@ -880,6 +897,7 @@ void main() {
         ListLibrary(FakeRecipeRepository()),
         ListIngredients(ingredients),
         SaveRecipeRevision(FakeRecipeRepository(), _FixedClock()),
+        CreateRecipe(FakeRecipeRepository(), _FixedClock()),
         SaveIngredient(ingredients),
       );
 
@@ -900,6 +918,7 @@ void main() {
         ListLibrary(FakeRecipeRepository()),
         ListIngredients(ingredients),
         SaveRecipeRevision(FakeRecipeRepository(), _FixedClock()),
+        CreateRecipe(FakeRecipeRepository(), _FixedClock()),
         SaveIngredient(ingredients),
       );
       final loading = cubit.load();
@@ -931,6 +950,7 @@ void main() {
         ListLibrary(FakeRecipeRepository()),
         ListIngredients(ingredients),
         SaveRecipeRevision(FakeRecipeRepository(), _FixedClock()),
+        CreateRecipe(FakeRecipeRepository(), _FixedClock()),
         SaveIngredient(ingredients),
       );
 
@@ -952,6 +972,7 @@ void main() {
         ListLibrary(recipes),
         ListIngredients(ingredients),
         SaveRecipeRevision(recipes, _FixedClock()),
+        CreateRecipe(recipes, _FixedClock()),
         SaveIngredient(ingredients),
       );
       addTearDown(cubit.close);
@@ -977,6 +998,7 @@ void main() {
         ListLibrary(recipes),
         ListIngredients(ingredients),
         SaveRecipeRevision(recipes, _FixedClock()),
+        CreateRecipe(recipes, _FixedClock()),
         SaveIngredient(ingredients),
       );
       addTearDown(cubit.close);
@@ -1061,6 +1083,69 @@ void main() {
       expect(cubit.state.savedRecipe!.id, 'ciabatta-3');
       expect((await recipes.findLatest('ciabatta'))!.revision, 1);
     });
+
+    test(
+      'a recipe stored after the editor opened pushes a new one past its id',
+      () async {
+        // The editor opens over a library that holds only the source; the
+        // duplicate the library screen started lands after the read.
+        final recipes = FakeRecipeRepository()..seed(buildRecipe(id: 'croissant-dough', name: 'Croissant dough'));
+        final cubit = _editor(recipes: recipes);
+        await cubit.load();
+        recipes.seed(
+          buildRecipe(id: 'croissant-dough-copy', name: 'Croissant dough (copy)'),
+        );
+        _fillRequiredFields(cubit, name: 'Croissant dough (copy)');
+
+        await cubit.save();
+
+        // Slugged against the library the editor opened on, the id would be
+        // the copy's: stored through `SaveRecipeRevision` it became the
+        // copy's revision 2, and refused by `CreateRecipe` it would be a
+        // failure the save-time read avoids.
+        expect(cubit.state.status, RecipeEditorStatus.saved);
+        expect(cubit.state.savedRecipe!.id, 'croissant-dough-copy-2');
+        expect(await recipes.findRevision('croissant-dough-copy', 2), isNull);
+      },
+    );
+
+    test(
+      'a recipe stored during the save is refused, and the next save gets '
+      'past it',
+      () async {
+        final reads = FakeRecipeRepository();
+        final recipes = ConcurrentWriteRecipeRepository(reads);
+        final cubit = _editorOver(recipes);
+        await cubit.load();
+        _fillRequiredFields(cubit, name: 'Croissant dough (copy)');
+        recipes.storeAfterNextList = buildRecipe(id: 'croissant-dough-copy', name: 'Occupant');
+
+        await cubit.save();
+
+        // The write landed after the save's own read, so no read could have
+        // seen it. What matters is that the occupant is still itself.
+        expect(cubit.state.status, RecipeEditorStatus.ready);
+        expect(
+          cubit.state.saveError,
+          isA<RecipeIdOccupiedError>().having(
+            (e) => e.recipeId,
+            'recipeId',
+            'croissant-dough-copy',
+          ),
+        );
+        expect(await reads.findRevision('croissant-dough-copy', 2), isNull);
+        expect(
+          (await reads.findLatest('croissant-dough-copy'))!.name,
+          'Occupant',
+        );
+
+        await cubit.save();
+
+        expect(cubit.state.status, RecipeEditorStatus.saved);
+        expect(cubit.state.savedRecipe!.id, 'croissant-dough-copy-2');
+        expect(cubit.state.savedRecipe!.name, 'Croissant dough (copy)');
+      },
+    );
 
     test('a recipe whose name slugs to nothing still gets an id', () async {
       final recipes = FakeRecipeRepository();
@@ -1230,6 +1315,7 @@ void main() {
         ListLibrary(recipes),
         ListIngredients(ingredients),
         SaveRecipeRevision(recipes, _FixedClock()),
+        CreateRecipe(recipes, _FixedClock()),
         SaveIngredient(ingredients),
       );
       await cubit.load();
@@ -1237,9 +1323,9 @@ void main() {
 
       final saving = cubit.save();
       expect(cubit.state.status, RecipeEditorStatus.saving);
-      // `SaveRecipeRevision` reads the dependency closure and the latest
-      // revision before it writes, so the write does not exist yet on the
-      // turn `save` was called.
+      // The save reads the library, then `CreateRecipe` reads the id and the
+      // dependency closure, all before it writes, so the write does not exist
+      // yet on the turn `save` was called.
       await pumpEventQueue();
       recipes.failWrite(0);
       await saving;
@@ -1256,6 +1342,7 @@ void main() {
         ListLibrary(recipes),
         ListIngredients(ingredients),
         SaveRecipeRevision(recipes, _FixedClock()),
+        CreateRecipe(recipes, _FixedClock()),
         SaveIngredient(ingredients),
       );
       await cubit.load();
@@ -1298,6 +1385,7 @@ void main() {
         ListLibrary(recipes),
         ListIngredients(ingredients),
         SaveRecipeRevision(recipes, _FixedClock()),
+        CreateRecipe(recipes, _FixedClock()),
         SaveIngredient(ingredients),
       );
       await cubit.load();
@@ -1324,6 +1412,7 @@ void main() {
         ListLibrary(recipes),
         ListIngredients(ingredients),
         SaveRecipeRevision(recipes, _FixedClock()),
+        CreateRecipe(recipes, _FixedClock()),
         SaveIngredient(ingredients),
       );
       await cubit.load();

@@ -13,11 +13,12 @@ part 'recipe_editor_pickers.dart';
 
 /// The recipe editor: metadata, an ordered component list, and the save.
 ///
-/// Creating a recipe and editing one are the same screen, because they are
-/// the same call: `SaveRecipeRevision` decides the revision number from what
-/// is stored. [recipe] is the revision being edited, or `null` to create one.
+/// Creating a recipe and editing one are the same screen over the same form;
+/// only the write differs, and the cubit picks it, as `RecipeEditorCubit`
+/// describes. [recipe] is the revision being edited, or `null` to create
+/// one.
 ///
-/// Takes the four use cases rather than storage, so nothing on this screen
+/// Takes the five use cases rather than storage, so nothing on this screen
 /// can reach a database directly.
 class RecipeEditorPage extends StatelessWidget {
   /// Creates the page over the use cases its cubit reads and writes through.
@@ -25,6 +26,7 @@ class RecipeEditorPage extends StatelessWidget {
     required this.listLibrary,
     required this.listIngredients,
     required this.saveRecipeRevision,
+    required this.createRecipe,
     required this.saveIngredient,
     this.recipe,
     super.key,
@@ -38,6 +40,9 @@ class RecipeEditorPage extends StatelessWidget {
 
   /// Stores the edit as the recipe's next revision.
   final SaveRecipeRevision saveRecipeRevision;
+
+  /// Stores a new recipe as revision 1 of an id nothing holds yet.
+  final CreateRecipe createRecipe;
 
   /// Stores an ingredient the operator names while editing.
   final SaveIngredient saveIngredient;
@@ -53,6 +58,7 @@ class RecipeEditorPage extends StatelessWidget {
           listLibrary,
           listIngredients,
           saveRecipeRevision,
+          createRecipe,
           saveIngredient,
           recipe: recipe,
         );
@@ -774,11 +780,14 @@ String _behaviorLabel(AppLocalizations l10n, ScalingBehavior behavior) => switch
 ///
 /// A cycle and a missing dependency are the two the operator can act on, so
 /// they are rendered with the path and the identifier the domain found
-/// rather than as a generic failure.
+/// rather than as a generic failure. An occupied id is the third: the
+/// operator's next save reads the library again and slugs past it, which is
+/// what the message tells them to do.
 String _saveErrorMessage(AppLocalizations l10n, Object error) => switch (error) {
   RecipeCycleError(:final path) => l10n.recipeEditorCycleError(
     path.join(' → '),
   ),
   MissingDependencyError(:final missingId) => l10n.recipeEditorMissingDependency(missingId),
+  RecipeIdOccupiedError() => l10n.recipeEditorIdOccupied,
   _ => l10n.recipeEditorSaveFailed,
 };

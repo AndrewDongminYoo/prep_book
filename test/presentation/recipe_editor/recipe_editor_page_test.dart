@@ -1538,6 +1538,36 @@ void main() {
       expect(find.byKey(const ValueKey('recipe-name')), findsOneWidget);
     });
 
+    testWidgets('an id taken during the save says to save again, and that works', (
+      tester,
+    ) async {
+      final concurrent = ConcurrentWriteRecipeRepository(recipes);
+
+      await _openEditor(tester, recipes: concurrent, ingredients: ingredients);
+      await _fillRequiredFields(tester, name: 'Croissant dough (copy)');
+      concurrent.storeAfterNextList = buildRecipe(id: 'croissant-dough-copy', name: 'Occupant');
+      await _save(tester);
+
+      expect(
+        find.text(
+          'A recipe with a matching name was saved while you were editing. '
+          'Save again to store this one beside it.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(RecipeEditorPage), findsOneWidget);
+
+      await _save(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RecipeEditorPage), findsNothing);
+      expect(
+        (await recipes.findLatest('croissant-dough-copy-2'))!.name,
+        'Croissant dough (copy)',
+      );
+      expect((await recipes.findLatest('croissant-dough-copy'))!.name, 'Occupant');
+    });
+
     testWidgets('a cycle is reported with the path the domain found', (
       tester,
     ) async {

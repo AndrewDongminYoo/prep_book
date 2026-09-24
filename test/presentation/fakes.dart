@@ -234,6 +234,55 @@ final class DeferredWriteRecipeRepository implements RecipeRepository {
   ) => throw UnsupportedError('the editor never reads by ingredient');
 }
 
+/// A recipe repository another writer stores into right after a list read,
+/// reading and writing through [reads] otherwise.
+///
+/// The editor slugs a new recipe's id against a list it reads at the save,
+/// and a write landing between that read and the editor's own is the one
+/// the read cannot see: a duplicate the library screen stores in that
+/// window. [FakeRecipeRepository] answers everything at once and has no
+/// window to land in, so [storeAfterNextList] makes one.
+final class ConcurrentWriteRecipeRepository implements RecipeRepository {
+  /// Creates a repository reading and writing through [reads].
+  new(this.reads);
+
+  /// The in-memory library every call is answered from.
+  final FakeRecipeRepository reads;
+
+  /// A recipe to store once the next [listLatestRevisions] call has read
+  /// the library, so that call's answer does not hold it and every later
+  /// read does. Cleared once stored.
+  Recipe? storeAfterNextList;
+
+  @override
+  Future<List<Recipe>> listLatestRevisions() async {
+    final listed = await reads.listLatestRevisions();
+    if (storeAfterNextList case final recipe?) {
+      storeAfterNextList = null;
+      reads.seed(recipe);
+    }
+    return listed;
+  }
+
+  @override
+  Future<Recipe?> findRevision(String id, int revision) => reads.findRevision(id, revision);
+
+  @override
+  Future<Recipe?> findLatest(String id) => reads.findLatest(id);
+
+  @override
+  Future<void> saveRevision(Recipe recipe) => reads.saveRevision(recipe);
+
+  @override
+  Future<void> setArchived(String id, {required bool isArchived}) =>
+      throw UnsupportedError('the editor never archives');
+
+  @override
+  Future<List<Recipe>> listLatestRevisionsUsingIngredient(
+    String ingredientId,
+  ) => throw UnsupportedError('the editor never reads by ingredient');
+}
+
 /// A clock that never moves, so a stored revision carries a timestamp the
 /// test chose rather than the moment it happened to run.
 final class FixedClock implements Clock {
@@ -328,6 +377,7 @@ RecipeEditorLauncher buildEditorLauncher(
   listLibrary: ListLibrary(recipes),
   listIngredients: ListIngredients(ingredients),
   saveRecipeRevision: SaveRecipeRevision(recipes, const FixedClock()),
+  createRecipe: CreateRecipe(recipes, const FixedClock()),
   saveIngredient: SaveIngredient(ingredients),
 );
 

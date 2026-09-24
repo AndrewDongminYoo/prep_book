@@ -7,9 +7,14 @@ final _slugSeparators = RegExp(r'[^\p{L}\p{N}]+', unicode: true);
 ///
 /// Identifiers are never displayed, so this only has to be stable and
 /// unique. Uniqueness is the part that matters: a second recipe named like
-/// an existing one would otherwise slug to the same id and be stored as
-/// that recipe's *next revision*, silently replacing it in the library
-/// under its own name.
+/// an existing one would otherwise slug to the same id, which the recipe
+/// writes refuse rather than store, and a second ingredient would replace
+/// the first, because an ingredient is written by upsert.
+///
+/// Unique against [taken], and only as current as [taken] is. A caller
+/// slugging a recipe reads the library for it at the write rather than
+/// reusing a list it read earlier, because the library can move in
+/// between.
 ///
 /// [fallback] is the stem used when [source] holds no letter or digit at
 /// all, so a name of punctuation still produces an id.
