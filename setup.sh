@@ -76,9 +76,11 @@ cached_sha256="$(sha256_of "${MERRY_SETUP_BIN}")"
 # `very_good test --coverage` the command that decides whether a line is uncovered.
 # bloc_tools stays a dev dependency, because CI reaches it with `dart run`.
 #
-# No `--precache`: the supported targets are iOS and Android, the web target was
-# removed, and none of them build on a Linux container. Omitting the option skips
-# the precache step outright rather than downloading artifacts nothing here uses.
+# No `--precache`: iOS and Android, the supported targets, do not build on a Linux
+# container. The one target that does is the championship web variant, which CI's
+# `build` job and `merry gate` compile, and it needs nothing a precache would add:
+# the Flutter Linux release archive already ships the web SDK. Omitting the option
+# skips the precache step outright rather than downloading artifacts nothing uses.
 #
 # No melos and no flutterfire bundle: this is a single package, and the first
 # release excludes every cloud account, sync, and backend.
