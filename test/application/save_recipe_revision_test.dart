@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
+import 'package:prep_book/persistence/database.dart';
 import 'package:prep_book/persistence/repositories.dart';
+import 'package:prep_book/persistence/sqflite/recipe_repository.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'fakes.dart';
 
@@ -14,22 +17,51 @@ final class _FixedClock implements Clock {
 /// first read as free, reading and writing through [reads] otherwise.
 ///
 /// That is the window between [CreateRecipe]'s occupancy check and its
-/// insert, which [FakeRecipeRepository] answers too quickly to open.
+/// insert, which neither [FakeRecipeRepository] nor an in-memory database
+/// answers slowly enough to open.
 final class _OccupiedAfterCheck implements RecipeRepository {
   new(this.reads, this.occupant);
 
-  final FakeRecipeRepository reads;
+  final RecipeRepository reads;
   final Recipe occupant;
 
   @override
   Future<Recipe?> findLatest(String id) async {
     final latest = await reads.findLatest(id);
-    if (id == occupant.id && latest == null) reads.seed(occupant);
+    if (id == occupant.id && latest == null) await reads.saveRevision(occupant);
     return latest;
   }
 
   @override
   Future<void> saveRevision(Recipe recipe) => reads.saveRevision(recipe);
+
+  @override
+  Future<List<Recipe>> listLatestRevisions() => throw UnsupportedError('a save never lists the library');
+
+  @override
+  Future<Recipe?> findRevision(String id, int revision) => throw UnsupportedError('a save never reads one revision');
+
+  @override
+  Future<void> setArchived(String id, {required bool isArchived}) => throw UnsupportedError('a save never archives');
+
+  @override
+  Future<List<Recipe>> listLatestRevisionsUsingIngredient(
+    String ingredientId,
+  ) => throw UnsupportedError('a save never reads by ingredient');
+}
+
+/// A library that reads through [reads] and refuses every write, with no
+/// recipe standing behind the refusal.
+final class _Unwritable implements RecipeRepository {
+  new(this.reads);
+
+  final FakeRecipeRepository reads;
+
+  @override
+  Future<Recipe?> findLatest(String id) => reads.findLatest(id);
+
+  @override
+  Future<void> saveRevision(Recipe recipe) async => throw StateError('the database is unwritable');
 
   @override
   Future<List<Recipe>> listLatestRevisions() => throw UnsupportedError('a save never lists the library');
@@ -249,15 +281,22 @@ void main() {
           buildRecipe(id: 'a', name: 'Occupant'),
         );
 
-        // Refused by the fake the way the real repository refuses a second
-        // insert of one `(id, revision)` pair; which error that is belongs
-        // to the repository, not to this use case.
+        // The fake refuses the second insert of one `(id, revision)` pair
+        // the way the real repository does, with an error of its own; the
+        // use case reports it as the same refusal its check gives, so the
+        // screen can say what a second save does about it.
         await expectLater(
           CreateRecipe(
             recipes,
             _FixedClock(),
           ).call(buildRecipe(id: 'a', name: 'New')),
-          throwsA(isA<StateError>()),
+          throwsA(
+            isA<RecipeIdOccupiedError>().having(
+              (e) => e.recipeId,
+              'recipeId',
+              'a',
+            ),
+          ),
         );
         // A create that re-read the latest revision before its insert would
         // find the occupant here and store revision 2 over it.
@@ -265,6 +304,68 @@ void main() {
         expect((await reads.findLatest('a'))!.name, 'Occupant');
       },
     );
+
+    test(
+      'an insert refused with the id still free keeps its own error',
+      () async {
+        final recipes = _Unwritable(FakeRecipeRepository());
+
+        // Nothing is stored under `a`, so this failure says nothing about
+        // the id, and calling it occupied would send the operator to a save
+        // that fails the same way.
+        await expectLater(
+          CreateRecipe(
+            recipes,
+            _FixedClock(),
+          ).call(buildRecipe(id: 'a')),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              'the database is unwritable',
+            ),
+          ),
+        );
+      },
+    );
+
+    group('over SQLite', () {
+      setUpAll(sqfliteFfiInit);
+
+      late Database db;
+
+      setUp(() async {
+        db = await openPrepBookDatabase(
+          path: inMemoryDatabasePath,
+          factory: databaseFactoryFfi,
+        );
+      });
+
+      tearDown(() => db.close());
+
+      test(
+        'an occupant stored after the check is reported as occupied',
+        () async {
+          // The repository the app runs on: its refusal is SQLite's own
+          // primary-key error, which this layer cannot name.
+          final stored = SqfliteRecipeRepository(db);
+          final recipes = _OccupiedAfterCheck(
+            stored,
+            buildRecipe(id: 'a', name: 'Occupant'),
+          );
+
+          await expectLater(
+            CreateRecipe(
+              recipes,
+              _FixedClock(),
+            ).call(buildRecipe(id: 'a', name: 'New')),
+            throwsA(isA<RecipeIdOccupiedError>()),
+          );
+          expect(await stored.findRevision('a', 2), isNull);
+          expect((await stored.findLatest('a'))!.name, 'Occupant');
+        },
+      );
+    });
 
     test('a missing sub-recipe is rejected and nothing is written', () async {
       final recipes = FakeRecipeRepository();

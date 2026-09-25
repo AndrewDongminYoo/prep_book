@@ -70,19 +70,32 @@ final class CreateRecipe {
   /// refusal before anything is written. A write landing between the check
   /// and the insert has already stored revision 1, and `saveRevision` never
   /// updates a stored revision, so the insert is refused and the occupant is
-  /// kept either way — that race arrives as whatever the repository throws
-  /// for a taken revision, not as this error.
+  /// kept either way.
+  ///
+  /// That refusal is the repository's own error, which this layer cannot
+  /// name — SQLite's is a primary-key violation — so a failed insert is
+  /// followed by one more read of the id. A recipe stored there now makes it
+  /// the same [RecipeIdOccupiedError] the check gives, which a screen can
+  /// answer by minting another id; an id still free leaves the failure as
+  /// the repository raised it, because nothing about the id caused it.
   Future<Recipe> call(Recipe created) async {
     if (await _recipes.findLatest(created.id) != null) {
       throw RecipeIdOccupiedError(created.id);
     }
     await _assertResolvable(_recipes, created);
-    return await _store(
-      _recipes,
-      created,
-      revision: 1,
-      modifiedAt: _clock.now(),
-    );
+    try {
+      return await _store(
+        _recipes,
+        created,
+        revision: 1,
+        modifiedAt: _clock.now(),
+      );
+    } on Object {
+      if (await _recipes.findLatest(created.id) != null) {
+        throw RecipeIdOccupiedError(created.id);
+      }
+      rethrow;
+    }
   }
 }
 
