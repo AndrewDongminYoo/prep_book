@@ -245,13 +245,16 @@ final class FakeProductionRunRepository implements ProductionRunRepository {
 /// a test can prove who released it.
 final class MemoryBackupArchive implements LibraryBackupArchive {
   /// Creates an archive over [bytes], read in chunks of at most [chunkSize].
-  new(List<int> bytes, {this.chunkSize = 1 << 16}) : bytes = Uint8List.fromList(bytes);
+  new(List<int> bytes, {this.chunkSize = 1 << 16, this.discardError}) : bytes = Uint8List.fromList(bytes);
 
   /// The archive content.
   final Uint8List bytes;
 
   /// The largest chunk [openRead] yields.
   final int chunkSize;
+
+  /// Thrown by every [discard] after it counts the call, when set.
+  final Error? discardError;
 
   /// How many times [discard] has been called.
   int discardCount = 0;
@@ -275,5 +278,9 @@ final class MemoryBackupArchive implements LibraryBackupArchive {
   }
 
   @override
-  Future<void> discard() async => discardCount++;
+  Future<void> discard() async {
+    discardCount++;
+    final error = discardError;
+    if (error != null) throw error;
+  }
 }

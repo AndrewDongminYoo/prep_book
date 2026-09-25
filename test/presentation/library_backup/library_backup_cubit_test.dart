@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bloc/bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/presentation/library_backup/cubit/library_backup_cubit.dart';
@@ -267,6 +268,97 @@ void main() {
     expect(archive.discardCount, 1);
   });
 
+  group('a discard that fails is reported without changing the outcome', () {
+    late _ErrorRecordingObserver observer;
+    final discardError = StateError('temporary directory busy');
+
+    setUp(() {
+      final previous = Bloc.observer;
+      observer = _ErrorRecordingObserver();
+      Bloc.observer = observer;
+      addTearDown(() => Bloc.observer = previous);
+    });
+
+    test('after a completed save', () async {
+      final archive = MemoryBackupArchive([1], discardError: discardError);
+      final gateway = _RecordingGateway()
+        ..createdBackup = LibraryBackupFile(
+          archive: archive,
+          suggestedName: 'backup.prepbook',
+        );
+      final cubit = _cubit(gateway, _RecordingPlatform());
+
+      await cubit.start(LibraryBackupAction.create);
+
+      expect(cubit.state.status, LibraryBackupStatus.succeeded);
+      expect(cubit.state.failure, isNull);
+      expect(observer.errors, [same(discardError)]);
+      await cubit.close();
+    });
+
+    test('after a completed restore', () async {
+      final gateway = _RecordingGateway();
+      final archive = MemoryBackupArchive([2], discardError: discardError);
+      final cubit = _cubit(gateway, _RecordingPlatform()..picked = archive);
+      await cubit.start(LibraryBackupAction.restore);
+
+      await cubit.confirmRestore();
+
+      expect(gateway.restored.single, same(archive));
+      expect(cubit.state.status, LibraryBackupStatus.succeeded);
+      expect(cubit.state.failure, isNull);
+      expect(observer.errors, [same(discardError)]);
+      await cubit.close();
+    });
+
+    test('after a cancelled restore', () async {
+      final archive = MemoryBackupArchive([3], discardError: discardError);
+      final cubit = _cubit(
+        _RecordingGateway(),
+        _RecordingPlatform()..picked = archive,
+      );
+      await cubit.start(LibraryBackupAction.restore);
+
+      await cubit.cancelRestore();
+
+      expect(cubit.state.status, LibraryBackupStatus.idle);
+      expect(observer.errors, [same(discardError)]);
+      await cubit.close();
+    });
+
+    test('when the dialog closes over a pending restore', () async {
+      final archive = MemoryBackupArchive([4], discardError: discardError);
+      final cubit = _cubit(
+        _RecordingGateway(),
+        _RecordingPlatform()..picked = archive,
+      );
+      await cubit.start(LibraryBackupAction.restore);
+
+      await cubit.close();
+
+      expect(archive.discardCount, 1);
+      expect(observer.errors, [same(discardError)]);
+    });
+
+    test('when a pick lands after the dialog closed', () async {
+      final pending = Completer<LibraryBackupArchive?>();
+      final cubit = _cubit(
+        _RecordingGateway(),
+        _RecordingPlatform()..pendingPick = pending.future,
+      );
+      final archive = MemoryBackupArchive([5], discardError: discardError);
+
+      final operation = cubit.start(LibraryBackupAction.restore);
+      await Future<void>.delayed(Duration.zero);
+      await cubit.close();
+      pending.complete(archive);
+      await operation;
+
+      expect(archive.discardCount, 1);
+      expect(observer.errors, [same(discardError)]);
+    });
+  });
+
   test('a cancelled pick that lands after close emits nothing', () async {
     final pending = Completer<LibraryBackupArchive?>();
     final platform = _RecordingPlatform()..pendingPick = pending.future;
@@ -357,5 +449,15 @@ final class _RecordingPlatform implements LibraryBackupPlatform {
     final error = saveError;
     if (error != null) throw error;
     return saveResult;
+  }
+}
+
+final class _ErrorRecordingObserver extends BlocObserver {
+  final errors = <Object>[];
+
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(bloc, error, stackTrace);
   }
 }

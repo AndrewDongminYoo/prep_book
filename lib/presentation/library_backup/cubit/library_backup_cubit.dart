@@ -11,7 +11,9 @@ part 'library_backup_state.dart';
 /// once the save settles, a picked one once it is restored or cancelled, and
 /// whichever is still held when the dialog closes. Each is staged in a file
 /// rather than memory, so a forgotten one costs disk space until the
-/// platform reclaims its temporary directory.
+/// platform reclaims its temporary directory. A discard that fails is
+/// reported through [addError] and never changes the outcome the dialog
+/// shows, because by then the save or restore has already happened.
 final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
   /// Creates the state machine over application and platform operations.
   new({
@@ -57,7 +59,7 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
         if (isClosed) return;
         saved = await _platform.saveBackup(backup);
       } finally {
-        await backup.archive.discard();
+        await _discard(backup.archive);
       }
       if (isClosed) return;
       if (!saved) {
@@ -83,7 +85,7 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
         return;
       }
       if (isClosed) {
-        await archive.discard();
+        await _discard(archive);
         return;
       }
       emit(
@@ -103,7 +105,7 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
     if (state.status != LibraryBackupStatus.awaitingConfirmation) return;
     final archive = state.pendingRestore!;
     emit(const LibraryBackupState());
-    await archive.discard();
+    await _discard(archive);
   }
 
   /// Restores the picked backup after explicit confirmation.
@@ -123,7 +125,7 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
       try {
         await _restoreBackup(archive);
       } finally {
-        await archive.discard();
+        await _discard(archive);
       }
       if (isClosed) return;
       emit(
@@ -144,7 +146,15 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
   Future<void> close() async {
     final pending = state.status == LibraryBackupStatus.awaitingConfirmation ? state.pendingRestore : null;
     await super.close();
-    await pending?.discard();
+    if (pending != null) await _discard(pending);
+  }
+
+  Future<void> _discard(LibraryBackupArchive archive) async {
+    try {
+      await archive.discard();
+    } on Object catch (error, stackTrace) {
+      addError(error, stackTrace);
+    }
   }
 
   void _fail(
