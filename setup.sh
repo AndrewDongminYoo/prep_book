@@ -16,8 +16,8 @@ set -euo pipefail
 #      aborts below rather than running code nothing vouched for.
 # The options below describe this project and change only when its toolchain does.
 
-readonly MERRY_SETUP_REVISION=a946d67a2071735250fc244842bcd4015052ec47
-readonly MERRY_SETUP_SHA256=d3282112f6f42b3b46b086538546e6423b83509b6e0730d6876904feea699197
+readonly MERRY_SETUP_REVISION=2f17c0afc7a8b876255c03ec228691059bce5048
+readonly MERRY_SETUP_SHA256=a319cb35c2f5dc7c32ad54ef78f5b151717406cc3bbb7debd244cb8e8ed7ff26
 readonly MERRY_SETUP_URL="https://raw.githubusercontent.com/AndrewDongminYoo/merry-setup/${MERRY_SETUP_REVISION}/bin/merry-setup"
 readonly MERRY_SETUP_BIN="${HOME}/.merry-setup/bin/merry-setup-${MERRY_SETUP_REVISION}"
 
@@ -67,7 +67,7 @@ if [[ ! -x ${MERRY_SETUP_BIN} ]]; then
 fi
 
 # Re-checked on every run rather than only after a download: the cache is a plain file under
-# $HOME, and hashing 52 KB costs less than trusting whatever now sits at that path.
+# $HOME, and hashing 60 KB costs less than trusting whatever now sits at that path.
 cached_sha256="$(sha256_of "${MERRY_SETUP_BIN}")"
 [[ ${cached_sha256} == "${MERRY_SETUP_SHA256}" ]] ||
 	die "SHA-256 mismatch for ${MERRY_SETUP_BIN}: expected ${MERRY_SETUP_SHA256}, got ${cached_sha256}. Delete it and re-run."
