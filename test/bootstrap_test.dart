@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/app/app.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/backup/backup.dart';
+import 'package:prep_book/backup/backup_files.dart';
 import 'package:prep_book/bootstrap.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/persistence.dart';
@@ -153,10 +154,24 @@ void main() {
     );
 
     final backup = await createBackup!();
-    final decoded = const BackupArchiveCodec().decode(backup.bytes);
+    final archivePath = '${directory.path}/created.prepbook';
+    final decodedPath = '${directory.path}/decoded.db';
+    await const IoBackupFiles().writeStream(
+      archivePath,
+      backup.archive.openRead(),
+      flush: false,
+    );
+    final decoded = await const BackupArchiveCodec().decodeFile(
+      archivePath: archivePath,
+      databasePath: decodedPath,
+    );
+    final staged = File((backup.archive as StagedBackupArchive).path);
+    expect(staged.existsSync(), isTrue);
+    await backup.archive.discard();
 
     expect(decoded.databaseSchemaVersion, currentSchemaVersion);
-    expect(decoded.databaseBytes, isNotEmpty);
+    expect(await File(decodedPath).length(), greaterThan(0));
+    expect(staged.existsSync(), isFalse);
     expect(mounts, hasLength(1));
   });
 
@@ -407,7 +422,7 @@ void main() {
     addTearDown(() => FlutterError.onError = previousFlutterError);
     final mounts = <Widget>[];
     RestoreLibraryBackup? restoreOperation;
-    late Uint8List archive;
+    late LibraryBackupArchive archive;
     await tester.runAsync(() async {
       archive = await _backupArchive(
         '${directory.path}/source.db',
@@ -548,7 +563,7 @@ final class _MountIdentityProbeState extends State<_MountIdentityProbe> {
 Matcher _failureKind(LibraryBackupFailureKind kind) =>
     isA<LibraryBackupException>().having((error) => error.kind, 'kind', kind);
 
-Future<Uint8List> _backupArchive(
+Future<LibraryBackupArchive> _backupArchive(
   String sourcePath, {
   required String ingredientId,
 }) async {
@@ -561,11 +576,19 @@ Future<Uint8List> _backupArchive(
     Ingredient(id: ingredientId, name: ingredientId, defaultUnit: Unit.gram),
   );
   await db.close();
-  final databaseBytes = await File(sourcePath).readAsBytes();
-  return const BackupArchiveCodec().encode(
-    databaseBytes: databaseBytes,
+  final archiveDirectory = await Directory('$sourcePath.archive').create();
+  final archivePath = '${archiveDirectory.path}/backup.prepbook';
+  await const BackupArchiveCodec().encodeFile(
+    databasePath: sourcePath,
+    archivePath: archivePath,
     databaseSchemaVersion: currentSchemaVersion,
     createdAtUtc: DateTime.utc(2026, 9, 13),
+  );
+  return StagedBackupArchive(
+    path: archivePath,
+    length: await File(archivePath).length(),
+    directory: archiveDirectory.path,
+    files: const IoBackupFiles(),
   );
 }
 

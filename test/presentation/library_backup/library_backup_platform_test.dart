@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -6,11 +7,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/presentation/library_backup/view/library_backup_platform.dart';
 
+import '../../application/fakes.dart';
+
 void main() {
-  test('rejects declared oversize before listening to the stream', () async {
+  late Directory root;
+  late List<Directory> stagingDirectories;
+
+  setUp(() async {
+    root = await Directory.systemTemp.createTemp('prep-book-platform-');
+    stagingDirectories = [];
+  });
+
+  tearDown(() => root.delete(recursive: true));
+
+  Future<Directory> createStagingDirectory() async {
+    final directory = await Directory(
+      '${root.path}/staging-${stagingDirectories.length}',
+    ).create();
+    stagingDirectories.add(directory);
+    return directory;
+  }
+
+  test('rejects declared oversize before listening or staging', () async {
     var listened = false;
     final platform = FilePickerLibraryBackupPlatform(
       maxBackupBytes: 3,
+      createStagingDirectory: createStagingDirectory,
       openPicker: () async => PickedLibraryBackup(
         knownLength: 4,
         resolveLength: () async => 4,
@@ -27,33 +49,46 @@ void main() {
     );
 
     expect(listened, isFalse);
+    expect(stagingDirectories, isEmpty);
   });
 
-  test('resolves unknown size then collects exact chunks', () async {
+  test('resolves unknown size then stages exact chunks on disk', () async {
     var lengthCalls = 0;
-    final first = Uint8List.fromList([1, 2]);
-    final second = Uint8List.fromList([3]);
     final platform = FilePickerLibraryBackupPlatform(
       maxBackupBytes: 3,
+      createStagingDirectory: createStagingDirectory,
       openPicker: () async => PickedLibraryBackup(
         resolveLength: () async {
           lengthCalls++;
           return 3;
         },
-        openRead: () => Stream.fromIterable([first, second]),
+        openRead: () => Stream.fromIterable([
+          Uint8List.fromList([1, 2]),
+          Uint8List.fromList([3]),
+        ]),
       ),
     );
 
-    final bytes = await platform.pickBackup();
+    final archive = (await platform.pickBackup())!;
 
     expect(lengthCalls, 1);
-    expect(bytes, [1, 2, 3]);
-    expect(identical(bytes, first), isFalse);
+    expect(archive.length, 3);
+    final staged = stagingDirectories.single.listSync();
+    expect(staged, hasLength(1));
+    expect(await (staged.single as File).readAsBytes(), [1, 2, 3]);
+    expect(await _readAll(archive), [1, 2, 3]);
+    expect(await _readAll(archive), [1, 2, 3], reason: 'each read reopens the file');
+
+    final discarding = archive.discard();
+    expect(archive.discard(), same(discarding));
+    await discarding;
+    expect(stagingDirectories.single.existsSync(), isFalse);
   });
 
   test('reports an unavailable selected-file length without reading it', () async {
     var listened = false;
     final platform = FilePickerLibraryBackupPlatform(
+      createStagingDirectory: createStagingDirectory,
       openPicker: () async => PickedLibraryBackup(
         resolveLength: () async => null,
         openRead: () {
@@ -69,10 +104,12 @@ void main() {
     );
 
     expect(listened, isFalse);
+    expect(stagingDirectories, isEmpty);
   });
 
-  test('rejects a file whose size changes while it is read', () async {
+  test('rejects a file that ends short and removes what it staged', () async {
     final platform = FilePickerLibraryBackupPlatform(
+      createStagingDirectory: createStagingDirectory,
       openPicker: () async => PickedLibraryBackup(
         knownLength: 2,
         resolveLength: () async => 2,
@@ -84,12 +121,15 @@ void main() {
       platform.pickBackup(),
       throwsA(_failureKind(LibraryBackupFailureKind.restoreFailed)),
     );
+
+    expect(stagingDirectories.single.existsSync(), isFalse);
   });
 
   test('stops when a chunk exceeds the resolved length', () async {
     var chunksRead = 0;
     final platform = FilePickerLibraryBackupPlatform(
       maxBackupBytes: 4,
+      createStagingDirectory: createStagingDirectory,
       openPicker: () async => PickedLibraryBackup(
         knownLength: 2,
         resolveLength: () async => 2,
@@ -110,19 +150,46 @@ void main() {
     );
 
     expect(chunksRead, 2);
+    expect(stagingDirectories.single.existsSync(), isFalse);
+  });
+
+  test('a staging directory that cannot be created fails the pick', () async {
+    final stagingError = StateError('no temporary directory');
+    var listened = false;
+    final platform = FilePickerLibraryBackupPlatform(
+      createStagingDirectory: () async => throw stagingError,
+      openPicker: () async => PickedLibraryBackup(
+        knownLength: 1,
+        resolveLength: () async => 1,
+        openRead: () {
+          listened = true;
+          return Stream.value(Uint8List.fromList([1]));
+        },
+      ),
+    );
+
+    await expectLater(
+      platform.pickBackup(),
+      throwsA(
+        _failureWithCause(LibraryBackupFailureKind.restoreFailed, stagingError),
+      ),
+    );
+    expect(listened, isFalse);
   });
 
   test('open and save cancellation are neutral', () async {
     final platform = FilePickerLibraryBackupPlatform(
       openPicker: () async => null,
-      savePicker: ({required suggestedName, required bytes}) async => false,
+      savePicker: ({required suggestedName, required archive}) async => false,
+      createStagingDirectory: createStagingDirectory,
     );
 
     expect(await platform.pickBackup(), isNull);
+    expect(stagingDirectories, isEmpty);
     expect(
       await platform.saveBackup(
         LibraryBackupFile(
-          bytes: Uint8List.fromList([1]),
+          archive: MemoryBackupArchive([1]),
           suggestedName: 'library.prepbook',
         ),
       ),
@@ -130,24 +197,26 @@ void main() {
     );
   });
 
-  test('save passes exact value and returns picker result', () async {
+  test('save passes the exact archive and returns the picker result', () async {
     String? receivedName;
-    Uint8List? receivedBytes;
+    LibraryBackupArchive? receivedArchive;
     final platform = FilePickerLibraryBackupPlatform(
-      savePicker: ({required suggestedName, required bytes}) async {
+      savePicker: ({required suggestedName, required archive}) async {
         receivedName = suggestedName;
-        receivedBytes = bytes;
+        receivedArchive = archive;
         return true;
       },
     );
+    final archive = MemoryBackupArchive([7, 8]);
     final backup = LibraryBackupFile(
-      bytes: Uint8List.fromList([7, 8]),
+      archive: archive,
       suggestedName: 'backup.prepbook',
     );
 
     expect(await platform.saveBackup(backup), isTrue);
     expect(receivedName, 'backup.prepbook');
-    expect(receivedBytes, [7, 8]);
+    expect(receivedArchive, same(archive));
+    expect(archive.discardCount, 0, reason: 'the caller owns the archive');
   });
 
   test('default bindings delegate to file_picker', () async {
@@ -158,22 +227,47 @@ void main() {
     addTearDown(() => FilePickerPlatform.instance = previous);
     const platform = FilePickerLibraryBackupPlatform();
 
-    expect(await platform.pickBackup(), [4, 5]);
+    final picked = (await platform.pickBackup())!;
+    addTearDown(picked.discard);
+    expect(await _readAll(picked), [4, 5]);
     expect(picker.pickType, FileType.custom);
     expect(picker.allowedExtensions, ['prepbook']);
+    final saved = MemoryBackupArchive([6, 7, 8], chunkSize: 2);
     expect(
       await platform.saveBackup(
-        LibraryBackupFile(
-          bytes: Uint8List.fromList([6, 7]),
-          suggestedName: 'native.prepbook',
-        ),
+        LibraryBackupFile(archive: saved, suggestedName: 'native.prepbook'),
       ),
       isTrue,
     );
     expect(picker.savedName, 'native.prepbook');
-    expect(picker.savedBytes, [6, 7]);
+    expect(picker.savedBytes, [6, 7, 8]);
     expect(picker.savedMimeType, 'application/octet-stream');
+    expect(saved.readCount, 1);
   });
+
+  for (final (description, content) in [
+    ('shorter', [1]),
+    ('longer', [1, 2, 3]),
+  ]) {
+    test('the default save refuses an archive $description than it reports', () async {
+      final previous = FilePickerPlatform.instance;
+      final picker = _TestFilePickerPlatform(null);
+      FilePickerPlatform.instance = picker;
+      addTearDown(() => FilePickerPlatform.instance = previous);
+      const platform = FilePickerLibraryBackupPlatform();
+
+      await expectLater(
+        platform.saveBackup(
+          LibraryBackupFile(
+            archive: _MisreportedArchive(content, reportedLength: 2),
+            suggestedName: 'native.prepbook',
+          ),
+        ),
+        throwsA(_failureKind(LibraryBackupFailureKind.saveFailed)),
+      );
+      expect(picker.savedName, isNull);
+    });
+  }
 
   test('maps open and save exceptions without exposing paths', () async {
     final openError = StateError('open picker path');
@@ -189,10 +283,10 @@ void main() {
     );
     await expectLater(
       FilePickerLibraryBackupPlatform(
-        savePicker: ({required suggestedName, required bytes}) async => throw saveError,
+        savePicker: ({required suggestedName, required archive}) async => throw saveError,
       ).saveBackup(
         LibraryBackupFile(
-          bytes: Uint8List.fromList([1]),
+          archive: MemoryBackupArchive([1]),
           suggestedName: 'backup.prepbook',
         ),
       ),
@@ -201,6 +295,25 @@ void main() {
       ),
     );
   });
+}
+
+Future<List<int>> _readAll(LibraryBackupArchive archive) => archive.openRead().expand((chunk) => chunk).toList();
+
+/// An archive whose content disagrees with the length it reports.
+final class _MisreportedArchive implements LibraryBackupArchive {
+  new(this._content, {required this.reportedLength});
+
+  final List<int> _content;
+  final int reportedLength;
+
+  @override
+  int get length => reportedLength;
+
+  @override
+  Stream<List<int>> openRead() => Stream.value(_content);
+
+  @override
+  Future<void> discard() async {}
 }
 
 Matcher _failureKind(LibraryBackupFailureKind kind) =>

@@ -93,23 +93,23 @@ final class _BackupGateway implements LibraryBackupGateway {
   Future<LibraryBackupFile> create() async {
     createCalls++;
     return LibraryBackupFile(
-      bytes: Uint8List.fromList([1]),
+      archive: MemoryBackupArchive([1]),
       suggestedName: 'backup.prepbook',
     );
   }
 
   @override
-  Future<void> restore(Uint8List archiveBytes) async {
+  Future<void> restore(LibraryBackupArchive archive) async {
     restoreCalls++;
   }
 }
 
 final class _BackupPlatform implements LibraryBackupPlatform {
-  Uint8List? pickedBytes;
+  LibraryBackupArchive? picked;
   bool saveResult = false;
 
   @override
-  Future<Uint8List?> pickBackup() async => pickedBytes;
+  Future<LibraryBackupArchive?> pickBackup() async => picked;
 
   @override
   Future<bool> saveBackup(LibraryBackupFile backup) async => saveResult;

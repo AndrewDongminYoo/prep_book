@@ -1,17 +1,19 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/presentation/library_backup/cubit/library_backup_cubit.dart';
 import 'package:prep_book/presentation/library_backup/view/library_backup_platform.dart';
 
+import '../../application/fakes.dart';
+
 void main() {
-  test('backup creates, saves, and succeeds in order', () async {
+  test('backup creates, saves, succeeds, and then discards the archive', () async {
     final gateway = _RecordingGateway();
     final platform = _RecordingPlatform();
+    final archive = MemoryBackupArchive([1, 2]);
     final backup = LibraryBackupFile(
-      bytes: Uint8List.fromList([1, 2]),
+      archive: archive,
       suggestedName: 'backup.prepbook',
     );
     gateway.createdBackup = backup;
@@ -28,13 +30,21 @@ void main() {
     ]);
     expect(gateway.createCalls, 1);
     expect(platform.saved, [backup]);
+    expect(platform.discardsSeenBySave, [0]);
+    expect(archive.discardCount, 1);
     expect(cubit.state.action, LibraryBackupAction.create);
     await subscription.cancel();
     await cubit.close();
+    expect(archive.discardCount, 1);
   });
 
-  test('backup save cancellation returns to neutral idle', () async {
-    final gateway = _RecordingGateway();
+  test('backup save cancellation discards the archive and returns to idle', () async {
+    final archive = MemoryBackupArchive([1]);
+    final gateway = _RecordingGateway()
+      ..createdBackup = LibraryBackupFile(
+        archive: archive,
+        suggestedName: 'backup.prepbook',
+      );
     final platform = _RecordingPlatform()..saveResult = false;
     final cubit = _cubit(gateway, platform);
 
@@ -43,31 +53,64 @@ void main() {
     expect(cubit.state.status, LibraryBackupStatus.idle);
     expect(cubit.state.action, isNull);
     expect(cubit.state.failure, isNull);
+    expect(archive.discardCount, 1);
+    await cubit.close();
+  });
+
+  test('a failed save still discards the archive', () async {
+    final archive = MemoryBackupArchive([1]);
+    final gateway = _RecordingGateway()
+      ..createdBackup = LibraryBackupFile(
+        archive: archive,
+        suggestedName: 'backup.prepbook',
+      );
+    final platform = _RecordingPlatform()..saveError = StateError('save failed');
+    final cubit = _cubit(gateway, platform);
+
+    await cubit.start(LibraryBackupAction.create);
+
+    expect(cubit.state.status, LibraryBackupStatus.failed);
+    expect(cubit.state.failure, LibraryBackupFailureKind.saveFailed);
+    expect(archive.discardCount, 1);
     await cubit.close();
   });
 
   test('restore waits for confirmation and discards on cancel', () async {
     final gateway = _RecordingGateway();
-    final platform = _RecordingPlatform()..pickedBytes = Uint8List.fromList([3, 4]);
+    final archive = MemoryBackupArchive([3, 4]);
+    final platform = _RecordingPlatform()..picked = archive;
     final cubit = _cubit(gateway, platform);
 
     await cubit.start(LibraryBackupAction.restore);
 
     expect(cubit.state.status, LibraryBackupStatus.awaitingConfirmation);
-    expect(cubit.state.pendingRestoreBytes, [3, 4]);
+    expect(cubit.state.pendingRestore, same(archive));
+    expect(archive.discardCount, 0);
     expect(gateway.restored, isEmpty);
 
-    cubit.cancelRestore();
+    await cubit.cancelRestore();
 
     expect(cubit.state.status, LibraryBackupStatus.idle);
-    expect(cubit.state.pendingRestoreBytes, isNull);
+    expect(cubit.state.pendingRestore, isNull);
+    expect(archive.discardCount, 1);
     expect(gateway.restored, isEmpty);
+    await cubit.close();
+    expect(archive.discardCount, 1);
+  });
+
+  test('cancel outside confirmation changes nothing', () async {
+    final cubit = _cubit(_RecordingGateway(), _RecordingPlatform());
+
+    await cubit.cancelRestore();
+
+    expect(cubit.state, const LibraryBackupState());
     await cubit.close();
   });
 
-  test('confirmed restore emits restoring then success', () async {
+  test('confirmed restore emits restoring then success and then discards', () async {
     final gateway = _RecordingGateway();
-    final platform = _RecordingPlatform()..pickedBytes = Uint8List.fromList([5, 6]);
+    final archive = MemoryBackupArchive([5, 6]);
+    final platform = _RecordingPlatform()..picked = archive;
     final cubit = _cubit(gateway, platform);
     final statuses = <LibraryBackupStatus>[];
     final subscription = cubit.stream.listen(
@@ -83,9 +126,13 @@ void main() {
       LibraryBackupStatus.restoring,
       LibraryBackupStatus.succeeded,
     ]);
-    expect(gateway.restored.single, [5, 6]);
+    expect(gateway.restored.single, same(archive));
+    expect(gateway.discardsSeenByRestore, [0]);
+    expect(archive.discardCount, 1);
+    expect(cubit.state.pendingRestore, isNull);
     await subscription.cancel();
     await cubit.close();
+    expect(archive.discardCount, 1);
   });
 
   test('picker cancellation returns to neutral idle', () async {
@@ -110,14 +157,15 @@ void main() {
     await cubit.close();
   });
 
-  test('restore preserves a typed failure category', () async {
+  test('restore preserves a typed failure category and discards', () async {
     final failure = LibraryBackupException(
       LibraryBackupFailureKind.invalidDatabase,
       cause: StateError('candidate failed'),
       stackTrace: StackTrace.current,
     );
     final gateway = _RecordingGateway()..restoreError = failure;
-    final platform = _RecordingPlatform()..pickedBytes = Uint8List.fromList([7]);
+    final archive = MemoryBackupArchive([7]);
+    final platform = _RecordingPlatform()..picked = archive;
     final cubit = _cubit(gateway, platform);
     await cubit.start(LibraryBackupAction.restore);
 
@@ -125,7 +173,9 @@ void main() {
 
     expect(cubit.state.status, LibraryBackupStatus.failed);
     expect(cubit.state.failure, LibraryBackupFailureKind.invalidDatabase);
+    expect(archive.discardCount, 1);
     await cubit.close();
+    expect(archive.discardCount, 1);
   });
 
   test('every typed failure becomes a localizable failed state', () async {
@@ -162,7 +212,7 @@ void main() {
     expect(platform.pickCalls, 0);
     pending.complete(
       LibraryBackupFile(
-        bytes: Uint8List.fromList([9]),
+        archive: MemoryBackupArchive([9]),
         suggestedName: 'backup.prepbook',
       ),
     );
@@ -170,25 +220,65 @@ void main() {
     await cubit.close();
   });
 
-  test('closing during backup creation prevents the save picker', () async {
+  test('closing during backup creation prevents the save picker and discards', () async {
     final gateway = _RecordingGateway();
     final platform = _RecordingPlatform();
     final pending = Completer<LibraryBackupFile>();
     gateway.pendingCreate = pending.future;
     final cubit = _cubit(gateway, platform);
+    final archive = MemoryBackupArchive([10]);
 
     final operation = cubit.start(LibraryBackupAction.create);
     await Future<void>.delayed(Duration.zero);
     await cubit.close();
     pending.complete(
-      LibraryBackupFile(
-        bytes: Uint8List.fromList([10]),
-        suggestedName: 'backup.prepbook',
-      ),
+      LibraryBackupFile(archive: archive, suggestedName: 'backup.prepbook'),
     );
     await operation;
 
     expect(platform.saved, isEmpty);
+    expect(archive.discardCount, 1);
+  });
+
+  test('closing while a restore awaits confirmation discards it', () async {
+    final gateway = _RecordingGateway();
+    final archive = MemoryBackupArchive([11]);
+    final cubit = _cubit(gateway, _RecordingPlatform()..picked = archive);
+    await cubit.start(LibraryBackupAction.restore);
+
+    await cubit.close();
+
+    expect(archive.discardCount, 1);
+    expect(gateway.restored, isEmpty);
+  });
+
+  test('a pick that lands after close is discarded, not held', () async {
+    final pending = Completer<LibraryBackupArchive?>();
+    final platform = _RecordingPlatform()..pendingPick = pending.future;
+    final cubit = _cubit(_RecordingGateway(), platform);
+    final archive = MemoryBackupArchive([12]);
+
+    final operation = cubit.start(LibraryBackupAction.restore);
+    await Future<void>.delayed(Duration.zero);
+    await cubit.close();
+    pending.complete(archive);
+    await operation;
+
+    expect(archive.discardCount, 1);
+  });
+
+  test('a cancelled pick that lands after close emits nothing', () async {
+    final pending = Completer<LibraryBackupArchive?>();
+    final platform = _RecordingPlatform()..pendingPick = pending.future;
+    final cubit = _cubit(_RecordingGateway(), platform);
+
+    final operation = cubit.start(LibraryBackupAction.restore);
+    await Future<void>.delayed(Duration.zero);
+    await cubit.close();
+    pending.complete();
+    await operation;
+
+    expect(cubit.state.status, LibraryBackupStatus.idle);
   });
 }
 
@@ -208,7 +298,8 @@ final class _RecordingGateway implements LibraryBackupGateway {
   Future<LibraryBackupFile>? pendingCreate;
   LibraryBackupException? createError;
   LibraryBackupException? restoreError;
-  final restored = <Uint8List>[];
+  final restored = <LibraryBackupArchive>[];
+  final discardsSeenByRestore = <int>[];
 
   @override
   Future<LibraryBackupFile> create() async {
@@ -219,38 +310,52 @@ final class _RecordingGateway implements LibraryBackupGateway {
     if (pending != null) return await pending;
     return createdBackup ??
         LibraryBackupFile(
-          bytes: Uint8List.fromList([1]),
+          archive: MemoryBackupArchive([1]),
           suggestedName: 'backup.prepbook',
         );
   }
 
   @override
-  Future<void> restore(Uint8List archiveBytes) async {
+  Future<void> restore(LibraryBackupArchive archive) async {
     restoreCalls++;
+    if (archive is MemoryBackupArchive) {
+      discardsSeenByRestore.add(archive.discardCount);
+    }
     final error = restoreError;
     if (error != null) throw error;
-    restored.add(Uint8List.fromList(archiveBytes));
+    restored.add(archive);
   }
 }
 
 final class _RecordingPlatform implements LibraryBackupPlatform {
   int pickCalls = 0;
-  Uint8List? pickedBytes;
+  LibraryBackupArchive? picked;
+  Future<LibraryBackupArchive?>? pendingPick;
   Object? pickError;
   bool saveResult = true;
+  Error? saveError;
   final saved = <LibraryBackupFile>[];
+  final discardsSeenBySave = <int>[];
 
   @override
-  Future<Uint8List?> pickBackup() async {
+  Future<LibraryBackupArchive?> pickBackup() async {
     pickCalls++;
     final error = pickError;
-    if (error != null) return await Future<Uint8List?>.error(error);
-    return pickedBytes;
+    if (error != null) return await Future<LibraryBackupArchive?>.error(error);
+    final pending = pendingPick;
+    if (pending != null) return await pending;
+    return picked;
   }
 
   @override
   Future<bool> saveBackup(LibraryBackupFile backup) async {
     saved.add(backup);
+    final archive = backup.archive;
+    if (archive is MemoryBackupArchive) {
+      discardsSeenBySave.add(archive.discardCount);
+    }
+    final error = saveError;
+    if (error != null) throw error;
     return saveResult;
   }
 }

@@ -28,7 +28,10 @@ void main() {
       expect(
         await saveAndroidBackup(
           suggestedName: 'library.prepbook',
-          bytes: Uint8List.fromList([1, 2, 3]),
+          content: Stream.fromIterable([
+            [1, 2],
+            [3],
+          ]),
         ),
         isTrue,
       );
@@ -48,7 +51,7 @@ void main() {
     expect(
       await saveAndroidBackup(
         suggestedName: 'library.prepbook',
-        bytes: Uint8List.fromList([1]),
+        content: Stream.value([1]),
       ),
       isFalse,
     );
@@ -65,10 +68,40 @@ void main() {
     await expectLater(
       saveAndroidBackup(
         suggestedName: 'library.prepbook',
-        bytes: Uint8List.fromList([1]),
+        content: Stream.value([1]),
       ),
       throwsA(isA<PlatformException>()),
     );
     expect(File(sourcePath!).existsSync(), isFalse);
   });
+  test('a failing content stream removes the partial file and never reaches the channel', () async {
+    var invoked = false;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      invoked = true;
+      return true;
+    });
+    final failure = StateError('archive read failed');
+    final temporaryBefore = _saveDirectories();
+    Stream<List<int>> failingContent() async* {
+      yield [1];
+      throw failure;
+    }
+
+    await expectLater(
+      saveAndroidBackup(
+        suggestedName: 'library.prepbook',
+        content: failingContent(),
+      ),
+      throwsA(same(failure)),
+    );
+    expect(invoked, isFalse);
+    expect(_saveDirectories(), temporaryBefore);
+  });
 }
+
+Set<String> _saveDirectories() => Directory.systemTemp
+    .listSync()
+    .whereType<Directory>()
+    .map((directory) => directory.path)
+    .where((path) => path.split(Platform.pathSeparator).last.startsWith('prep-book-save-'))
+    .toSet();

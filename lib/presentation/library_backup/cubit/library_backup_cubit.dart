@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:prep_book/application/application.dart';
@@ -8,6 +6,12 @@ import 'package:prep_book/presentation/library_backup/view/library_backup_platfo
 part 'library_backup_state.dart';
 
 /// Drives one backup or restore dialog.
+///
+/// Every archive this cubit receives is its to discard: a created backup
+/// once the save settles, a picked one once it is restored or cancelled, and
+/// whichever is still held when the dialog closes. Each is staged in a file
+/// rather than memory, so a forgotten one costs disk space until the
+/// platform reclaims its temporary directory.
 final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
   /// Creates the state machine over application and platform operations.
   new({
@@ -48,8 +52,13 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
     );
     try {
       final backup = await _createBackup();
-      if (isClosed) return;
-      final saved = await _platform.saveBackup(backup);
+      final bool saved;
+      try {
+        if (isClosed) return;
+        saved = await _platform.saveBackup(backup);
+      } finally {
+        await backup.archive.discard();
+      }
       if (isClosed) return;
       if (!saved) {
         emit(const LibraryBackupState());
@@ -68,17 +77,20 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
 
   Future<void> _pickRestore() async {
     try {
-      final bytes = await _platform.pickBackup();
-      if (isClosed) return;
-      if (bytes == null) {
-        emit(const LibraryBackupState());
+      final archive = await _platform.pickBackup();
+      if (archive == null) {
+        if (!isClosed) emit(const LibraryBackupState());
+        return;
+      }
+      if (isClosed) {
+        await archive.discard();
         return;
       }
       emit(
         LibraryBackupState(
           status: LibraryBackupStatus.awaitingConfirmation,
           action: LibraryBackupAction.restore,
-          pendingRestoreBytes: bytes,
+          pendingRestore: archive,
         ),
       );
     } on Object catch (error, stackTrace) {
@@ -87,9 +99,11 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
   }
 
   /// Discards a picked backup without changing the library.
-  void cancelRestore() {
+  Future<void> cancelRestore() async {
     if (state.status != LibraryBackupStatus.awaitingConfirmation) return;
+    final archive = state.pendingRestore!;
     emit(const LibraryBackupState());
+    await archive.discard();
   }
 
   /// Restores the picked backup after explicit confirmation.
@@ -97,7 +111,7 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
     if (_operationActive || state.status != LibraryBackupStatus.awaitingConfirmation) {
       return;
     }
-    final bytes = state.pendingRestoreBytes!;
+    final archive = state.pendingRestore!;
     _operationActive = true;
     emit(
       const LibraryBackupState(
@@ -106,7 +120,11 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
       ),
     );
     try {
-      await _restoreBackup(bytes);
+      try {
+        await _restoreBackup(archive);
+      } finally {
+        await archive.discard();
+      }
       if (isClosed) return;
       emit(
         const LibraryBackupState(
@@ -119,6 +137,14 @@ final class LibraryBackupCubit extends Cubit<LibraryBackupState> {
     } finally {
       _operationActive = false;
     }
+  }
+
+  /// Discards a picked backup still awaiting confirmation.
+  @override
+  Future<void> close() async {
+    final pending = state.status == LibraryBackupStatus.awaitingConfirmation ? state.pendingRestore : null;
+    await super.close();
+    await pending?.discard();
   }
 
   void _fail(

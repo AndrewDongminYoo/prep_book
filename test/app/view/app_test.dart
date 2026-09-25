@@ -97,17 +97,17 @@ ProductionHistoryLauncher _historyLauncher() {
 final class _BackupGateway implements LibraryBackupGateway {
   @override
   Future<LibraryBackupFile> create() async => LibraryBackupFile(
-    bytes: Uint8List.fromList([1]),
+    archive: MemoryBackupArchive([1]),
     suggestedName: 'backup.prepbook',
   );
 
   @override
-  Future<void> restore(Uint8List archiveBytes) async {}
+  Future<void> restore(LibraryBackupArchive archive) async {}
 }
 
 final class _BackupPlatform implements LibraryBackupPlatform {
   @override
-  Future<Uint8List?> pickBackup() async => null;
+  Future<LibraryBackupArchive?> pickBackup() async => null;
 
   @override
   Future<bool> saveBackup(LibraryBackupFile backup) async => false;

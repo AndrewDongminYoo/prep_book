@@ -6,6 +6,7 @@ The corrected fixture passed a full near-limit iOS Simulator run.
 The Android Emulator reproduced a production native-save out-of-memory failure with the same fixture size.
 The Android streaming save correction passed both emulator sizes.
 The physical iPhone follow-up below adds one-device evidence; supported-device safety remains unverified, and Issue #31 remains open.
+On 2026-09-25 a streaming pipeline replaced the whole-buffer copies those runs measured; the last section records host measurements of it, and no Simulator, Emulator, or device has run it yet.
 
 ## Method
 
@@ -338,3 +339,51 @@ These host checks do not establish device-memory safety.
 The personal-account Oracle lookup for `prep_book` found no project-specific match for `backup memory` or `physical device`: \[no precedent found\].
 It returned the global evidence guidance in `wiki/entities/flutter-ui-ux-review.md` and `raw/sources/.claude/skills/flutter-ui-ux-review/references/evidence-and-runtime.md`.
 That guidance confirmed the decision to keep one-device profiling evidence separate from supported-device safety and to leave Issue #31 open.
+
+## Streaming pipeline on 2026-09-25
+
+This change replaces every whole-archive and whole-database buffer on the create and restore paths with file-backed streams.
+The snapshot copies the live database file to a private temporary file under the same checkpoint and exclusive transaction as before.
+The codec writes and reads the two ZIP entries itself, deflating and inflating one chunk at a time and patching each local header's CRC and sizes once its entry ends, because `archive` 4.3.0 deflates each entry into a memory buffer and its `dart:io` inflater collects every chunk before returning.
+`archive` still parses the central directory, computes CRC-32, and decodes a `bzip2` entry.
+A created backup and a picked backup are each a file behind `LibraryBackupArchive`, which whoever receives it discards.
+The CRC, declared-size, actual-size, SQLite integrity, domain validation, and atomic replacement checks are unchanged in effect; the declared size is still checked before the first entry byte is read, and the actual size is checked on every inflated chunk.
+
+### Host measurement, not device evidence
+
+These numbers come from a Linux container in a `flutter test` debug process using `sqflite_common_ffi`, sampling process RSS every 10 milliseconds with the same fixture generator at 240 MiB.
+They show how the change moves the Dart heap, not what a phone does: the native save and pick used injected adapters that write and read a local file, and nothing mounted a UI.
+The "before" run was the base commit `69a6bab` and the "after" run is this change, both with a 252,112,896-byte database; the archives were 250,576,965 and 250,552,274 bytes.
+
+| Phase    | Before peak increase MiB | After peak increase MiB |
+| -------- | -----------------------: | ----------------------: |
+| create   |                    1,208 |                      35 |
+| save     |                      479 |                       1 |
+| pick     |                        0 |                       5 |
+| decode   |                      292 |                       6 |
+| restore  |                      691 |                      21 |
+| rollback |                      242 |                      15 |
+
+Each increase is the phase's peak sample minus its baseline sample, rounded to the nearest MiB.
+The before run's save wrote the whole archive buffer; the after run's save streamed the archive to the file.
+The after run's increase stays near 35 MiB at 64, 96, and 240 MiB, which marks it as allocation churn in the test process rather than a copy of the library.
+
+The non-Android save is the exception.
+`file_picker` takes the whole file as one buffer on every platform except Android, where the app already streams through its own document-save channel, so that save reads the archive into one allocation at the moment of saving.
+A host approximation of that path, reading the archive into one buffer and writing it out, raised RSS by 477 MiB at 240 MiB, the same order as the before run's save.
+Removing that buffer on iOS needs a native exporter, which this change does not add.
+
+Restore now writes more to disk than it holds in memory.
+A near-limit restore stages the picked file, a second copy for the gateway, the candidate, and the rollback copy beside the live database, so it needs roughly four times the archive size in free storage.
+
+### Regression coverage
+
+`test/backup/library_backup_memory_test.dart` runs create and restore over a 96 MiB fixture on the host and fails if either phase raises RSS by one database size or more.
+Clean runs raised it by 31 to 39 MiB at create and 6 to 24 MiB at restore.
+Three mutations each reintroduced one whole-buffer copy and each failed the test: the gateway collecting the archive before staging it (287 MiB), the encoder reading the database with `readAsBytes` (343 MiB), and the decoder collecting the inflated entry before writing it (304 MiB).
+
+### Harness changes
+
+`integration_test/backup_memory_profile_test.dart` keeps its seven phase names.
+Its `nativeSave` phase now also discards the created archive, its `decode` phase stages the picked archive to a file before inflating it to the validation path, and its `validate` phase no longer writes a database buffer first.
+Compare device runs of this harness with the earlier tables phase by phase with those differences in mind.

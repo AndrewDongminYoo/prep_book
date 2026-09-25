@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/backup/backup_files.dart';
@@ -15,15 +14,44 @@ void main() {
 
   tearDown(() => directory.delete(recursive: true));
 
-  test('writes, measures, and reads exact bytes', () async {
+  test('writes a chunked stream, measures, and reads exact bytes', () async {
     final target = '${directory.path}/library.db';
-    final bytes = Uint8List.fromList([0, 1, 2, 255]);
+    await File(target).writeAsBytes(List.filled(16, 7), flush: true);
 
-    await files.writeBytes(target, bytes, flush: true);
+    final written = await files.writeStream(
+      target,
+      Stream.fromIterable([
+        [0, 1],
+        <int>[],
+        [2, 255],
+      ]),
+      flush: true,
+    );
 
+    expect(written, 4);
     expect(await files.length(target), 4);
     expect(await files.lengthIfExists(target), 4);
-    expect(await files.readBytes(target), bytes);
+    expect(
+      await files.openRead(target).expand((chunk) => chunk).toList(),
+      [0, 1, 2, 255],
+    );
+  });
+
+  test('a failing stream propagates after closing the partial file', () async {
+    final target = '${directory.path}/partial.db';
+    final failure = StateError('source failed');
+    Stream<List<int>> failingSource() async* {
+      yield [1, 2];
+      throw failure;
+    }
+
+    await expectLater(
+      files.writeStream(target, failingSource(), flush: false),
+      throwsA(same(failure)),
+    );
+
+    expect(await File(target).readAsBytes(), [1, 2]);
+    await File(target).delete();
   });
 
   test('copies exact bytes with the requested flush', () async {
@@ -75,4 +103,58 @@ void main() {
     expect(exactSidecars.where((path) => File(path).existsSync()), isEmpty);
     expect(unrelated.where((path) => File(path).existsSync()), hasLength(2));
   });
+
+  test('creates and deletes a temporary directory with its contents', () async {
+    final path = await files.createTemporaryDirectory('prep-book-files-test-');
+    await File('$path/nested.prepbook').writeAsBytes([1], flush: true);
+
+    expect(Directory(path).existsSync(), isTrue);
+    expect(path.split(Platform.pathSeparator).last, startsWith('prep-book-files-test-'));
+
+    await files.deleteDirectory(path);
+    await files.deleteDirectory(path);
+
+    expect(Directory(path).existsSync(), isFalse);
+  });
+
+  test('a staged archive reads its file and discards its directory once', () async {
+    final stagingDirectory = await Directory('${directory.path}/staged').create();
+    final archivePath = '${stagingDirectory.path}/backup.prepbook';
+    await File(archivePath).writeAsBytes([4, 5, 6], flush: true);
+    final recording = _DeleteCountingFiles();
+    final archive = StagedBackupArchive(
+      path: archivePath,
+      length: 3,
+      directory: stagingDirectory.path,
+      files: recording,
+    );
+
+    expect(archive.length, 3);
+    expect(await archive.openRead().expand((chunk) => chunk).toList(), [4, 5, 6]);
+
+    final first = archive.discard();
+    final second = archive.discard();
+    expect(second, same(first));
+    await first;
+
+    expect(recording.deletedDirectories, [stagingDirectory.path]);
+    expect(stagingDirectory.existsSync(), isFalse);
+  });
+}
+
+final class _DeleteCountingFiles implements BackupFiles {
+  static const _delegate = IoBackupFiles();
+  final deletedDirectories = <String>[];
+
+  @override
+  Stream<List<int>> openRead(String path) => _delegate.openRead(path);
+
+  @override
+  Future<void> deleteDirectory(String path) {
+    deletedDirectories.add(path);
+    return _delegate.deleteDirectory(path);
+  }
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

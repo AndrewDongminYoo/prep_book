@@ -60,6 +60,7 @@ void main() {
       final databasesPath = await databaseFactory.getDatabasesPath();
       final databasePath = '$databasesPath/backup_memory_profile.db';
       final validationPath = '$databasePath.validation';
+      final validationArchivePath = '$validationPath.prepbook';
       await databaseFactory.deleteDatabase(databasePath);
       await databaseFactory.deleteDatabase(validationPath);
 
@@ -70,6 +71,7 @@ void main() {
         if (connection?.isOpen ?? false) await connection!.close();
         await databaseFactory.deleteDatabase(databasePath);
         await databaseFactory.deleteDatabase(validationPath);
+        await const IoBackupFiles().deleteIfExists(validationArchivePath);
       });
 
       final fixture = await generateBackupMemoryFixture(
@@ -123,70 +125,76 @@ void main() {
         mountRecoveryFailure: () => fail('rollback recovery must succeed'),
       );
       final gateway = DatabaseLibraryBackupGateway(
-        createSnapshot: () => DatabaseSnapshotter(
+        createSnapshot: (destinationPath) => DatabaseSnapshotter(
           connection: session.connection,
           databasePath: databasePath,
-          factory: databaseFactory,
           files: files,
           validateCandidate: validator.validate,
-        ).create(),
-        encodeArchive: codec.encode,
-        decodeArchive: codec.decode,
+        ).create(destinationPath: destinationPath),
+        encodeArchive: codec.encodeFile,
+        decodeArchive: codec.decodeFile,
         restoreDatabase: session.restore,
+        files: files,
         now: () => DateTime.now().toUtc(),
       );
       const platform = FilePickerLibraryBackupPlatform();
 
-      LibraryBackupFile? backup;
-      backup = await measure('create', gateway.create);
-      final archiveBytes = backup!.bytes.length;
+      final backup = await measure('create', gateway.create);
+      final archiveBytes = backup.archive.length;
       expect(
         archiveBytes,
         greaterThanOrEqualTo((fixture.databaseBytes * 0.9).floor()),
         reason: 'the profiled archive must remain near-limit after ZIP',
       );
 
-      final saved = await measure(
-        'nativeSave',
-        () => platform.saveBackup(backup!),
-      );
+      final saved = await measure('nativeSave', () async {
+        try {
+          return await platform.saveBackup(backup);
+        } finally {
+          await backup.archive.discard();
+        }
+      });
       expect(saved, isTrue, reason: 'the native save must complete');
-      backup = null;
       await Future<void>.delayed(const Duration(seconds: 1));
 
-      final pickedBytes = await measure('nativePick', platform.pickBackup);
-      if (pickedBytes == null) fail('the native pick must complete');
-      expect(pickedBytes, hasLength(archiveBytes));
+      final picked = await measure('nativePick', platform.pickBackup);
+      if (picked == null) fail('the native pick must complete');
+      addTearDown(picked.discard);
+      expect(picked.length, archiveBytes);
 
-      DecodedLibraryBackup? decoded;
-      decoded = await measure('decode', () => codec.decode(pickedBytes));
+      final decoded = await measure('decode', () async {
+        await files.writeStream(
+          validationArchivePath,
+          picked.openRead(),
+          flush: false,
+        );
+        return await codec.decodeFile(
+          archivePath: validationArchivePath,
+          databasePath: validationPath,
+        );
+      });
 
       await measure<void>('validate', () async {
-        await files.writeBytes(
-          validationPath,
-          decoded!.databaseBytes,
-          flush: true,
-        );
         try {
           await validator.validate(
             candidatePath: validationPath,
-            manifestSchemaVersion: decoded!.databaseSchemaVersion,
+            manifestSchemaVersion: decoded.databaseSchemaVersion,
           );
         } finally {
           await files.deleteDatabaseSidecars(validationPath);
           await files.deleteIfExists(validationPath);
+          await files.deleteIfExists(validationArchivePath);
         }
       });
-      decoded = null;
       await Future<void>.delayed(const Duration(seconds: 1));
 
-      await measure<void>('restore', () => gateway.restore(pickedBytes));
+      await measure<void>('restore', () => gateway.restore(picked));
       connection = session.connection;
 
       failNextRestoredActivation = true;
       await measure<void>('rollback', () async {
         try {
-          await gateway.restore(pickedBytes);
+          await gateway.restore(picked);
           fail('the profiling activation must fail');
         } on LibraryBackupException catch (error) {
           expect(error.kind, LibraryBackupFailureKind.restoreFailed);

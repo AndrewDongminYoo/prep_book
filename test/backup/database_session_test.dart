@@ -113,10 +113,7 @@ void main() {
       },
     );
 
-    await session.restore(
-      restoredBytes,
-      manifestSchemaVersion: currentSchemaVersion,
-    );
+    await session.restore(_stage(restoredBytes));
     live = session.connection;
 
     expect(activations, hasLength(1));
@@ -143,10 +140,7 @@ void main() {
     );
 
     await expectLater(
-      session.restore(
-        restoredBytes,
-        manifestSchemaVersion: currentSchemaVersion,
-      ),
+      session.restore(_stage(restoredBytes)),
       throwsA(same(failure)),
     );
 
@@ -165,10 +159,7 @@ void main() {
     );
 
     await expectLater(
-      session.restore(
-        restoredBytes,
-        manifestSchemaVersion: currentSchemaVersion,
-      ),
+      session.restore(_stage(restoredBytes)),
       throwsA(
         isA<LibraryBackupException>()
             .having(
@@ -184,6 +175,31 @@ void main() {
     expect(await _ids(live), ['previous']);
   });
 
+  test('a staging failure leaves live open and removes a partial candidate', () async {
+    final failure = LibraryBackupException(
+      LibraryBackupFailureKind.invalidArchive,
+      cause: const FormatException('entry checksum mismatch'),
+      stackTrace: StackTrace.current,
+    );
+    var validations = 0;
+    final session = buildSession(
+      validateCandidate: ({required candidatePath, required manifestSchemaVersion}) async => validations++,
+    );
+
+    await expectLater(
+      session.restore((candidatePath) async {
+        await File(candidatePath).writeAsBytes([1, 2, 3], flush: true);
+        throw failure;
+      }),
+      throwsA(same(failure)),
+    );
+
+    expect(validations, 0);
+    expect(live.isOpen, isTrue);
+    expect(await _ids(live), ['previous']);
+    expect(await temporaryPaths(), everyElement(isFalse));
+  });
+
   test('cleanup failures are reported without undoing activation', () async {
     final reports = <Object>[];
     final session = buildSession(
@@ -191,10 +207,7 @@ void main() {
       onReportError: (error, stackTrace) => reports.add(error),
     );
 
-    await session.restore(
-      restoredBytes,
-      manifestSchemaVersion: currentSchemaVersion,
-    );
+    await session.restore(_stage(restoredBytes));
     live = session.connection;
 
     expect(await _ids(live), ['restored']);
@@ -223,10 +236,7 @@ void main() {
       );
 
       await expectLater(
-        session.restore(
-          restoredBytes,
-          manifestSchemaVersion: currentSchemaVersion,
-        ),
+        session.restore(_stage(restoredBytes)),
         throwsA(
           isA<LibraryBackupException>().having(
             (error) => error.kind,
@@ -261,10 +271,7 @@ void main() {
       );
 
       await expectLater(
-        session.restore(
-          restoredBytes,
-          manifestSchemaVersion: currentSchemaVersion,
-        ),
+        session.restore(_stage(restoredBytes)),
         throwsA(
           isA<LibraryBackupException>().having(
             (error) => error.kind,
@@ -304,10 +311,7 @@ void main() {
     );
 
     await expectLater(
-      session.restore(
-        restoredBytes,
-        manifestSchemaVersion: currentSchemaVersion,
-      ),
+      session.restore(_stage(restoredBytes)),
       throwsA(
         isA<LibraryBackupException>().having(
           (error) => error.kind,
@@ -389,14 +393,17 @@ final class _FaultingBackupFiles implements BackupFiles {
   Future<int?> lengthIfExists(String path) => _delegate.lengthIfExists(path);
 
   @override
-  Future<Uint8List> readBytes(String path) => _delegate.readBytes(path);
+  Stream<List<int>> openRead(String path) => _delegate.openRead(path);
 
   @override
-  Future<void> writeBytes(
-    String path,
-    Uint8List bytes, {
-    required bool flush,
-  }) => _delegate.writeBytes(path, bytes, flush: flush);
+  Future<int> writeStream(String path, Stream<List<int>> content, {required bool flush}) =>
+      _delegate.writeStream(path, content, flush: flush);
+
+  @override
+  Future<String> createTemporaryDirectory(String prefix) => _delegate.createTemporaryDirectory(prefix);
+
+  @override
+  Future<void> deleteDirectory(String path) => _delegate.deleteDirectory(path);
 }
 
 final class _CloseFailingDatabase implements Database {
@@ -423,6 +430,13 @@ Future<Database> _open(String path) => openPrepBookDatabase(
 Future<void> _storeIngredient(Database db, String id) => SqfliteIngredientRepository(
   db,
 ).upsert(Ingredient(id: id, name: id, defaultUnit: Unit.gram));
+
+/// A staging step that writes [bytes] as the candidate and declares the
+/// current schema version, as the gateway's decode does.
+StageRestoreCandidate _stage(Uint8List bytes) => (candidatePath) async {
+  await File(candidatePath).writeAsBytes(bytes, flush: true);
+  return currentSchemaVersion;
+};
 
 Future<Uint8List> _databaseBytes(String path, String ingredientId) async {
   final db = await _open(path);
