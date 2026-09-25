@@ -44,20 +44,21 @@ void main() {
       final validator = BackupDatabaseValidator(factory: databaseFactoryFfi);
       const codec = BackupArchiveCodec();
       final sourceGateway = DatabaseLibraryBackupGateway(
-        createSnapshot: () => DatabaseSnapshotter(
+        createSnapshot: (destinationPath) => DatabaseSnapshotter(
           connection: source,
           databasePath: sourcePath,
-          factory: databaseFactoryFfi,
           files: files,
           validateCandidate: validator.validate,
-        ).create(),
-        encodeArchive: codec.encode,
-        decodeArchive: codec.decode,
-        restoreDatabase: (_, {required manifestSchemaVersion}) => throw UnimplementedError(),
+        ).create(destinationPath: destinationPath),
+        encodeArchive: codec.encodeFile,
+        decodeArchive: codec.decodeFile,
+        restoreDatabase: (_) => throw UnimplementedError(),
+        files: files,
         now: () => DateTime(2026, 9, 13, 12, 34, 56),
       );
 
       final backup = await sourceGateway.create();
+      addTearDown(backup.archive.discard);
 
       expect(source.isOpen, isTrue);
       expect(backup.suggestedName, 'prepbook-backup-20260913-123456.prepbook');
@@ -80,14 +81,15 @@ void main() {
         mountRecoveryFailure: () => fail('recovery must not fail'),
       );
       final targetGateway = DatabaseLibraryBackupGateway(
-        createSnapshot: () => throw UnimplementedError(),
-        encodeArchive: codec.encode,
-        decodeArchive: codec.decode,
+        createSnapshot: (_) => throw UnimplementedError(),
+        encodeArchive: codec.encodeFile,
+        decodeArchive: codec.decodeFile,
         restoreDatabase: session.restore,
+        files: files,
         now: DateTime.now,
       );
 
-      await targetGateway.restore(backup.bytes);
+      await targetGateway.restore(backup.archive);
       target = session.connection;
 
       expect(initialTarget.isOpen, isFalse);
@@ -108,7 +110,7 @@ void main() {
         ),
       );
 
-      await targetGateway.restore(backup.bytes);
+      await targetGateway.restore(backup.archive);
       target = session.connection;
       await _expectTablesEqual(source, target);
       await _expectRepositoriesEqual(source, target);

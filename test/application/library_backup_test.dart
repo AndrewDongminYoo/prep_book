@@ -1,34 +1,34 @@
-import 'dart:typed_data';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 
+import 'fakes.dart';
+
 void main() {
-  test('create returns an immutable snapshot of the gateway bytes', () async {
-    final bytes = Uint8List.fromList([1, 2, 3]);
+  test('create returns the gateway backup and leaves its archive to the caller', () async {
+    final archive = MemoryBackupArchive([1, 2, 3]);
     final expected = LibraryBackupFile(
-      bytes: bytes,
+      archive: archive,
       suggestedName: 'prepbook-backup-20260913-120000.prepbook',
     );
-    bytes[0] = 9;
     final gateway = _RecordingLibraryBackupGateway(createResult: expected);
 
     final actual = await CreateLibraryBackup(gateway)();
 
     expect(actual, same(expected));
-    expect(() => actual.bytes[1] = 8, throwsUnsupportedError);
-    expect(actual.bytes, [1, 2, 3]);
+    expect(actual.archive, same(archive));
+    expect(archive.discardCount, 0);
     expect(gateway.createCalls, 1);
   });
 
-  test('restore forwards the selected archive bytes exactly once', () async {
-    final bytes = Uint8List.fromList([4, 5, 6]);
+  test('restore forwards the selected archive exactly once without discarding it', () async {
+    final archive = MemoryBackupArchive([4, 5, 6]);
     final gateway = _RecordingLibraryBackupGateway();
 
-    await RestoreLibraryBackup(gateway)(bytes);
+    await RestoreLibraryBackup(gateway)(archive);
 
     expect(gateway.restoreCalls, 1);
-    expect(gateway.restoredBytes, same(bytes));
+    expect(gateway.restoredArchive, same(archive));
+    expect(archive.discardCount, 0);
   });
 
   test('create preserves a typed failure and its diagnostics', () async {
@@ -57,7 +57,7 @@ void main() {
     final gateway = _RecordingLibraryBackupGateway(restoreError: failure);
 
     await expectLater(
-      RestoreLibraryBackup(gateway)(Uint8List(0)),
+      RestoreLibraryBackup(gateway)(MemoryBackupArchive(const [])),
       throwsA(same(failure)),
     );
     expect(failure.cause, same(cause));
@@ -78,7 +78,7 @@ final class _RecordingLibraryBackupGateway implements LibraryBackupGateway {
 
   int createCalls = 0;
   int restoreCalls = 0;
-  Uint8List? restoredBytes;
+  LibraryBackupArchive? restoredArchive;
 
   @override
   Future<LibraryBackupFile> create() async {
@@ -89,9 +89,9 @@ final class _RecordingLibraryBackupGateway implements LibraryBackupGateway {
   }
 
   @override
-  Future<void> restore(Uint8List archiveBytes) async {
+  Future<void> restore(LibraryBackupArchive archive) async {
     restoreCalls++;
-    restoredBytes = archiveBytes;
+    restoredArchive = archive;
     final error = restoreError;
     if (error != null) throw error;
   }

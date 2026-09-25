@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math' show Random;
-import 'dart:typed_data';
 
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/backup/backup_files.dart';
@@ -17,6 +16,13 @@ typedef ReportDatabaseSessionError = void Function(Object error, StackTrace stac
 
 /// Opens the database at [path] as the session's next owned connection.
 typedef OpenSessionDatabase = Future<Database> Function(String path);
+
+/// Writes the replacement database to [candidatePath] and returns the schema
+/// version its manifest declares.
+///
+/// The session names the path, beside the live database, so the swap after
+/// validation is a rename on one filesystem rather than another copy.
+typedef StageRestoreCandidate = Future<int> Function(String candidatePath);
 
 /// Owns the live connection and performs recoverable database replacement.
 final class DatabaseSession {
@@ -77,11 +83,12 @@ final class DatabaseSession {
   /// The currently owned live connection.
   Database get connection => _connection;
 
-  /// Validates and activates [databaseBytes] at the live database path.
-  Future<void> restore(
-    Uint8List databaseBytes, {
-    required int manifestSchemaVersion,
-  }) async {
+  /// Validates the database [stageCandidate] writes and activates it at the
+  /// live database path.
+  ///
+  /// A failure while staging or validating leaves the live database open and
+  /// untouched, the same as before any byte was written.
+  Future<void> restore(StageRestoreCandidate stageCandidate) async {
     final candidatePath = _createCandidatePath();
     final rollbackPath = _createRollbackPath();
     final rollbackInstallPath = '$rollbackPath.install';
@@ -92,7 +99,7 @@ final class DatabaseSession {
     Database? replacement;
 
     try {
-      await _files.writeBytes(candidatePath, databaseBytes, flush: true);
+      final manifestSchemaVersion = await stageCandidate(candidatePath);
       await _validateCandidate(
         candidatePath: candidatePath,
         manifestSchemaVersion: manifestSchemaVersion,

@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 /// Maximum encoded backup size accepted by the application.
 const int maxLibraryBackupBytes = 256 * 1024 * 1024;
 
@@ -30,22 +28,38 @@ final class LibraryBackupException implements Exception {
   final StackTrace? stackTrace;
 }
 
-/// A complete portable library backup and its suggested filename.
+/// A portable backup archive, read as a stream rather than handed over as
+/// one buffer.
+///
+/// Passing a readable archive instead of its bytes means nothing between
+/// creating a backup and saving or restoring it has to hold the whole
+/// archive in memory; a near-limit library otherwise kept several full-size
+/// copies alive at once. [length] is known without reading the archive, so
+/// a size check can run before any content is read.
+///
+/// Whoever receives an archive owns it: it calls [discard] once it no longer
+/// needs the content, and nothing else releases it.
+abstract interface class LibraryBackupArchive {
+  /// The archive size in bytes.
+  int get length;
+
+  /// Opens a fresh read of the whole archive.
+  ///
+  /// Each call starts from the first byte, and a read that yields a total
+  /// other than [length] means the content changed underneath it.
+  Stream<List<int>> openRead();
+
+  /// Releases whatever holds the archive. Calling it again does nothing.
+  Future<void> discard();
+}
+
+/// A newly created backup and the filename offered for it.
 final class LibraryBackupFile {
-  /// Creates a backup value that cannot be changed through [bytes].
-  new({required Uint8List bytes, required this.suggestedName}) : _bytes = Uint8List.fromList(bytes);
+  /// Creates a backup over [archive].
+  const new({required this.archive, required this.suggestedName});
 
-  /// Creates a backup value by taking ownership of [bytes].
-  /// The caller must not change [bytes] after this call.
-  new takeOwnership({
-    required this._bytes,
-    required this.suggestedName,
-  });
-
-  final Uint8List _bytes;
-
-  /// An unmodifiable view of the owned encoded archive.
-  Uint8List get bytes => _bytes.asUnmodifiableView();
+  /// The encoded archive, owned by whoever received this backup.
+  final LibraryBackupArchive archive;
 
   /// The filename offered to the native save interface.
   final String suggestedName;
@@ -54,10 +68,15 @@ final class LibraryBackupFile {
 /// Infrastructure operations used by the backup application use cases.
 abstract interface class LibraryBackupGateway {
   /// Creates a complete, validated backup archive.
+  ///
+  /// The caller owns the returned archive and discards it once it has been
+  /// saved or abandoned.
   Future<LibraryBackupFile> create();
 
-  /// Validates, restores, and activates [archiveBytes].
-  Future<void> restore(Uint8List archiveBytes);
+  /// Validates, restores, and activates [archive].
+  ///
+  /// Reads [archive] and never discards it; the caller still owns it.
+  Future<void> restore(LibraryBackupArchive archive);
 }
 
 /// Creates a complete portable library backup.
@@ -76,6 +95,6 @@ final class RestoreLibraryBackup {
 
   final LibraryBackupGateway _gateway;
 
-  /// Completes only after [archiveBytes] is active or recovery has settled.
-  Future<void> call(Uint8List archiveBytes) => _gateway.restore(archiveBytes);
+  /// Completes only after [archive] is active or recovery has settled.
+  Future<void> call(LibraryBackupArchive archive) => _gateway.restore(archive);
 }

@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prep_book/application/application.dart';
 import 'package:prep_book/l10n/l10n.dart';
 import 'package:prep_book/presentation/library_backup/library_backup.dart';
+
+import '../../application/fakes.dart';
 
 void main() {
   testWidgets('backup saves, closes, and reports success', (tester) async {
@@ -23,7 +24,7 @@ void main() {
     expect(find.text('Preparing backup…'), findsOneWidget);
     pending.complete(
       LibraryBackupFile(
-        bytes: Uint8List.fromList([1]),
+        archive: MemoryBackupArchive([1]),
         suggestedName: 'backup.prepbook',
       ),
     );
@@ -38,7 +39,8 @@ void main() {
     tester,
   ) async {
     final gateway = _Gateway();
-    final platform = _Platform()..pickedBytes = Uint8List.fromList([2, 3]);
+    final archive = MemoryBackupArchive([2, 3]);
+    final platform = _Platform()..picked = archive;
     final launcher = _launcher(gateway, platform);
     await _pumpLauncher(tester, launcher, LibraryBackupAction.restore);
 
@@ -58,12 +60,13 @@ void main() {
 
     expect(find.byType(LibraryBackupDialog), findsNothing);
     expect(gateway.restoreCalls, 0);
+    expect(archive.discardCount, 1);
   });
 
   testWidgets('shows picker progress while native selection is pending', (
     tester,
   ) async {
-    final pending = Completer<Uint8List?>();
+    final pending = Completer<LibraryBackupArchive?>();
     final platform = _Platform()..pendingPick = pending.future;
     final launcher = _launcher(_Gateway(), platform);
     await _pumpLauncher(tester, launcher, LibraryBackupAction.restore);
@@ -80,7 +83,7 @@ void main() {
     tester,
   ) async {
     final gateway = _Gateway();
-    final platform = _Platform()..pickedBytes = Uint8List.fromList([4, 5]);
+    final platform = _Platform()..picked = MemoryBackupArchive([4, 5]);
     final pending = Completer<void>();
     gateway.pendingRestore = pending.future;
     final launcher = _launcher(gateway, platform);
@@ -124,7 +127,7 @@ void main() {
     expect(find.byType(LibraryBackupDialog), findsOneWidget);
     pending.complete(
       LibraryBackupFile(
-        bytes: Uint8List.fromList([6]),
+        archive: MemoryBackupArchive([6]),
         suggestedName: 'backup.prepbook',
       ),
     );
@@ -193,7 +196,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final gateway = _Gateway();
-      final platform = _Platform()..pickedBytes = Uint8List.fromList([1]);
+      final platform = _Platform()..picked = MemoryBackupArchive([1]);
       await _pumpLauncher(
         tester,
         _launcher(gateway, platform),
@@ -253,28 +256,28 @@ final class _Gateway implements LibraryBackupGateway {
     if (error != null) throw error;
     return await (pendingCreate ??
         LibraryBackupFile(
-          bytes: Uint8List.fromList([1]),
+          archive: MemoryBackupArchive([1]),
           suggestedName: 'backup.prepbook',
         ));
   }
 
   @override
-  Future<void> restore(Uint8List archiveBytes) async {
+  Future<void> restore(LibraryBackupArchive archive) async {
     restoreCalls++;
     await (pendingRestore ?? Future<void>.value());
   }
 }
 
 final class _Platform implements LibraryBackupPlatform {
-  Uint8List? pickedBytes;
-  Future<Uint8List?>? pendingPick;
+  LibraryBackupArchive? picked;
+  Future<LibraryBackupArchive?>? pendingPick;
   final saved = <LibraryBackupFile>[];
 
   @override
-  Future<Uint8List?> pickBackup() async {
+  Future<LibraryBackupArchive?> pickBackup() async {
     final pending = pendingPick;
     if (pending != null) return await pending;
-    return pickedBytes;
+    return picked;
   }
 
   @override

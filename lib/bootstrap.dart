@@ -198,16 +198,16 @@ Future<void> _runStartup({
       mountRecoveryFailure: mountFailure,
     );
     gateway = DatabaseLibraryBackupGateway(
-      createSnapshot: () => DatabaseSnapshotter(
+      createSnapshot: (destinationPath) => DatabaseSnapshotter(
         connection: session.connection,
         databasePath: databasePath,
-        factory: factory,
         files: files,
         validateCandidate: validator.validate,
-      ).create(),
-      encodeArchive: codec.encode,
-      decodeArchive: codec.decode,
+      ).create(destinationPath: destinationPath),
+      encodeArchive: codec.encodeFile,
+      decodeArchive: codec.decodeFile,
       restoreDatabase: session.restore,
+      files: files,
       now: DateTime.now,
     );
     final repositories = _repositories(initialConnection);

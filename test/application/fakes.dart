@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:prep_book/application/application.dart';
 import 'package:prep_book/domain/domain.dart';
 import 'package:prep_book/persistence/repositories.dart';
 
@@ -235,5 +238,49 @@ final class FakeProductionRunRepository implements ProductionRunRepository {
       componentId: key.$2,
       value: value,
     );
+  }
+}
+
+/// A [LibraryBackupArchive] over bytes held in memory, counting discards so
+/// a test can prove who released it.
+final class MemoryBackupArchive implements LibraryBackupArchive {
+  /// Creates an archive over [bytes], read in chunks of at most [chunkSize].
+  new(List<int> bytes, {this.chunkSize = 1 << 16, this.discardError}) : bytes = Uint8List.fromList(bytes);
+
+  /// The archive content.
+  final Uint8List bytes;
+
+  /// The largest chunk [openRead] yields.
+  final int chunkSize;
+
+  /// Thrown by every [discard] after it counts the call, when set.
+  final Error? discardError;
+
+  /// How many times [discard] has been called.
+  int discardCount = 0;
+
+  /// How many reads have been opened.
+  int readCount = 0;
+
+  @override
+  int get length => bytes.length;
+
+  @override
+  Stream<List<int>> openRead() async* {
+    readCount++;
+    for (var offset = 0; offset < bytes.length; offset += chunkSize) {
+      yield Uint8List.sublistView(
+        bytes,
+        offset,
+        offset + chunkSize > bytes.length ? bytes.length : offset + chunkSize,
+      );
+    }
+  }
+
+  @override
+  Future<void> discard() async {
+    discardCount++;
+    final error = discardError;
+    if (error != null) throw error;
   }
 }

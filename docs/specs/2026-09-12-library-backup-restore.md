@@ -123,12 +123,13 @@ A later change can raise it with device-memory evidence.
 
 `lib/application/` owns two use cases and the interface that backs them:
 
-- `CreateLibraryBackup` returns immutable archive bytes and the suggested filename.
-- `RestoreLibraryBackup` accepts archive bytes and completes only after the new library is active.
+- `CreateLibraryBackup` returns a readable archive and the suggested filename; the caller discards that archive once the save settles.
+- `RestoreLibraryBackup` accepts a readable archive and completes only after the new library is active; it reads the archive and leaves discarding it to the caller.
 - `LibraryBackupGateway` is the application-facing interface that both use cases call.
 - Typed backup errors are part of the use-case contract so presentation code can select localized messages without importing infrastructure.
 
-The application interface uses `Uint8List`, value objects, and typed backup errors.
+The application interface uses `LibraryBackupArchive`, value objects, and typed backup errors.
+`LibraryBackupArchive` exposes only a length, a fresh chunked read, and an idempotent discard, so neither the application nor presentation holds a whole archive in memory, and the interface still names no path or file.
 It does not name Flutter, `sqflite`, `file_picker`, paths, files, ZIP entries, or concrete repositories.
 The current application boundary test remains unchanged.
 
@@ -152,7 +153,8 @@ Only one backup or restore operation can run at a time.
 - `LibraryBackupLauncher` opens the flow from the recipe library.
 
 The presentation layer receives the two use cases and the platform adapter.
-It does not import persistence, `sqflite`, `archive`, or `dart:io`.
+It does not import persistence, `sqflite`, or `archive`.
+Only the two native adapters, `FilePickerLibraryBackupPlatform` and the Android save channel, import `dart:io`, because they stage picked and saved archives in private temporary files.
 The presentation boundary allowlist needs only the new `file_picker` package prefix for the adapter.
 
 ## Creating a consistent snapshot
@@ -165,20 +167,24 @@ The backup session serializes backup and restore operations so two file operatio
 
 1. Ask the live connection to checkpoint and truncate any WAL content.
 2. Start an exclusive SQLite transaction on the owned connection without writing data.
-3. Read the main database bytes while that transaction prevents another write through the connection.
+3. Copy the main database file, chunk by chunk, to a snapshot file in a private temporary directory while that transaction prevents another write through the connection.
 4. End the transaction.
-5. Write the bytes to a candidate file under the application database directory.
+5. Copy the snapshot to a candidate file under the application database directory.
 6. Open and validate that candidate through the same validator that restore uses.
-7. Encode the validated bytes with the manifest.
-8. Remove the candidate file in a `finally` path.
+7. Stream the snapshot into an archive file in the same temporary directory, deflating each chunk and writing the manifest first.
+8. Remove the candidate file in a `finally` path, and remove the snapshot as soon as the archive holds it.
+
+The candidate is a second copy rather than the snapshot itself, because opening a database to validate it can touch the file, and the archive must hold exactly the state the live connection held.
 
 The implementation must not copy the live database without the checkpoint and lock.
 SQLite documents that a file copied while another write transaction is active can combine old and new content or lose required WAL content.
 The application-owned single connection is the condition that makes the checkpoint followed by the exclusive lock sufficient here.
 
 The live connection stays open, so creating or saving a backup does not rebuild the application and does not discard the current library search or scroll state.
-The platform save dialog runs only after the archive bytes are ready.
-Picker cancellation discards the bytes and returns the cubit to idle without an error message.
+The platform save dialog runs only after the archive file is complete.
+On Android the archive streams to a private temporary file whose path is all the native save channel carries.
+Every other platform hands `file_picker` one buffer, so that save reads the archive into exactly one allocation at the moment of saving.
+Saving, cancelling, and failing all discard the archive's temporary directory, and picker cancellation returns the cubit to idle without an error message.
 
 ## Restore flow
 
@@ -186,7 +192,7 @@ The operator flow is deliberately replace-only:
 
 1. The operator selects `Restore backup` from the library app bar menu.
 2. The native picker returns one `.prepbook` file or a cancellation.
-3. The application checks the selected file size before reading all bytes.
+3. The application checks the selected file size before reading any byte, then copies the selection into a private staging file, checking every chunk against that size.
 4. The interface shows a confirmation that restore replaces all current recipes and production history.
 5. Cancellation returns to the unchanged library.
 6. Confirmation starts validation and replacement behind a blocking progress state.
@@ -199,8 +205,10 @@ Back navigation and the app bar actions are disabled while the swap is in progre
 
 ## Candidate validation
 
-Restore writes `library.db` to a unique candidate path inside the application database directory.
+Restore copies the selected archive into a private temporary directory, rejecting it if it grows past the archive limit or ends at a different length than it reported.
+It then inflates the `library.db` entry chunk by chunk to a unique candidate path inside the application database directory, stopping at the declared size and checking the entry's length and CRC once it ends.
 Keeping the candidate on the same filesystem as the live database makes the final rename atomic at the filesystem level.
+Every full-size artifact of a restore, the staged selection, the staged archive, the candidate, and the rollback copy, is a file, so a near-limit restore needs several times the archive size in free storage, and a write that runs out of space fails the restore through the same paths as any other staging or rollback-copy failure, leaving the current library in place.
 
 The validator performs these checks in order:
 

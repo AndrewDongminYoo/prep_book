@@ -47,13 +47,15 @@ void main() {
       fixture.ingredientCount,
     );
 
-    final archive = const BackupArchiveCodec().encode(
-      databaseBytes: await File(path).readAsBytes(),
+    final archivePath = '${directory.path}/profile.prepbook';
+    await const BackupArchiveCodec().encodeFile(
+      databasePath: path,
+      archivePath: archivePath,
       databaseSchemaVersion: currentSchemaVersion,
       createdAtUtc: DateTime.utc(2026),
     );
     expect(
-      archive.length,
+      await File(archivePath).length(),
       greaterThanOrEqualTo((fixture.databaseBytes * 0.9).floor()),
       reason: 'the profiling fixture must remain near-limit after ZIP',
     );

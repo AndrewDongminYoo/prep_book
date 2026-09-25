@@ -20,12 +20,15 @@ final class LibraryBackupState {
   const new({
     this.status = LibraryBackupStatus.idle,
     this.action,
-    this.pendingRestoreBytes,
+    this.pendingRestore,
     this.failure,
   });
 
   final LibraryBackupStatus status;
   final LibraryBackupAction? action;
-  final Uint8List? pendingRestoreBytes;
+
+  /// The picked backup awaiting confirmation, owned by the cubit until it
+  /// is restored, cancelled, or the dialog closes.
+  final LibraryBackupArchive? pendingRestore;
   final LibraryBackupFailureKind? failure;
 }
