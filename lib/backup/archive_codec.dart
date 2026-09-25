@@ -27,6 +27,10 @@ final class DecodedLibraryBackup {
   final DateTime createdAtUtc;
 }
 
+/// Opens the file [BackupArchiveCodec.decodeFile] writes a database entry
+/// into.
+typedef OpenDatabaseSink = Future<RandomAccessFile> Function(String path);
+
 /// Encodes and decodes version 1 PrepBook backup archives.
 ///
 /// Both directions work file to file in chunks. The archive and its database
@@ -35,10 +39,15 @@ final class DecodedLibraryBackup {
 /// buffers at once — several full-size copies per operation.
 final class BackupArchiveCodec {
   /// Creates the codec.
+  ///
+  /// `openDatabaseSink` opens the decoded database for writing; a test
+  /// replaces it to fail a write the way a full disk does, which no
+  /// portable file can be made to do.
   const new({
     int maxArchiveBytes = maxLibraryBackupBytes,
     int maxDatabaseBytes = maxLibraryBackupBytes,
     int maxManifestBytes = 64 * 1024,
+    this._openDatabaseSink = _openDatabaseFile,
   }) : assert(maxArchiveBytes > 0, 'maxArchiveBytes must be positive.'),
        assert(maxDatabaseBytes > 0, 'maxDatabaseBytes must be positive.'),
        assert(maxManifestBytes > 0, 'maxManifestBytes must be positive.'),
@@ -49,6 +58,7 @@ final class BackupArchiveCodec {
   final int _maxArchiveBytes;
   final int _maxDatabaseBytes;
   final int _maxManifestBytes;
+  final OpenDatabaseSink _openDatabaseSink;
 
   /// Encodes one manifest and the SQLite database at [databasePath] into a
   /// ZIP archive written to [archivePath].
@@ -107,6 +117,11 @@ final class BackupArchiveCodec {
   /// entry structure, and then each entry's actual size and CRC, bounded
   /// while it is written. A partly written [databasePath] is left for the
   /// caller to remove.
+  ///
+  /// Only a fault in the archive's content is reported as an invalid
+  /// archive. A failure to open, write, or flush [databasePath], such as a
+  /// full disk, propagates as it was thrown, because the backup itself is
+  /// sound and the caller reports it as a failed restore.
   Future<DecodedLibraryBackup> decodeFile({
     required String archivePath,
     required String databasePath,
@@ -142,7 +157,7 @@ final class BackupArchiveCodec {
       );
       final manifest = _decodeManifest(manifestBytes.takeBytes());
 
-      final database = await File(databasePath).open(mode: FileMode.write);
+      final database = await _openDatabaseSink(databasePath);
       try {
         await _extractEntry(
           archive,
@@ -223,13 +238,19 @@ Future<void> _extractEntry(
       if (chunk.length > maxBytes - length) throw const ArchiveEntryTooLarge();
       length += chunk.length;
       crc = getCrc32(chunk, crc);
-      await write(chunk);
+      try {
+        await write(chunk);
+      } on Object catch (error, stackTrace) {
+        throw _EntryWriteFailure(error, stackTrace);
+      }
     }
     if (length != header.uncompressedSize || crc != header.crc32) {
       throw const FormatException('The archive entry checksum or size is invalid.');
     }
   } on ArchiveEntryTooLarge {
     _throwBackupTooLarge();
+  } on _EntryWriteFailure catch (failure) {
+    Error.throwWithStackTrace(failure.error, failure.stackTrace);
   } on LibraryBackupException {
     rethrow;
   } on Object catch (error, stackTrace) {
@@ -239,6 +260,17 @@ Future<void> _extractEntry(
       stackTrace,
     );
   }
+}
+
+Future<RandomAccessFile> _openDatabaseFile(String path) => File(path).open(mode: FileMode.write);
+
+/// A failure of the sink an entry was written to, carried past the handler
+/// that reports content faults so it reaches the caller unchanged.
+final class _EntryWriteFailure implements Exception {
+  const new(this.error, this.stackTrace);
+
+  final Object error;
+  final StackTrace stackTrace;
 }
 
 /// Where the content of [header]'s entry begins, after checking that its

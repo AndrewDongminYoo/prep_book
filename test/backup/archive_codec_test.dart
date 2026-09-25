@@ -73,6 +73,15 @@ void main() {
       expect(result.decoded.databaseSchemaVersion, 1);
     });
 
+    test('a failed database write propagates unchanged, not as a damaged archive', () async {
+      const codec = BackupArchiveCodec(openDatabaseSink: _fullDiskSink);
+
+      await expectLater(
+        _decode(_archiveWithManifest(_validManifestMap), codec: codec),
+        throwsA(same(_diskFull)),
+      );
+    });
+
     test('builds the suggested name from zero-padded local fields', () {
       final localCreatedAt = DateTime(2026, 3, 4, 5, 6, 7);
 
@@ -670,4 +679,29 @@ void _renameLocalEntry(Uint8List bytes, String entryName, String replacement) {
     return;
   }
   fail('Local header entry not found: $entryName');
+}
+
+const _diskFull = FileSystemException(
+  'No space left on device',
+  'library.db',
+  OSError('No space left on device', 28),
+);
+
+/// Opens a real database file whose every write fails the way a full disk
+/// does.
+Future<RandomAccessFile> _fullDiskSink(String path) async => _FullDiskFile(await File(path).open(mode: FileMode.write));
+
+final class _FullDiskFile implements RandomAccessFile {
+  new(this._delegate);
+
+  final RandomAccessFile _delegate;
+
+  @override
+  Future<RandomAccessFile> writeFrom(List<int> buffer, [int start = 0, int? end]) => Future.error(_diskFull);
+
+  @override
+  Future<void> close() => _delegate.close();
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
