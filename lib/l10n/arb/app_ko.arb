@@ -469,6 +469,10 @@
             }
         }
     },
+    "recipeEditorIdOccupied": "편집하는 동안 이름이 같은 레시피가 저장되었습니다. 다시 저장하면 이 레시피를 따로 저장합니다.",
+    "@recipeEditorIdOccupied": {
+        "description": "저장하는 동안 다른 쓰기가 새 레시피의 식별자를 먼저 차지했을 때 보여 주는 문구. 다시 저장하면 비어 있는 다음 식별자를 고른다"
+    },
     "productionSetupTitle": "생산 실행",
     "@productionSetupTitle": {
         "description": "생산 설정 화면의 제목"

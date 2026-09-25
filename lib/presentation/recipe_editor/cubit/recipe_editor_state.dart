@@ -275,13 +275,14 @@ final class RecipeEditorState {
   /// referenced recipe, so an incompatible unit is not a formatting problem:
   /// every production run of the saved recipe throws
   /// `IncompatibleYieldUnitError` on it, and nothing between here and there
-  /// rejects it — `SaveRecipeRevision` checks the dependency graph, not the
-  /// units. [unitChoicesFor] keeps the picker from producing one; this is
-  /// what catches a line that reached the state some other way, such as a
-  /// stored manual line switched to a scaling behavior.
+  /// rejects it — `SaveRecipeRevision` and `CreateRecipe` check the
+  /// dependency graph, not the units. [unitChoicesFor] keeps the picker
+  /// from producing one; this is what catches a line that reached the state
+  /// some other way, such as a stored manual line switched to a scaling
+  /// behavior.
   ///
   /// A reference the library does not hold is left alone: it is a missing
-  /// dependency, which `SaveRecipeRevision` reports by name.
+  /// dependency, which the save's use case reports by name.
   bool subRecipeUnitIsIncompatible(ComponentDraft draft) {
     if (draft.behavior == ScalingBehavior.manual) return false;
     final yieldUnit = _subRecipeYieldUnit(draft);
@@ -338,8 +339,9 @@ final class RecipeEditorState {
   /// Whether any field the operator can fix in place is wrong.
   ///
   /// The errors this covers are the ones a form can decide on its own. The
-  /// ones it cannot — a dependency cycle, a missing sub-recipe — belong to
-  /// `SaveRecipeRevision` and arrive as [saveError].
+  /// ones it cannot — a dependency cycle, a missing sub-recipe, an id taken
+  /// since the form was read — belong to the use case the save goes
+  /// through, and arrive as [saveError].
   bool get hasFieldErrors =>
       nameIsMissing ||
       baseYieldIsInvalid ||

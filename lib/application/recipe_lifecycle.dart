@@ -31,7 +31,7 @@ final class ArchiveRecipe {
 /// Copies a recipe's latest revision under a new id.
 final class DuplicateRecipe {
   /// Creates the use case over [_recipes], passing [_clock] on to
-  /// [SaveRecipeRevision] so the copy's `modifiedAt` is stamped from it.
+  /// [CreateRecipe] so the copy's `modifiedAt` is stamped from it.
   const new(this._recipes, this._clock);
 
   final RecipeRepository _recipes;
@@ -43,17 +43,17 @@ final class DuplicateRecipe {
   /// product decision, and a screen can prefill a field with whatever it
   /// likes.
   ///
-  /// The copy goes through [SaveRecipeRevision], so it is validated exactly
-  /// as an edit is — a source whose dependencies have since been deleted
-  /// fails here rather than producing an unusable copy.
+  /// The copy goes through [CreateRecipe], so it is validated exactly as an
+  /// edit is — a source whose dependencies have since been deleted fails
+  /// here rather than producing an unusable copy.
   ///
   /// Throws [MissingDependencyError] when [sourceId] has no stored revision,
-  /// and [ArgumentError] when [newId] already names a stored recipe. The
-  /// spec requires the copy to land "under a new id at revision 1"; without
-  /// this guard, an occupied [newId] would fall through to
-  /// [SaveRecipeRevision] and silently become the *next* revision of
-  /// whatever already lives there, overwriting the occupant's identity
-  /// under its own name rather than creating a copy.
+  /// and [RecipeIdOccupiedError], an [ArgumentError], when [newId] already
+  /// names a stored recipe. The spec requires the copy to land "under a new
+  /// id at revision 1"; [CreateRecipe] is what refuses an occupied [newId]
+  /// rather than letting it become the *next* revision of whatever already
+  /// lives there, overwriting the occupant's identity under its own name
+  /// rather than creating a copy.
   Future<Recipe> call({
     required String sourceId,
     required String newId,
@@ -66,33 +66,16 @@ final class DuplicateRecipe {
     // references the source here — the operator asked for it directly.
     if (source == null) throw MissingDependencyError(sourceId, sourceId);
 
-    final occupant = await _recipes.findLatest(newId);
-    if (occupant != null) {
-      // No `DomainError` fits "this id is already taken" — every existing
-      // one names a missing or invalid reference, not an occupied one — so
-      // this is a plain `ArgumentError`, the idiomatic Dart choice for a
-      // caller-supplied value that is invalid on its own terms.
-      throw ArgumentError.value(
-        newId,
-        'newId',
-        'already names a stored recipe; duplicate under an unused id',
-      );
-    }
-
-    return await SaveRecipeRevision(_recipes, _clock).call(
+    return await CreateRecipe(_recipes, _clock).call(
       Recipe(
         id: newId,
-        // Ignored by SaveRecipeRevision, which assigns the real number. The
-        // guard above is what makes that number 1: with `newId` proven to
-        // have no stored revision, `(latest?.revision ?? 0) + 1` can only be
-        // 1, which is what makes this method's "at revision 1" contract
-        // true rather than merely stated.
+        // Ignored by CreateRecipe, which always stores revision 1.
         revision: 1,
         name: name,
         baseYield: source.baseYield,
         components: source.components,
-        // Ignored by SaveRecipeRevision, which stamps `_clock`'s instant
-        // instead: a copy is saved now, not whenever its source last was.
+        // Ignored by CreateRecipe, which stamps `_clock`'s instant instead:
+        // a copy is saved now, not whenever its source last was.
         modifiedAt: source.modifiedAt,
         category: source.category,
         maxBatchYield: source.maxBatchYield,

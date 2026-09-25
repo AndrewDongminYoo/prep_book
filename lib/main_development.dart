@@ -28,6 +28,7 @@ Future<void> main() async {
               recipes,
               const SystemClock(),
             ),
+            createRecipe: CreateRecipe(recipes, const SystemClock()),
             saveIngredient: SaveIngredient(ingredients),
           ),
           production: ProductionSetupLauncher(
