@@ -215,6 +215,22 @@ void main() {
     expect(loaded.overrides, run.overrides);
   });
 
+  // `production_runs.id` is the primary key and `save` inserts with no
+  // conflict algorithm, so a second save under a stored id fails rather
+  // than replacing the run. `save` is the only write that takes a whole
+  // run, so this is also why a stored run cannot be updated through it.
+  test('saving a stored run id again throws and keeps the first run', () async {
+    await repository.save(buildRun(id: 'run-1', createdAt: DateTime.utc(2026, 9, 7)));
+
+    await expectLater(
+      repository.save(buildRun(id: 'run-1', createdAt: DateTime.utc(2026, 9, 8))),
+      throwsA(anything),
+    );
+
+    expect((await repository.findById('run-1'))!.createdAt, DateTime.utc(2026, 9, 7));
+    expect(await repository.listSummaries(), hasLength(1));
+  });
+
   // A codec round trip is not this: `findById` rebuilds the run field by
   // field, so a payload that decodes its ingredient snapshot correctly can
   // still be dropped on the way into the `ProductionRun` this returns.

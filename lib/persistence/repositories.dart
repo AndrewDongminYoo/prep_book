@@ -112,9 +112,25 @@ abstract interface class ProductionRunRepository {
   Future<void> save(ProductionRun run);
 
   /// Records that [warning] has been acknowledged on the run [runId].
+  ///
+  /// Nothing in the first release calls this or [recordOverride], and that
+  /// is a ruling rather than an oversight. Both write state onto a run that
+  /// is already stored, and no first-release screen changes one: the design
+  /// document's production history screen reopens and re-exports a stored
+  /// snapshot, its architecture section commits a run's acknowledgement
+  /// state together with the snapshot, which is [save]'s one transaction,
+  /// and the production result screen stops accepting changes once its run
+  /// is stored. They stay, implemented and tested, for an editable history
+  /// screen after the first release, which is where the shape of an update
+  /// use case gets decided. Until then [save] is the only write path, and
+  /// it refuses a second save under a stored run id rather than updating
+  /// the run.
   Future<void> recordAcknowledgement(String runId, ProductionWarning warning);
 
   /// Records an operator-entered replacement [value] for [key] on the run
   /// [runId].
+  ///
+  /// Unused in the first release, for the reason [recordAcknowledgement]
+  /// gives.
   Future<void> recordOverride(String runId, OverrideKey key, Quantity value);
 }
